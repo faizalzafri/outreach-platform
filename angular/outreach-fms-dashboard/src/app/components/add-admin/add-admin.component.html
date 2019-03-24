@@ -1,0 +1,17 @@
+<div class="row">
+  <div class="h-100 mt-5 col-md-12 d-flex justify-content-center">
+    <p style="font-size: 2em;color: #0074D9"><b>Add Admin</b></p>
+  </div>
+  <div class="h-100 mt-2 col-md-12 d-flex justify-content-center">
+    <p style="color:#0074D9">{{message}}</p>
+  </div>
+</div>
+<div class="h-100 d-flex justify-content-center align-items-center mt-5">
+  <form (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="associateId">Admin ID:</label>
+      <input type="text" class="form-control" required id="associateId" [(ngModel)]="id" name="id">
+    </div>
+    <button type="submit" class="btn btn-success">Add Admin</button>
+  </form>
+</div>
