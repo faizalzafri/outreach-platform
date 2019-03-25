@@ -1,24 +1,19 @@
-.icon {
-	size: 7px;
-	color: white;
-}
-
-table {
-	background-color: #15aabf;
-}
-
-th {
-	padding: 25px 25px 25px 25px;
-}
-
-p {
-	color: white;
-}
-
-.selected {
-	color: yellow;
-}
-
 .justify-content-center{
 	padding: 20px;
+}
+
+#fa-ang-1.ang-active{
+    color: darkorange;
+}
+#fa-fro-1.fro-active{
+    color: darkorange;
+}
+#fa-meh-1.meh-active{
+    color: darkorange;
+}
+#fa-smi-1.smi-active{
+    color: darkorange;
+}
+#fa-gri-1.gri-active{
+    color: darkorange;
 }
