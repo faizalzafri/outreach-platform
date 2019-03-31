@@ -1,3 +1,24 @@
+.icon {
+	size: 7px;
+	color: rgb(247, 218, 90);
+}
+
+table {
+	background-color: #15aabf;
+}
+
+th {
+	padding: 25px 25px 25px 25px;
+}
+
+p {
+	color: white;
+}
+
+.selected {
+	color: yellow;
+}
+
 .justify-content-center{
 	padding: 20px;
 }
