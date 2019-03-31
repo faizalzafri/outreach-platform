@@ -27,27 +27,33 @@
 
 <div class="row justify-content-center">
   <div style="text-align:center" class="justify-content-center">
-    <fa-icon [icon]="faAngry" size="4x"></fa-icon>
+    <fa-icon id="fa-ang-1" (click)="iconAClicked($event)" [icon]="faAngry" size="4x" [ngClass]="{'ang-active': isangActive}">
+    </fa-icon>
   </div>
   <div style="text-align:center" class="justify-content-center">
-    <fa-icon [icon]="faFrown" size="4x"></fa-icon>
+    <fa-icon id="fa-fro-1" (click)="iconFClicked($event)" [icon]="faFrown" size="4x" [ngClass]="{'fro-active': isfroActive}">
+    </fa-icon>
   </div>
   <div style="text-align:center" class="justify-content-center">
-    <fa-icon [icon]="faMeh" size="4x"></fa-icon>
+    <fa-icon id="fa-meh-1" (click)="iconMClicked($event)" [icon]="faMeh" size="4x" [ngClass]="{'meh-active': ismehActive}">
+    </fa-icon>
   </div>
   <div style="text-align:center" class="justify-content-center">
-    <fa-icon [icon]="faSmile" size="4x"></fa-icon>
+    <fa-icon id="fa-smi-1" (click)="iconSClicked($event)" [icon]="faSmile" size="4x" [ngClass]="{'smi-active': issmiActive}">
+    </fa-icon>
   </div>
   <div style="text-align:center" class="justify-content-center">
-    <fa-icon [icon]="faGrinAlt" size="4x"></fa-icon>
+    <fa-icon id="fa-gri-1" (click)="iconGClicked($event)" [icon]="faGrinAlt" size="4x" [ngClass]="{'gri-active': isgriActive}">
+    </fa-icon>
   </div>
 </div>
 
+
 <div class="form-group justify-content-center">
-  <label for="exampleFormControlTextarea1">Example Question1</label>
-  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+  <label for="qes1">Example Question1</label>
+  <textarea class="form-control" id="qes1" rows="2" colu></textarea>
 </div>
 <div class="form-group justify-content-center">
-  <label for="exampleFormControlTextarea1">Example Question2</label>
-  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+  <label for="qes2">Example Question2</label>
+  <textarea class="form-control" id="qes2" rows="2"></textarea>
 </div>
