@@ -17,29 +17,35 @@ import org.springframework.web.bind.annotation.RestController;
 @CrossOrigin(origins = "*")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+	@Autowired
+	private UserService userService;
 
-    @RequestMapping("/login")
-    public LoginResponseModel login(HttpServletRequest request) {
+	// @RequestMapping("/login")
+	// public LoginResponseModel login(HttpServletRequest request) {
+	//
+	// String[] credentials = filterCredentials(request);
+	// User user = userService.getUserByCredentials(credentials);
+	// LoginResponseModel loginResponseModel = new LoginResponseModel();
+	// loginResponseModel.setUserAuthentic(userService.authenticate(credentials));
+	// return loginResponseModel;
+	// }
 
-        String[] credentials = filterCredentials(request);
-        User user = userService.getUserByCredentials(credentials);
-        LoginResponseModel loginResponseModel = new LoginResponseModel();
-        loginResponseModel.setUserAuthentic(userService.authenticate(credentials));
-        return loginResponseModel;
-    }
+	@RequestMapping("/logout")
+	public void logout(HttpServletRequest request) {
+		request.getSession().invalidate();
+	}
 
-    @RequestMapping("/user")
-    public UserResponseModel authenticate(HttpServletRequest request) {
-        String[] credentials = filterCredentials(request);
-        User user = userService.getUserByCredentials(credentials);
-        UserResponseModel userResponseModel = new UserResponseModel(user.getUsername(), user.getUsername(), user.getEmail(), user.getRoles().get(0).getName());
-        return userResponseModel;
-    }
+	@RequestMapping("/login")
+	public UserResponseModel authenticate(HttpServletRequest request) {
+		String[] credentials = filterCredentials(request);
+		User user = userService.getUserByCredentials(credentials);
+		UserResponseModel userResponseModel = new UserResponseModel(user.getUsername(), user.getUsername(),
+				user.getEmail(), user.getRole().name(), String.valueOf(userService.authenticate(credentials)));
+		return userResponseModel;
+	}
 
-    private String[] filterCredentials(HttpServletRequest request) {
-        String authToken = request.getHeader("Authorization").substring("Basic".length()).trim();
-        return new String(Base64.getDecoder().decode(authToken)).split(":");
-    }
+	private String[] filterCredentials(HttpServletRequest request) {
+		String authToken = request.getHeader("Authorization").substring("Basic".length()).trim();
+		return new String(Base64.getDecoder().decode(authToken)).split(":");
+	}
 }

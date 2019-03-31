@@ -1,5 +1,6 @@
 package org.outreach.outreachfeedbackserver.repo;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.outreach.outreachfeedbackserver.entity.EventPK;
@@ -18,5 +19,7 @@ public interface VolunteerNotAttendedRepo extends CrudRepository<VolunteerNotAtt
 		});
 		return null;
 	}
+
+	public List<VolunteerNotAttended> findByEmailStatus(String string);
 
 }

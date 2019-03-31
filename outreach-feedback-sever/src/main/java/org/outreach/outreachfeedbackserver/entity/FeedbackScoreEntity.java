@@ -2,19 +2,21 @@ package org.outreach.outreachfeedbackserver.entity;
 
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Table;
 
 @Entity
+@Table(name = "volunteer_feeback")
 public class FeedbackScoreEntity {
-	
+
 	@EmbeddedId
 	private EventPK eventPK;
-	
+
 	private int score;
-	
+
 	private String answer1;
-	
+
 	private String answer2;
-	
+
 	private String status;
 
 	public EventPK getEventPK() {
@@ -56,6 +58,5 @@ public class FeedbackScoreEntity {
 	public void setStatus(String status) {
 		this.status = status;
 	}
-	
-	
+
 }

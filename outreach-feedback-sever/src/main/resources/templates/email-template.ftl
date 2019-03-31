@@ -26,9 +26,9 @@
         </tr>
         <tr>
             <td bgcolor="#eaeaea" style="padding: 40px 30px 40px 30px;">
-                <p>Dear ${name},</p>
+                <p>Hi ${name},</p>
                 <p>Thanks for participating in the event ${eventName} on ${eventDate}</b></p>
-                <p>Please tell us how we did and help outreach improve helping all.</b></p>
+                <p>Please tell us how we did and help outreach improve by this <a href=${feedbacklink}>Survey Here</a></b></p>
                 <p>Thanks</p>
             </td>
         </tr>

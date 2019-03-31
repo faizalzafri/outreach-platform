@@ -28,7 +28,9 @@ import org.outreach.outreachfeedbackserver.repo.UserRoleRepository;
 import org.outreach.outreachfeedbackserver.repo.VolunteerAttendedRepo;
 import org.outreach.outreachfeedbackserver.repo.VolunteerNotAttendedRepo;
 import org.outreach.outreachfeedbackserver.repo.VolunteerUnregisteredRepo;
+import org.outreach.outreachfeedbackserver.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -48,6 +50,12 @@ public class LoadExcelUtil {
 
 	@Autowired
 	private UserRoleRepository userRoleRepository;
+
+	@Autowired
+	private EmailService emailService;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
 	public void readExcel(Path path) throws ParseException {
 
@@ -90,8 +98,8 @@ public class LoadExcelUtil {
 					eventInfoEntity.setEmailStatus("I");
 					eventInfoList.add(eventInfoEntity);
 				}
-
 				volunteerAttendedRepo.saveAll(eventInfoList);
+				emailService.sendBatchEmails(volunteerAttendedRepo.findByEmailStatus("I"), "email-template.ftl");
 			} else if (VolunteerType.ABSENT == volunteerType) {
 				List<VolunteerNotAttended> eventInfoList = new ArrayList<>();
 				while (rowIterator.hasNext()) {
@@ -101,6 +109,9 @@ public class LoadExcelUtil {
 					eventInfoList.add(eventInfoEntity);
 				}
 				volunteerNotAttendedRepo.saveAll(eventInfoList);
+				emailService.sendBatchEmails(volunteerNotAttendedRepo.findByEmailStatus("I"),
+						"absent-email-template.ftl");
+
 			} else if (VolunteerType.UNREGISTERED == volunteerType) {
 				List<VolunteerUnregistered> eventInfoList = new ArrayList<>();
 				while (rowIterator.hasNext()) {
@@ -110,6 +121,9 @@ public class LoadExcelUtil {
 					eventInfoList.add(eventInfoEntity);
 				}
 				volunteerUnregisteredRepo.saveAll(eventInfoList);
+				emailService.sendBatchEmails(volunteerUnregisteredRepo.findByEmailStatus("I"),
+						"unregistered-email-template.ftl");
+
 			} else if (volunteerType == null) {
 				List<EventSummaryEntity> eventInfoList = new ArrayList<>();
 				while (rowIterator.hasNext()) {
@@ -117,7 +131,8 @@ public class LoadExcelUtil {
 					EventSummaryEntity eventInfoEntity = getEventInfoRecord(row);
 					eventInfoList.add(eventInfoEntity);
 				}
-				eventSummaryRepo.saveAll(eventInfoList);
+				/* List<EventSummaryEntity> resultList = */ manipulate(eventInfoList);
+				// eventSummaryRepo.saveAll(resultList);
 			}
 		} catch (IOException ie) {
 			ie.printStackTrace();
@@ -137,6 +152,41 @@ public class LoadExcelUtil {
 				}
 			}
 		}
+
+	}
+
+	private void manipulate(List<EventSummaryEntity> eventInfoList) {
+		// TODO Auto-generated method stub
+
+		List<EventSummaryEntity> resultList = new ArrayList<>();
+		List<UserRole> userList = new ArrayList<>();
+
+		eventInfoList.stream().forEach(es -> {
+
+			// for multiple poc id
+			if (es.getPocId().contains(";")) {
+				String[] pocIds = es.getPocId().split(";");
+				String[] names = es.getPocName().split(";");
+				int index = 0;
+				// create a new es and user role object
+				for (String id : pocIds) {
+					resultList.add(new EventSummaryEntity(es.getEventId(), id, names[index]));
+					index++;
+					userList.add(new UserRole(id + "@cognizant.com", id, passwordEncoder.encode(id), true, true, true,
+							true, Roles.ROLE_POC));
+				}
+
+			} else {
+				// for non multiple pocId
+				resultList.add(new EventSummaryEntity(es.getEventId(), es.getPocId(), es.getPocName()));
+				userList.add(new UserRole(es.getPocId() + "@cognizant.com", es.getPocId(),
+						passwordEncoder.encode(es.getPocId()), true, true, true, true, Roles.ROLE_POC));
+			}
+
+		});
+
+		eventSummaryRepo.saveAll(resultList);
+		userRoleRepository.saveAll(userList);
 
 	}
 
@@ -204,11 +254,15 @@ public class LoadExcelUtil {
 			if (rowIterator.hasNext()) {
 				rowIterator.next();
 			}
-
+			String associateId = "";
 			while (rowIterator.hasNext()) {
+				associateId = row.getCell(0).getStringCellValue();
 				row = rowIterator.next();
 				row.getCell(0).setCellType(CellType.STRING);
-				pmoList.add(new UserRole(row.getCell(0).getStringCellValue(), Roles.PMO));
+				pmoList.add(new UserRole(associateId + "@cognizant.com", // email
+						associateId, // username
+						passwordEncoder.encode(associateId), // password
+						true, true, true, true, Roles.ROLE_PMO));
 			}
 		} catch (IOException ie) {
 			ie.printStackTrace();
@@ -234,20 +288,19 @@ public class LoadExcelUtil {
 
 	}
 
-	/*public List<EventInformationEntity> findNotMatchingRecords(List<EventInformationEntity> eventInfoList,
-			VolunteerType volunteerType) {
-		if (volunteerType == VolunteerType.ATTENDED) {
-			List<VolunteerAttended> allRecords=new ArrayList<>();
-			 volunteerAttendedRepo.findAll().forEach(allRecords::add);
-			 allRecords.stream().forEach(eie -> {
-				 
-			 });
-		} else if (volunteerType == VolunteerType.UNREGISTERED) {
-			List<VolunteerUnregistered> allRecords = volunteerUnregisteredRepo.findAll();
-		} else if (volunteerType == VolunteerType.ABSENT) {
-			List<VolunteerNotAttended> allRecords = volunteerNotAttendedRepo.findAll();
-		}
-		return null;
-	}*/
+	/*
+	 * public List<EventInformationEntity>
+	 * findNotMatchingRecords(List<EventInformationEntity> eventInfoList,
+	 * VolunteerType volunteerType) { if (volunteerType == VolunteerType.ATTENDED) {
+	 * List<VolunteerAttended> allRecords=new ArrayList<>();
+	 * volunteerAttendedRepo.findAll().forEach(allRecords::add);
+	 * allRecords.stream().forEach(eie -> {
+	 * 
+	 * }); } else if (volunteerType == VolunteerType.UNREGISTERED) {
+	 * List<VolunteerUnregistered> allRecords = volunteerUnregisteredRepo.findAll();
+	 * } else if (volunteerType == VolunteerType.ABSENT) {
+	 * List<VolunteerNotAttended> allRecords = volunteerNotAttendedRepo.findAll(); }
+	 * return null; }
+	 */
 
 }

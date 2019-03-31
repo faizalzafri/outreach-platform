@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: feedback-server
+  cloud:
+    config:
+      uri: http://localhost:8888
+
+server:
+   port: 9090

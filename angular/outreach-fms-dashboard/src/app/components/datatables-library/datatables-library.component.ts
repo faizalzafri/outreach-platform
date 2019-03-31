@@ -35,11 +35,19 @@ export class DatatablesLibraryComponent implements AfterViewInit, OnDestroy, OnI
     });
 
     console.log(this.selectedValue);
-    this.feedbackService.getReport2(this.selectedValue).subscribe(data => {
-      console.log(data);
-      this.eventReport = data;
-      this.dtTrigger.next();
-    });
+
+    var role = localStorage.getItem('role');
+    var ascid = "";
+    if (role == "ROLE_POC")
+      ascid = localStorage.getItem('id');
+
+    this.feedbackService.getReport(this.selectedValue, ascid)
+      .subscribe(
+        data => {
+          console.log(data);
+          this.eventReport = data;
+          this.dtTrigger.next();
+        });
   }
 
 

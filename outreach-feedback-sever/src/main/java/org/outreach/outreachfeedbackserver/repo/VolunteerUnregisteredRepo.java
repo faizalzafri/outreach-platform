@@ -1,5 +1,6 @@
 package org.outreach.outreachfeedbackserver.repo;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.outreach.outreachfeedbackserver.entity.EventPK;
@@ -19,5 +20,7 @@ public interface VolunteerUnregisteredRepo extends CrudRepository<VolunteerUnreg
 		});
 		return null;
 	}
+
+	public List<VolunteerUnregistered> findByEmailStatus(String string);
 
 }

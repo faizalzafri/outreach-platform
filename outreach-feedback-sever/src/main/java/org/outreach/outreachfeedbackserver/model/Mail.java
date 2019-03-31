@@ -1,5 +1,6 @@
 package org.outreach.outreachfeedbackserver.model;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,7 +13,7 @@ public class Mail {
     private Map<String, Object> model;
 
     public Mail() {
-
+    	model=new HashMap<>();
     }
 
     public String getFrom() {

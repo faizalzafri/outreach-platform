@@ -6,5 +6,9 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'outreach-fms-dashboard';
+  title: string;
+
+  constructor() {
+    this.title = 'Outreach Feedback Management System';
+  }
 }

@@ -13,9 +13,12 @@ public class EventSummaryService {
 	@Autowired
 	private EventReportsRepository eRepository;
 
-	public List<IEventReport> getEventRatingByEvent() {
+	public List<IEventReport> getEventRatingByEvent(String pocId) {
 
-		return eRepository.findAllByEvents();
+		if (pocId == null || "".equals(pocId)) {
+			return eRepository.findAllByEvents();
+		}
+		return eRepository.findAllByPocEvents(pocId);
 	}
 
 	public List<IEventReport> getEventRatingByBaseLocation() {

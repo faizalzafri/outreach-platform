@@ -2,7 +2,7 @@ package org.outreach.outreachfeedbackserver.model;
 
 public enum Roles {
 	
-	ADMIN("A"),PMO("PMO"),POC("POC");
+	ROLE_ADMIN("A"),ROLE_PMO("PMO"),ROLE_POC("POC");
 	
 	String code;
 	
