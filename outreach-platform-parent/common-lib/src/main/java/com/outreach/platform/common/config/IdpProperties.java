@@ -23,7 +23,7 @@ import jakarta.validation.constraints.NotBlank;
  * </ul>
  *
  * <p>Resource servers always validate tokens via JWKS regardless of which provider is active,
- * ensuring consistent security posture across provider switches (Requirement 2.16).
+ * ensuring consistent security posture across provider switches.
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc7517">RFC 7517 - JSON Web Key (JWK)</a>
  */

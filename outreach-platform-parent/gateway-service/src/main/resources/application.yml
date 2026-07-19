@@ -2,8 +2,8 @@
 # Identity Provider Configuration
 # ============================================================================
 # The gateway validates JWT tokens via the JWKS endpoint regardless of which
-# identity provider is active (Requirement 2.16). Set IDP_JWKS_URI or
-# idp.jwks-uri to switch between providers without code changes (Req 2.3):
+# identity provider is active. Set IDP_JWKS_URI or
+# idp.jwks-uri to switch between providers without code changes:
 #   - Keycloak: http://localhost:8080/realms/outreach/protocol/openid-connect/certs
 #   - Spring:   http://localhost:8090/oauth2/jwks
 # ============================================================================

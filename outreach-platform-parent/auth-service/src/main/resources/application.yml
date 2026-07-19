@@ -6,8 +6,8 @@
 #   - "keycloak" -> Deactivates auth server beans; Keycloak container handles tokens
 #
 # Switching providers requires NO code changes — only this configuration value
-# and the corresponding idp.jwks-uri need to change (Requirement 2.3).
-# Resource servers always validate tokens via JWKS (Requirement 2.16).
+# and the corresponding idp.jwks-uri need to change.
+# Resource servers always validate tokens via JWKS.
 # ============================================================================
 idp:
   provider: ${IDP_PROVIDER:spring}
