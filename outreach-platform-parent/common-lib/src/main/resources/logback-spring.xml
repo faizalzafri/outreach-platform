@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Structured logging configuration for the Outreach Platform.
+    - Structured JSON logs with timestamp, level, service, traceId, spanId, message
+    - Propagates trace context (traceId, spanId) across inter-service calls via MDC
+    - Logs request method, path, response status, and duration
+    - Never logs PII in application logs
+    - Applies log-masking filters (PII + secrets) before log output
+-->
+<configuration>
+
+    <!-- Import Spring Boot defaults for log levels and color coding -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Resolve spring.application.name for service identification -->
+    <springProperty scope="context" name="SERVICE_NAME" source="spring.application.name" defaultValue="unknown-service"/>
+
+    <!-- ========================================== -->
+    <!-- Custom conversion word for pattern layouts -->
+    <!-- Applies PII + secret masking in pattern-based appenders -->
+    <!-- ========================================== -->
+    <conversionRule conversionWord="maskedMsg"
+                    converterClass="com.outreach.platform.common.logging.MaskingCompositeConverter"/>
+
+    <!-- ========================================== -->
+    <!-- CONSOLE APPENDER (Development Profile)    -->
+    <!-- Human-readable format with masking applied -->
+    <!-- ========================================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId:-}] [%X{spanId:-}] [%X{correlationId:-}] %-5level %logger{36} - %maskedMsg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ========================================== -->
+    <!-- JSON APPENDER (Non-Development Profiles)  -->
+    <!-- Structured JSON using LogstashEncoder      -->
+    <!-- ========================================== -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Apply PII and secret masking to all JSON string fields -->
+            <jsonGeneratorDecorator class="com.outreach.platform.common.logging.MaskingJsonGeneratorDecorator"/>
+
+            <!-- Include standard fields -->
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+
+            <!-- Custom fields for service identification -->
+            <customFields>{"service":"${SERVICE_NAME}"}</customFields>
+
+            <!-- Timestamp format (ISO-8601) -->
+            <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampPattern>
+
+            <!-- Include caller info only at DEBUG or lower -->
+            <includeCallerData>false</includeCallerData>
+
+            <!-- Stack trace configuration -->
+            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                <maxLength>2048</maxLength>
+                <shortenedClassNameLength>20</shortenedClassNameLength>
+                <rootCauseFirst>true</rootCauseFirst>
+            </throwableConverter>
+        </encoder>
+    </appender>
+
+    <!-- ========================================== -->
+    <!-- Profile-based Appender Selection           -->
+    <!-- ========================================== -->
+
+    <!-- Development profile: human-readable console output -->
+    <springProfile name="development,dev,local,default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- More verbose logging in development -->
+        <logger name="com.outreach.platform" level="DEBUG"/>
+        <logger name="org.springframework.web" level="DEBUG"/>
+    </springProfile>
+
+    <!-- Non-development profiles: structured JSON output -->
+    <springProfile name="staging,production,prod,test">
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+
+        <logger name="com.outreach.platform" level="INFO"/>
+
+        <!-- Reduce noise from framework internals -->
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.springframework.security" level="WARN"/>
+    </springProfile>
+
+</configuration>
