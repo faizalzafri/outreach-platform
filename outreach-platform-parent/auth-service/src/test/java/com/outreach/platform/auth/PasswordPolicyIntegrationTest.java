@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for password policy enforcement.
- * Validates Requirements 2.13 (12 chars, uppercase, lowercase, digit, special char).
+ * Verifies: 12+ chars, uppercase, lowercase, digit, and special character requirements.
  */
 @DisplayName("Password Policy Enforcement")
 class PasswordPolicyIntegrationTest extends BaseAuthIntegrationTest {

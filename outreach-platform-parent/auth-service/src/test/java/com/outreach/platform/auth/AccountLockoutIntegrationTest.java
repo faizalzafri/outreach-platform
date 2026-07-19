@@ -18,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for account lockout after repeated failed attempts.
- * Validates Requirements 2.14, 2.15.
  * Policy: 5 failed attempts → account locked for 30 min.
  */
 @DisplayName("Account Lockout")

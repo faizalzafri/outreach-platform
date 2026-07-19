@@ -73,7 +73,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
 
         <!-- Testing -->
-        <testcontainers.version>1.20.4</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
 
         <!-- Maven Plugins -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -246,6 +246,9 @@
                     <version>${maven-surefire-plugin.version}</version>
                     <configuration>
                         <argLine>@{argLine} --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                        <environmentVariables>
+                            <DOCKER_HOST>npipe:////./pipe/dockerDesktopLinuxEngine</DOCKER_HOST>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
 
@@ -264,6 +267,9 @@
                     </executions>
                     <configuration>
                         <argLine>@{argLine} --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                        <environmentVariables>
+                            <DOCKER_HOST>npipe:////./pipe/dockerDesktopLinuxEngine</DOCKER_HOST>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
 

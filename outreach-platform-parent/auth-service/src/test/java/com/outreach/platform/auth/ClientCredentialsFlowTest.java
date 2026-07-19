@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for the OAuth2 Client Credentials flow.
- * Validates Requirements 2.1, 2.5, 2.8.
+ * Verifies token issuance, scope handling, and invalid credential rejection.
  */
 @DisplayName("Client Credentials Flow")
 class ClientCredentialsFlowTest extends BaseAuthIntegrationTest {

@@ -1,5 +1,8 @@
 package com.outreach.platform.auth.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -13,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -27,6 +31,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
@@ -43,6 +48,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -130,13 +136,40 @@ public class AuthorizationServerConfig {
     /**
      * JDBC-backed authorization service for storing active tokens and authorization codes.
      * Required for token revocation (RFC 7009) — the revocation endpoint looks up tokens here.
+     *
+     * <p>A custom ObjectMapper is configured with Spring Security and OAuth2 Authorization Server
+     * Jackson modules to properly serialize/deserialize authorization attributes (fixes
+     * ImmutableCollections deserialization issues).
      */
     @Bean
     public OAuth2AuthorizationService authorizationService(
             JdbcTemplate jdbcTemplate,
             RegisteredClientRepository registeredClientRepository
     ) {
-        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+        JdbcOAuth2AuthorizationService authorizationService =
+                new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+
+        // Configure a custom ObjectMapper that can handle ImmutableCollections and other
+        // Spring Security types stored in the authorization attributes column
+        JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper =
+                new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
+        List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
+        objectMapper.registerModules(securityModules);
+        objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+        // Enable default typing to handle Java immutable collections (Map.of(), List.of())
+        objectMapper.activateDefaultTyping(
+                objectMapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+
+        rowMapper.setObjectMapper(objectMapper);
+        authorizationService.setAuthorizationRowMapper(rowMapper);
+
+        return authorizationService;
     }
 
     /**

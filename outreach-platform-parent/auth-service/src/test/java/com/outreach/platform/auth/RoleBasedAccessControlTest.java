@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration test for role-based access control.
  * Verifies that JWT tokens contain correct {@code realm_access.roles} claims for different users.
- * Validates Requirements 2.9, 2.10, 2.11, 2.12.
  */
 @DisplayName("Role-Based Access Control")
 class RoleBasedAccessControlTest extends BaseAuthIntegrationTest {

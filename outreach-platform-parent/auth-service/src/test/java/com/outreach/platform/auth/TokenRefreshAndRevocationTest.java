@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for token refresh and revocation (RFC 7009).
- * Validates Requirements 2.6, 2.7, 2.17.
+ * Verifies revocation endpoint, introspection, and idempotent behavior.
  */
 @DisplayName("Token Refresh and Revocation")
 class TokenRefreshAndRevocationTest extends BaseAuthIntegrationTest {
