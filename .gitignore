@@ -1,0 +1,122 @@
+# ==============================================================================
+# IDEs and Editors
+# ==============================================================================
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+!**/src/main/resources/
+!**/src/test/resources/
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+*.code-workspace
+.history/
+.ionide/
+
+# Kito / Kiro (Generic editor swap and backup patterns)
+*.swp
+*.swo
+*~
+.kiro/
+
+# Generic OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ==============================================================================
+# Java Build Tools (Maven & Gradle)
+# ==============================================================================
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.next
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/.maven-wrapper.properties
+
+# Gradle
+.gradle/
+build/
+!src/**/build/
+.cache/
+
+# Gradle Wrapper elements to ignore if you want to force local installation
+# (Remove the '!' lines if you do not want to commit the gradle wrapper)
+!gradle-wrapper.jar
+!gradlew
+!gradlew.bat
+
+
+# ==============================================================================
+# Node.js & Frontend (Angular, React)
+# ==============================================================================
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+tmp/
+out-tsc/
+build/
+.next/
+.nuxt/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Angular specific
+.angular/
+.serve/
+
+# React / Vite / Nuxt specific frameworks cache
+.eslintcache
+.stylelintcache
+.prettiercache
+.parcel-cache
+
+
+# ==============================================================================
+# Containers & Ecosystem (Docker)
+# ==============================================================================
+
+# Docker local data directories (if mapped locally)
+.docker/
+docker-data/
+
+# Avoid committing local environment configurations
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+# ==============================================================================
+# Testing & Code Quality
+# ==============================================================================
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output
+
+# SonarQube
+.sonar/
+.sourcemaps/
