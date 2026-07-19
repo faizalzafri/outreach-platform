@@ -1,0 +1,48 @@
+# Development profile - local development settings
+# Relaxed security, verbose logging, local infrastructure
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/outreachfeedbackdb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/outreach_nosql
+  redis:
+    host: localhost
+    port: 6379
+
+# AI settings for development - enabled with lower limits
+platform:
+  ai:
+    enabled: true
+    provider: openai
+    api-key: ${AI_API_KEY:sk-dev-placeholder}
+    features:
+      sentiment-analysis: true
+      auto-categorization: true
+      response-suggestion: false
+    defaults:
+      temperature: 0.7
+      max-tokens: 1024
+      top-p: 1.0
+
+# Development logging - verbose
+logging:
+  level:
+    com.outreach.platform: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+# Eureka for local dev
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
