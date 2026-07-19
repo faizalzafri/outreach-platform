@@ -1,0 +1,21 @@
+server:
+  port: 8090
+
+spring:
+  datasource:
+    url: ${AUTH_DB_URL}
+    username: ${AUTH_DB_USER}
+    password: ${AUTH_DB_PASSWORD}
+
+# Production token settings (override defaults)
+auth-server:
+  issuer-uri: ${AUTH_ISSUER_URI}
+  clients:
+    services:
+      client-secret: ${AUTH_SERVICE_CLIENT_SECRET}
+
+# Logging reduced for production
+logging:
+  level:
+    org.springframework.security.oauth2: INFO
+    com.outreach.platform.auth: INFO
