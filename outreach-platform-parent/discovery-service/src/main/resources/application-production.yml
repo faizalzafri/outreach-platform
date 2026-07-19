@@ -1,0 +1,39 @@
+# Production profile: more conservative settings and peer-awareness support
+server:
+  port: 8761
+
+eureka:
+  server:
+    # Keep self-preservation enabled to protect against mass evictions during network issues
+    enable-self-preservation: true
+    # More conservative eviction interval (60 seconds) in production
+    eviction-interval-timer-in-ms: 60000
+    # Slightly lower threshold to avoid premature self-preservation activation
+    renewal-percent-threshold: 0.85
+    # Wait before synchronizing with peers on startup
+    wait-time-in-ms-when-sync-empty: 5
+
+  client:
+    # In a multi-instance cluster, Eureka peers register with each other
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      # Comma-separated peer URLs for multi-instance Eureka clusters
+      # Override via environment variable for actual peer addresses
+      defaultZone: ${EUREKA_PEER_URLS:http://eurekaadmin:eurekasecret@localhost:8761/eureka}
+
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    prefer-ip-address: true
+    # Recommended client-side lease settings (applied per registered service):
+    #   lease-renewal-interval-in-seconds: 30  (default; how often client sends heartbeats)
+    #   lease-expiration-duration-in-seconds: 90 (default; how long server waits before eviction)
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
+# Stricter logging in production
+logging:
+  level:
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
+    org.springframework.security: WARN

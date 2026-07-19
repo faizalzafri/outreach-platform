@@ -1,0 +1,32 @@
+# Test configuration for Gateway Service
+# Disables Eureka and simplifies gateway routes for testing
+
+server:
+  port: 0
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      # Routes and default-filters are configured via @DynamicPropertySource in tests
+      routes: []
+
+eureka:
+  client:
+    enabled: false
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 3
+        minimumNumberOfCalls: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5000
+        permittedNumberOfCallsInHalfOpenState: 1
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 2s

@@ -1,0 +1,54 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: discovery-service
+
+  # Basic security for Eureka dashboard and endpoints
+  security:
+    user:
+      name: ${EUREKA_USER:eurekaadmin}
+      password: ${EUREKA_PASSWORD:eurekasecret}
+
+# Eureka server configuration (standalone mode for development)
+eureka:
+  client:
+    # Standalone instance does not register with itself
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:${server.port}/eureka
+
+  server:
+    # Self-preservation prevents Eureka from evicting instances during network partitions
+    enable-self-preservation: true
+    # Faster eviction for development (check every 5 seconds)
+    eviction-interval-timer-in-ms: 5000
+    # Minimum percentage of renewals required before self-preservation activates
+    renewal-percent-threshold: 0.85
+
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+
+  # Dashboard available at root path
+  dashboard:
+    enabled: true
+    path: /
+
+# Actuator endpoints for monitoring and health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, env
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging
+logging:
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO

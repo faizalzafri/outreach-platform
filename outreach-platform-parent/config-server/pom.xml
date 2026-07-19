@@ -33,6 +33,7 @@
         </dependency>
     </dependencies>
 
+    <!-- Test dependencies -->
     <build>
         <plugins>
             <plugin>

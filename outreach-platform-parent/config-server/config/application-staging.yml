@@ -1,0 +1,50 @@
+# Staging profile - mirrors production with relaxed constraints
+# Uses encrypted values for sensitive properties
+
+spring:
+  datasource:
+    url: jdbc:postgresql://staging-db.internal:5432/outreachfeedbackdb
+    username: '{cipher}staging-db-username-encrypted'
+    password: '{cipher}staging-db-password-encrypted'
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  data:
+    mongodb:
+      uri: '{cipher}staging-mongodb-uri-encrypted'
+  redis:
+    host: staging-redis.internal
+    port: 6379
+    password: '{cipher}staging-redis-password-encrypted'
+
+# AI settings for staging - enabled with production-like limits
+platform:
+  ai:
+    enabled: true
+    provider: openai
+    api-key: '{cipher}staging-ai-api-key-encrypted'
+    features:
+      sentiment-analysis: true
+      auto-categorization: true
+      response-suggestion: true
+    defaults:
+      temperature: 0.5
+      max-tokens: 2048
+      top-p: 0.95
+
+# Staging logging - standard levels
+logging:
+  level:
+    com.outreach.platform: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+
+# SMTP settings for staging
+platform.notification:
+  smtp:
+    host: staging-smtp.internal
+    port: 587
+    username: '{cipher}staging-smtp-username-encrypted'
+    password: '{cipher}staging-smtp-password-encrypted'
