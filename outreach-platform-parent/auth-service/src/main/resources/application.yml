@@ -1,0 +1,99 @@
+# ============================================================================
+# Identity Provider Configuration
+# ============================================================================
+# The idp.provider property controls which identity provider is active:
+#   - "spring"   -> Activates the embedded Spring Authorization Server (this service)
+#   - "keycloak" -> Deactivates auth server beans; Keycloak container handles tokens
+#
+# Switching providers requires NO code changes — only this configuration value
+# and the corresponding idp.jwks-uri need to change (Requirement 2.3).
+# Resource servers always validate tokens via JWKS (Requirement 2.16).
+# ============================================================================
+idp:
+  provider: ${IDP_PROVIDER:spring}
+  jwks-uri: ${IDP_JWKS_URI:http://localhost:8090/oauth2/jwks}
+
+server:
+  port: 8090
+
+spring:
+  application:
+    name: auth-service
+
+  # PostgreSQL datasource
+  datasource:
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
+    username: ${AUTH_DB_USER:postgres}
+    password: ${AUTH_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+
+  # JPA configuration
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Liquibase schema management
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+# Authorization Server configuration (type-safe properties)
+auth-server:
+  issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8090}
+  clients:
+    dashboard:
+      client-id: outreach-dashboard
+      redirect-uri: http://localhost:4200/*
+      post-logout-redirect-uri: http://localhost:4200/*
+    services:
+      client-id: outreach-services
+      client-secret: ${AUTH_SERVICE_CLIENT_SECRET:CHANGE_ME_IN_PRODUCTION}
+  token:
+    access-token-time-to-live: 5m
+    refresh-token-time-to-live: 30m
+    refresh-token-max-reuse: 0
+  security:
+    password-policy:
+      min-length: 12
+      require-uppercase: true
+      require-lowercase: true
+      require-digit: true
+      require-special-char: true
+    brute-force:
+      max-failed-attempts: 5
+      lock-duration: 30m
+
+# Eureka client registration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://eurekaadmin:eurekasecret@localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: DEBUG
+    com.outreach.platform.auth: DEBUG

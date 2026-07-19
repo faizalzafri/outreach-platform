@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Spring Authorization Server schema (OAuth2 registered clients, authorizations, consent) -->
+    <include file="db/changelog/20240101-001-oauth2-authorization-schema.sql"/>
+
+    <!-- Spring Security JDBC user details schema -->
+    <include file="db/changelog/20240101-002-spring-security-users-schema.sql"/>
+
+</databaseChangeLog>
