@@ -1,0 +1,111 @@
+spring:
+  application:
+    name: feedback-service
+
+  # PostgreSQL datasource
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+
+  # JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  # Liquibase configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  # MongoDB and Redis
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/outreach_nosql}
+      auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # Cache
+  cache:
+    type: redis
+
+  # Security: OAuth2 Resource Server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8090/oauth2/jwks}
+
+  # OpenFeign
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 5000
+
+server:
+  port: 9001
+  shutdown: graceful
+
+# Eureka service discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,refresh
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+# Resilience4j
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state:
+          seconds: 30
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration:
+          millis: 500
+  timelimiter:
+    configs:
+      default:
+        timeout-duration:
+          seconds: 5
+
+# Feedback service properties
+feedback-service:
+  max-score-value: 5
+  min-score-value: 1
+  default-page-size: 20
+  max-page-size: 100
