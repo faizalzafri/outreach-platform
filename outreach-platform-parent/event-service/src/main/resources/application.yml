@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: event-service
+
+  # PostgreSQL datasource
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+
+  # JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  # Liquibase configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  # MongoDB
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/outreach_nosql}
+      auto-index-creation: true
+      # Connection pool settings
+      min-connections-per-host: 5
+      max-connections-per-host: 20
+      connect-timeout: 5000
+      socket-timeout: 10000
+
+server:
+  port: 9004
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,refresh
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true

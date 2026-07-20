@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ====================================================== -->
+    <!-- Outreach Platform - PostgreSQL Migration Master Changelog -->
+    <!-- Migrated from MySQL to PostgreSQL 16+                    -->
+    <!-- ====================================================== -->
+
+    <!-- 1. Extensions and baseline setup -->
+    <include file="db/changelog/20240101-001-extensions-and-baseline.sql"/>
+
+    <!-- 2. Core tables -->
+    <include file="db/changelog/20240101-002-create-users-table.sql"/>
+    <include file="db/changelog/20240101-003-create-events-table.sql"/>
+    <include file="db/changelog/20240101-004-create-beneficiaries-table.sql"/>
+    <include file="db/changelog/20240101-005-create-event-beneficiary-table.sql"/>
+    <include file="db/changelog/20240101-006-create-volunteers-table.sql"/>
+    <include file="db/changelog/20240101-007-create-event-enrollment-table.sql"/>
+    <include file="db/changelog/20240101-008-create-poc-assignments-table.sql"/>
+    <include file="db/changelog/20240101-009-create-volunteer-feedback-table.sql"/>
+
+    <!-- 3. Notification and scheduling tables -->
+    <include file="db/changelog/20240101-010-create-notification-templates-table.sql"/>
+    <include file="db/changelog/20240101-011-create-notification-schedules-table.sql"/>
+    <include file="db/changelog/20240101-012-create-report-schedules-table.sql"/>
+
+    <!-- 4. Indexes and full-text search -->
+    <include file="db/changelog/20240101-013-create-indexes-and-fulltext.sql"/>
+
+</databaseChangeLog>
