@@ -16,7 +16,7 @@ import com.outreach.platform.event.config.EventServiceProperties;
  * communication, and type-safe configuration properties.</p>
  */
 @SpringBootApplication(scanBasePackages = "com.outreach.platform")
-@EnableJpaAuditing(auditorRef = "auditorAware")
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 @EnableFeignClients
 @EnableConfigurationProperties(EventServiceProperties.class)
 public class EventServiceApplication {
