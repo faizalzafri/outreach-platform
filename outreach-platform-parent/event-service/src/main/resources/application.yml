@@ -40,9 +40,68 @@ spring:
       connect-timeout: 5000
       socket-timeout: 10000
 
+  # Security - OAuth2 Resource Server JWT validation
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI:http://localhost:8090/oauth2/jwks}
+
+  # OpenFeign client configuration
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 5000
+
 server:
   port: 9004
   shutdown: graceful
+
+# Service discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+# Event Service custom properties
+event-service:
+  max-events-per-page: 50
+  default-page-size: 20
+  event-code-prefix: EVT
+
+# Resilience4j configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+    instances:
+      default:
+        base-config: default
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms
+        exponential-backoff-multiplier: 2
+    instances:
+      default:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+    instances:
+      default:
+        base-config: default
 
 management:
   endpoints:
