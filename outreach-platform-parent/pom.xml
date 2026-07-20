@@ -123,12 +123,12 @@
                 <version>${postgresql.version}</version>
             </dependency>
 
-            <!-- MongoDB Driver -->
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>mongodb-driver-sync</artifactId>
-                <version>${mongodb-driver.version}</version>
-            </dependency>
+        <!-- MongoDB Driver (managed by Spring Boot — do not override) -->
+        <!-- <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>${mongodb-driver.version}</version>
+        </dependency> -->
 
             <!-- Liquibase -->
             <dependency>

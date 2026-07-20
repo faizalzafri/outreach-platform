@@ -120,3 +120,4 @@ coverage/
 # SonarQube
 .sonar/
 .sourcemaps/
+/LEARNING-GUIDE.md
