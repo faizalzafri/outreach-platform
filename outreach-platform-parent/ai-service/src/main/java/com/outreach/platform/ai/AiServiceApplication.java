@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  * All endpoints are restricted to ROLE_ADMIN only.
  * Uses MongoDB for storing AI job results with configurable TTL.
  */
-@SpringBootApplication(scanBasePackages = "com.outreach.platform")
+@SpringBootApplication
 @ConfigurationPropertiesScan
 public class AiServiceApplication {
 

@@ -5,16 +5,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * Main application entry point for the Feedback Service.
  * Responsible for accepting, validating, and persisting volunteer feedback submissions.
  */
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.outreach.platform.feedback", "com.outreach.platform.common"})
 @EnableJpaAuditing
+@EnableJpaRepositories(basePackages = "com.outreach.platform.feedback.repo")
 @EnableFeignClients
 @EnableCaching
 @ConfigurationPropertiesScan

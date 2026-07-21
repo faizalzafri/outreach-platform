@@ -17,17 +17,16 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
 
-  # Liquibase configuration
+  # Liquibase disabled — schema managed by event-service
   liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.xml
-    enabled: true
+    enabled: false
 
   # MongoDB
   data:

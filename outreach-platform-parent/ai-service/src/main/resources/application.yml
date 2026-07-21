@@ -3,11 +3,21 @@ spring:
     name: ai-service
 
   # Exclude JPA/DataSource/Liquibase — AI Service uses MongoDB only
+  # Also exclude OpenAI auto-configuration to prevent ClassNotFound on Alpine JRE;
+  # the OpenAiServiceImpl creates ChatClient manually when provider=openai
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
       - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
 
   # MongoDB (sole data store for AI service)
   data:
@@ -86,11 +96,6 @@ resilience4j:
   timelimiter:
     configs:
       default:
-        timeout-duration:
-          seconds: 30
-    instances:
-      aiProvider:
-        base-config: default
         timeout-duration:
           seconds: 30
 

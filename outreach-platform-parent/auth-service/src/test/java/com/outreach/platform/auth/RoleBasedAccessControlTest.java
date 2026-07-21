@@ -41,6 +41,20 @@ class RoleBasedAccessControlTest extends BaseAuthIntegrationTest {
     @BeforeEach
     void setupTestUsers() {
         userManager = new JdbcUserDetailsManager(dataSource);
+        userManager.setUsersByUsernameQuery(
+                "SELECT username, password, enabled FROM auth_users WHERE username = ?");
+        userManager.setAuthoritiesByUsernameQuery(
+                "SELECT username, authority FROM auth_authorities WHERE username = ?");
+        userManager.setCreateUserSql(
+                "INSERT INTO auth_users (username, password, enabled) VALUES (?,?,?)");
+        userManager.setCreateAuthoritySql(
+                "INSERT INTO auth_authorities (username, authority) VALUES (?,?)");
+        userManager.setUserExistsSql(
+                "SELECT username FROM auth_users WHERE username = ?");
+        userManager.setDeleteUserSql(
+                "DELETE FROM auth_users WHERE username = ?");
+        userManager.setDeleteUserAuthoritiesSql(
+                "DELETE FROM auth_authorities WHERE username = ?");
 
         // Create PMO user if not exists
         if (!userManager.userExists("pmo_user")) {

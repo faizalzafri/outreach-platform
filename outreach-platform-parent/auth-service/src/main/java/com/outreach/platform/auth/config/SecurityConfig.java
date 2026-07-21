@@ -64,11 +64,32 @@ public class SecurityConfig {
 
     /**
      * JDBC-backed user details service for authenticating resource owners.
+     * Uses auth_users/auth_authorities tables to avoid conflict with the platform users table.
      * Default admin user is provisioned on first startup if not already present.
      */
     @Bean
     public UserDetailsService userDetailsService(DataSource dataSource, PasswordEncoder passwordEncoder) {
         JdbcUserDetailsManager userManager = new JdbcUserDetailsManager(dataSource);
+
+        // Point to auth-service specific tables (avoids conflict with event-service users table)
+        userManager.setUsersByUsernameQuery(
+                "SELECT username, password, enabled FROM auth_users WHERE username = ?");
+        userManager.setAuthoritiesByUsernameQuery(
+                "SELECT username, authority FROM auth_authorities WHERE username = ?");
+        userManager.setCreateUserSql(
+                "INSERT INTO auth_users (username, password, enabled) VALUES (?,?,?)");
+        userManager.setCreateAuthoritySql(
+                "INSERT INTO auth_authorities (username, authority) VALUES (?,?)");
+        userManager.setUserExistsSql(
+                "SELECT username FROM auth_users WHERE username = ?");
+        userManager.setDeleteUserSql(
+                "DELETE FROM auth_users WHERE username = ?");
+        userManager.setDeleteUserAuthoritiesSql(
+                "DELETE FROM auth_authorities WHERE username = ?");
+        userManager.setUpdateUserSql(
+                "UPDATE auth_users SET password = ?, enabled = ? WHERE username = ?");
+        userManager.setChangePasswordSql(
+                "UPDATE auth_users SET password = ? WHERE username = ?");
 
         // Provision default admin if not present
         if (!userManager.userExists("admin")) {
