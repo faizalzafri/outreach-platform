@@ -11,6 +11,8 @@ import com.outreach.platform.event.model.dto.EventUpdateRequest;
 import com.outreach.platform.event.model.dto.LifecycleStatsDto;
 import com.outreach.platform.event.repo.EventRepository;
 import jakarta.inject.Inject;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -81,6 +83,7 @@ public class EventService {
      *
      * @throws EventNotFoundException if event not found
      */
+    @Cacheable(value = "eventCache", key = "#eventId")
     @Transactional(readOnly = true)
     public EventDto getEvent(UUID eventId) {
         EventEntity entity = findEntityOrThrow(eventId);
@@ -90,6 +93,7 @@ public class EventService {
     /**
      * Updates event metadata. Only allowed for events not in terminal states.
      */
+    @CacheEvict(value = "eventCache", key = "#eventId")
     @Transactional
     public EventDto updateEvent(UUID eventId, EventUpdateRequest request) {
         EventEntity entity = findEntityOrThrow(eventId);
@@ -101,6 +105,7 @@ public class EventService {
     /**
      * Soft-deletes an event by transitioning it to ARCHIVED status.
      */
+    @CacheEvict(value = "eventCache", key = "#eventId")
     @Transactional
     public void deleteEvent(UUID eventId) {
         EventEntity entity = findEntityOrThrow(eventId);
@@ -114,6 +119,7 @@ public class EventService {
      *
      * @throws InvalidStatusTransitionException if the transition is not allowed
      */
+    @CacheEvict(value = "eventCache", key = "#eventId")
     @Transactional
     public EventDto transitionStatus(UUID eventId, EventStatus targetStatus) {
         EventEntity entity = findEntityOrThrow(eventId);
