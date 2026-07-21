@@ -1,0 +1,304 @@
+{
+  "info": {
+    "name": "Event Service",
+    "description": "API collection for the Outreach Platform Event Service.\nManages outreach event lifecycle, CRUD operations, search, calendar views, and status transitions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9004",
+      "description": "Base URL for the Event Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token"
+    },
+    {
+      "key": "eventId",
+      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "description": "Sample event UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Event CRUD",
+      "description": "Create, read, update, and delete events",
+      "item": [
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventName\": \"Community Clean-Up Drive 2025\",\n  \"eventCode\": \"CCD-2025-BLR\",\n  \"city\": \"Bangalore\",\n  \"category\": \"ENVIRONMENT\",\n  \"description\": \"Annual community clean-up drive in partnership with local NGOs\",\n  \"startDate\": \"2025-03-15\",\n  \"endDate\": \"2025-03-15\",\n  \"maxVolunteers\": 50,\n  \"pocId\": \"b2c3d4e5-f6a7-8901-abcd-ef2345678901\",\n  \"beneficiaryId\": \"c3d4e5f6-a7b8-9012-abcd-ef3456789012\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"eventName\": \"Community Clean-Up Drive 2025\",\n  \"eventCode\": \"CCD-2025-BLR\",\n  \"city\": \"Bangalore\",\n  \"category\": \"ENVIRONMENT\",\n  \"description\": \"Annual community clean-up drive in partnership with local NGOs\",\n  \"startDate\": \"2025-03-15\",\n  \"endDate\": \"2025-03-15\",\n  \"maxVolunteers\": 50,\n  \"status\": \"DRAFT\",\n  \"pocId\": \"b2c3d4e5-f6a7-8901-abcd-ef2345678901\",\n  \"beneficiaryId\": \"c3d4e5f6-a7b8-9012-abcd-ef3456789012\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events?status=PUBLISHED&city=Bangalore&page=0&size=20&sort=startDate,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"],
+              "query": [
+                { "key": "status", "value": "PUBLISHED" },
+                { "key": "city", "value": "Bangalore" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "startDate,asc" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"eventName\": \"Community Clean-Up Drive 2025\",\n      \"eventCode\": \"CCD-2025-BLR\",\n      \"city\": \"Bangalore\",\n      \"category\": \"ENVIRONMENT\",\n      \"status\": \"PUBLISHED\",\n      \"startDate\": \"2025-03-15\",\n      \"endDate\": \"2025-03-15\"\n    }\n  ],\n  \"pageable\": { \"pageNumber\": 0, \"pageSize\": 20 },\n  \"totalElements\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Event by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"eventName\": \"Community Clean-Up Drive 2025\",\n  \"eventCode\": \"CCD-2025-BLR\",\n  \"city\": \"Bangalore\",\n  \"category\": \"ENVIRONMENT\",\n  \"description\": \"Annual community clean-up drive\",\n  \"startDate\": \"2025-03-15\",\n  \"endDate\": \"2025-03-15\",\n  \"maxVolunteers\": 50,\n  \"status\": \"DRAFT\",\n  \"pocId\": \"b2c3d4e5-f6a7-8901-abcd-ef2345678901\",\n  \"beneficiaryId\": \"c3d4e5f6-a7b8-9012-abcd-ef3456789012\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventName\": \"Community Clean-Up Drive 2025 - Updated\",\n  \"description\": \"Updated description for the annual community clean-up drive\",\n  \"maxVolunteers\": 75\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"eventName\": \"Community Clean-Up Drive 2025 - Updated\",\n  \"eventCode\": \"CCD-2025-BLR\",\n  \"city\": \"Bangalore\",\n  \"category\": \"ENVIRONMENT\",\n  \"description\": \"Updated description for the annual community clean-up drive\",\n  \"maxVolunteers\": 75,\n  \"status\": \"DRAFT\",\n  \"updatedAt\": \"2025-01-15T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Event (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle Management",
+      "description": "Event status transitions and lifecycle statistics",
+      "item": [
+        {
+          "name": "Transition Event Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetStatus\": \"PUBLISHED\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Status Changed",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"eventName\": \"Community Clean-Up Drive 2025\",\n  \"status\": \"PUBLISHED\",\n  \"updatedAt\": \"2025-01-15T14:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Lifecycle Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/lifecycle-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "lifecycle-stats"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"draft\": 5,\n  \"published\": 12,\n  \"inProgress\": 3,\n  \"completed\": 45,\n  \"cancelled\": 2,\n  \"total\": 67\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search & Calendar",
+      "description": "Full-text search and calendar view queries",
+      "item": [
+        {
+          "name": "Search Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/search?query=clean-up&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "search"],
+              "query": [
+                { "key": "query", "value": "clean-up" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"eventName\": \"Community Clean-Up Drive 2025\",\n      \"eventCode\": \"CCD-2025-BLR\",\n      \"city\": \"Bangalore\",\n      \"status\": \"PUBLISHED\"\n    }\n  ],\n  \"totalElements\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Calendar View",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/calendar?from=2025-03-01&to=2025-03-31&page=0&size=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "calendar"],
+              "query": [
+                { "key": "from", "value": "2025-03-01" },
+                { "key": "to", "value": "2025-03-31" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "50" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"eventName\": \"Community Clean-Up Drive 2025\",\n      \"startDate\": \"2025-03-15\",\n      \"endDate\": \"2025-03-15\",\n      \"city\": \"Bangalore\",\n      \"status\": \"PUBLISHED\"\n    }\n  ],\n  \"totalElements\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
