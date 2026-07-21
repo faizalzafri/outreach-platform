@@ -58,6 +58,13 @@ spring:
     encoding: UTF-8
     cache: true
 
+  # Security: OAuth2 Resource Server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8090/oauth2/jwks}
+
   # OpenFeign defaults
   cloud:
     openfeign:

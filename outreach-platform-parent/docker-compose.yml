@@ -1,6 +1,6 @@
 services:
   # ─────────────────────────────────────────────────────────────────────────────
-  # Infrastructure Services
+  # Infrastructure
   # ─────────────────────────────────────────────────────────────────────────────
 
   postgres:
@@ -9,13 +9,15 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-outreachfeedbackdb}
-      POSTGRES_USER: ${POSTGRES_USER:-outreach}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      POSTGRES_DB: outreachfeedbackdb
+      POSTGRES_USER: outreach
+      POSTGRES_PASSWORD: outreach_secret
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - outreach-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-outreach} -d ${POSTGRES_DB:-outreachfeedbackdb}"]
+      test: ["CMD-SHELL", "pg_isready -U outreach -d outreachfeedbackdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,9 +30,11 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: ${MONGO_DB:-outreach_nosql}
+      MONGO_INITDB_DATABASE: outreach_nosql
     volumes:
       - mongodb-data:/data/db
+    networks:
+      - outreach-net
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
       interval: 10s
@@ -44,41 +48,15 @@ services:
     container_name: outreach-redis
     ports:
       - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret}
+    command: redis-server --requirepass redis_secret
+    networks:
+      - outreach-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "redis_secret", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
-    stop_grace_period: 15s
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: outreach-keycloak
-    ports:
-      - "8080:8080"
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      KC_DB_USERNAME: ${POSTGRES_USER:-outreach}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-    command: start-dev --import-realm
-    volumes:
-      - ./config/keycloak/outreach-realm.json:/opt/keycloak/data/import/outreach-realm.json:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200\\|UP'"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
     stop_grace_period: 15s
 
   mailhog:
@@ -87,6 +65,8 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+    networks:
+      - outreach-net
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8025 || exit 1"]
       interval: 10s
@@ -96,7 +76,7 @@ services:
     stop_grace_period: 15s
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Platform Services
+  # Platform Infrastructure Services
   # ─────────────────────────────────────────────────────────────────────────────
 
   config-server:
@@ -106,16 +86,9 @@ services:
     ports:
       - "8888:8888"
     environment:
-      CONFIG_REPO_PATH: file:/config
-      CONFIG_SERVER_USER: ${CONFIG_SERVER_USER:-configadmin}
-      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:-configsecret}
-      ENCRYPT_KEY: ${ENCRYPT_KEY:-dev-encrypt-key-change-in-production}
-      EUREKA_ENABLED: "true"
       EUREKA_URI: http://discovery-service:8761/eureka
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
-        -Dspring.profiles.active=native
+    networks:
+      - outreach-net
     volumes:
       - ./config:/config:ro
     healthcheck:
@@ -134,9 +107,8 @@ services:
       - "8761:8761"
     environment:
       EUREKA_URI: http://discovery-service:8761/eureka
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+    networks:
+      - outreach-net
     depends_on:
       config-server:
         condition: service_healthy
@@ -158,11 +130,11 @@ services:
       EUREKA_URI: http://discovery-service:8761/eureka
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      REDIS_PASSWORD: redis_secret
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+    networks:
+      - outreach-net
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -183,14 +155,14 @@ services:
     ports:
       - "8090:8090"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      AUTH_DB_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      AUTH_DB_USER: outreach
+      AUTH_DB_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      IDP_PROVIDER: spring
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -204,6 +176,10 @@ services:
       start_period: 25s
     stop_grace_period: 15s
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Business Services
+  # ─────────────────────────────────────────────────────────────────────────────
+
   event-service:
     build:
       context: ./event-service
@@ -211,18 +187,19 @@ services:
     ports:
       - "9004:9004"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      DATABASE_USERNAME: outreach
+      DATABASE_PASSWORD: outreach_secret
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      REDIS_PASSWORD: redis_secret
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      JWK_SET_URI: http://auth-service:8090/oauth2/jwks
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -247,20 +224,19 @@ services:
     ports:
       - "9001:9001"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      DATABASE_USERNAME: outreach
+      DATABASE_PASSWORD: outreach_secret
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      REDIS_PASSWORD: redis_secret
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JWKS_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
-      IDP_JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -283,23 +259,26 @@ services:
     ports:
       - "9002:9002"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      DATABASE_USERNAME: outreach
+      DATABASE_PASSWORD: outreach_secret
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      SMTP_HOST: ${SMTP_HOST:-mailhog}
-      SMTP_PORT: ${SMTP_PORT:-1025}
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      JWKS_URI: http://auth-service:8090/oauth2/jwks
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
         condition: service_healthy
       discovery-service:
+        condition: service_healthy
+      mailhog:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9002/actuator/health || exit 1"]
@@ -316,15 +295,18 @@ services:
     ports:
       - "9003:9003"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      DATABASE_USERNAME: outreach
+      DATABASE_PASSWORD: outreach_secret
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      JWT_JWK_SET_URI: http://auth-service:8090/oauth2/jwks
+      JWT_ISSUER_URI: http://auth-service:8090
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      INGESTION_INPUT_DIR: /tmp/ingestion
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -347,18 +329,19 @@ services:
     ports:
       - "9005:9005"
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
-      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
+      DATABASE_USERNAME: outreach
+      DATABASE_PASSWORD: outreach_secret
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      REDIS_PASSWORD: redis_secret
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      JWK_SET_URI: http://auth-service:8090/oauth2/jwks
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+    networks:
+      - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -383,12 +366,14 @@ services:
     ports:
       - "9006:9006"
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
-      JAVA_OPTS: >-
-        -XX:+UseG1GC
-        -XX:MaxRAMPercentage=75.0
+      JWKS_URI: http://auth-service:8090/oauth2/jwks
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      AI_PROVIDER: mock
+    networks:
+      - outreach-net
     depends_on:
       mongodb:
         condition: service_healthy
@@ -401,6 +386,14 @@ services:
       retries: 5
       start_period: 30s
     stop_grace_period: 15s
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  outreach-net:
+    driver: bridge
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Volumes
