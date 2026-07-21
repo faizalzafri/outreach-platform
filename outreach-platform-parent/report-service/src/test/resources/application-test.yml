@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: report-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/testdb
+    username: test
+    password: test
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      read-only: true
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+  liquibase:
+    enabled: false
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/test_outreach
+    redis:
+      host: localhost
+      port: 6379
+
+  cache:
+    type: none
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8090/oauth2/jwks
+
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+report-service:
+  default-page-size: 20
+  max-page-size: 100
+  cache-ttl-minutes: 10
+  snapshot-retention-days: 365
