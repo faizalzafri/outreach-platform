@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -16,4 +17,8 @@ public interface PocAssignmentRepository extends JpaRepository<PocAssignmentEnti
     List<PocAssignmentEntity> findByEventId(UUID eventId);
 
     List<PocAssignmentEntity> findByUserId(UUID userId);
+
+    Optional<PocAssignmentEntity> findByEventIdAndUserId(UUID eventId, UUID userId);
+
+    boolean existsByEventIdAndUserId(UUID eventId, UUID userId);
 }
