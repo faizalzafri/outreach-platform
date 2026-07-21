@@ -41,6 +41,7 @@ public class EventService {
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
     private final DomainEventPublisher domainEventPublisher;
+    private final AuditLogService auditLogService;
     private final EventServiceProperties properties;
     private final AtomicLong eventCodeSequence = new AtomicLong(System.currentTimeMillis() % 100000);
 
@@ -48,10 +49,12 @@ public class EventService {
     public EventService(EventRepository eventRepository,
                         EventMapper eventMapper,
                         DomainEventPublisher domainEventPublisher,
+                        AuditLogService auditLogService,
                         EventServiceProperties properties) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
         this.domainEventPublisher = domainEventPublisher;
+        this.auditLogService = auditLogService;
         this.properties = properties;
     }
 
@@ -66,6 +69,10 @@ public class EventService {
         entity.setRegisteredCount(0);
         entity.setAttendedCount(0);
         EventEntity saved = eventRepository.save(entity);
+
+        auditLogService.log("system", "CREATE_EVENT", "Event",
+                saved.getId().toString(), Map.of("eventName", saved.getEventName()));
+
         return eventMapper.toDto(saved);
     }
 
@@ -129,6 +136,11 @@ public class EventService {
                 "newStatus", targetStatus.name(),
                 "transitionedAt", Instant.now().toString()
         ));
+
+        auditLogService.log("system", "UPDATE_STATUS", "Event",
+                eventId.toString(), Map.of(
+                        "previousStatus", currentStatus.name(),
+                        "newStatus", targetStatus.name()));
 
         return eventMapper.toDto(saved);
     }
