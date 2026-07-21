@@ -41,6 +41,11 @@ management:
       exposure:
         include: health,info
 
+# Identity provider settings (required by common-lib)
+idp:
+  provider: spring
+  jwks-uri: http://localhost:8090/oauth2/jwks
+
 platform:
   ai:
     provider: mock
