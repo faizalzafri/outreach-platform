@@ -75,6 +75,10 @@
         <!-- Testing -->
         <testcontainers.version>1.21.4</testcontainers.version>
 
+        <!-- Observability / Tracing -->
+        <micrometer-tracing.version>1.4.2</micrometer-tracing.version>
+        <opentelemetry.version>1.44.1</opentelemetry.version>
+
         <!-- Maven Plugins -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
@@ -179,6 +183,18 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- Observability: Micrometer Tracing + OpenTelemetry -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bridge-otel</artifactId>
+                <version>${micrometer-tracing.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-exporter-otlp</artifactId>
+                <version>${opentelemetry.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

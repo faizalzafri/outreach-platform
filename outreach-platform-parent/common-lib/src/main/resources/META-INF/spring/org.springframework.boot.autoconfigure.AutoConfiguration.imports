@@ -1,1 +1,2 @@
 com.outreach.platform.common.config.IdpAutoConfiguration
+com.outreach.platform.common.health.HealthAutoConfiguration
