@@ -4,6 +4,7 @@ import com.outreach.platform.ingestion.model.FileUploadResponse;
 import com.outreach.platform.ingestion.model.ParseResult;
 import com.outreach.platform.ingestion.model.ValidationResult;
 import com.outreach.platform.ingestion.service.FileParserService;
+import com.outreach.platform.ingestion.service.JobTrackingService;
 import jakarta.inject.Inject;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -41,10 +42,13 @@ public class IngestionController {
     };
 
     private final FileParserService fileParserService;
+    private final JobTrackingService jobTrackingService;
 
     @Inject
-    public IngestionController(FileParserService fileParserService) {
+    public IngestionController(FileParserService fileParserService,
+                               JobTrackingService jobTrackingService) {
         this.fileParserService = fileParserService;
+        this.jobTrackingService = jobTrackingService;
     }
 
     /**
@@ -60,6 +64,14 @@ public class IngestionController {
 
         UUID jobId = UUID.randomUUID();
         log.info("Accepted file upload: {} (jobId={})", file.getOriginalFilename(), jobId);
+
+        jobTrackingService.createJob(
+                jobId.toString(),
+                "FILE_IMPORT",
+                file.getOriginalFilename(),
+                extension,
+                file.getSize()
+        );
 
         FileUploadResponse response = new FileUploadResponse(
                 jobId,
@@ -86,6 +98,14 @@ public class IngestionController {
 
             UUID jobId = UUID.randomUUID();
             log.info("Accepted bulk file upload: {} (jobId={})", file.getOriginalFilename(), jobId);
+
+            jobTrackingService.createJob(
+                    jobId.toString(),
+                    "FILE_IMPORT",
+                    file.getOriginalFilename(),
+                    extension,
+                    file.getSize()
+            );
 
             responses.add(new FileUploadResponse(
                     jobId,
