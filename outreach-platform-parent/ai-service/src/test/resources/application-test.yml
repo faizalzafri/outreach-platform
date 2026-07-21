@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: ai-service
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/outreach_nosql_test
+
+  # Disable Spring AI auto-config during tests
+  ai:
+    openai:
+      api-key: test-key
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          max-tokens: 4096
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8090/oauth2/jwks
+
+server:
+  port: 0
+
+eureka:
+  client:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+platform:
+  ai:
+    provider: openai
+    api-key: test-key
+    model: gpt-4o-mini
+    max-tokens: 4096
+    temperature: 0.7
+    job-result-ttl-hours: 1
+    features:
+      summarize:
+        enabled: false
+      anomalies:
+        enabled: false
+      query:
+        enabled: false
