@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * Main application entry point for the Feedback Service.
  * Responsible for accepting, validating, and persisting volunteer feedback submissions.
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.outreach.platform")
 @EnableJpaAuditing
 @EnableFeignClients
 @EnableCaching

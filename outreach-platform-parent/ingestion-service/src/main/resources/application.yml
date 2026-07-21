@@ -121,3 +121,9 @@ ingestion-service:
 spring.security.oauth2.resourceserver.jwt:
   issuer-uri: ${JWT_ISSUER_URI:http://localhost:8090}
   jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8090/oauth2/jwks}
+
+
+# Identity Provider configuration (shared via common-lib)
+idp:
+  provider: ${IDP_PROVIDER:keycloak}
+  jwks-uri: ${IDP_JWKS_URI:http://localhost:8080/realms/outreach/protocol/openid-connect/certs}

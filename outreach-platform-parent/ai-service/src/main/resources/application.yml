@@ -110,3 +110,9 @@ platform:
         enabled: ${AI_ANOMALIES_ENABLED:false}
       query:
         enabled: ${AI_QUERY_ENABLED:false}
+
+
+# Identity Provider configuration (shared via common-lib)
+idp:
+  provider: ${IDP_PROVIDER:keycloak}
+  jwks-uri: ${IDP_JWKS_URI:http://localhost:8080/realms/outreach/protocol/openid-connect/certs}

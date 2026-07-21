@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * Main application entry point for the Notification Service.
  * Handles email composition, template rendering, SMTP dispatch, and delivery status tracking.
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.outreach.platform")
 @EnableJpaAuditing
 @EnableFeignClients
 @EnableAsync
