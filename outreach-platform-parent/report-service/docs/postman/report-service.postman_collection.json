@@ -1,0 +1,548 @@
+{
+  "info": {
+    "name": "Report Service",
+    "description": "API collection for the Outreach Platform Report Service.\nProvides feedback score aggregation, time-series analytics, dashboard data, report scheduling, and export generation (PDF, CSV, Excel).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9005",
+      "description": "Base URL for the Report Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token"
+    },
+    {
+      "key": "exportJobId",
+      "value": "d4e5f6a7-b8c9-0123-abcd-ef4567890123",
+      "description": "Sample export job UUID"
+    },
+    {
+      "key": "scheduleId",
+      "value": "e5f6a7b8-c9d0-1234-abcd-ef5678901234",
+      "description": "Sample scheduled report UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Aggregation Reports",
+      "description": "Aggregate feedback scores by various dimensions",
+      "item": [
+        {
+          "name": "Report by Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/by-event?dateFrom=2025-01-01&dateTo=2025-06-30&cities=Bangalore,Mumbai&granularity=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "by-event"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "cities", "value": "Bangalore,Mumbai" },
+                { "key": "granularity", "value": "month" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"eventName\": \"Community Clean-Up Drive 2025\",\n      \"avgScore\": 4.2,\n      \"totalResponses\": 42,\n      \"participationRate\": 0.84,\n      \"city\": \"Bangalore\"\n    }\n  ],\n  \"metadata\": {\n    \"dateFrom\": \"2025-01-01\",\n    \"dateTo\": \"2025-06-30\",\n    \"totalEvents\": 12,\n    \"generatedAt\": \"2025-07-01T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Report by Beneficiary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/by-beneficiary?dateFrom=2025-01-01&dateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "by-beneficiary"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"beneficiaryId\": \"c3d4e5f6-a7b8-9012-abcd-ef3456789012\",\n      \"beneficiaryName\": \"Green Earth Foundation\",\n      \"avgScore\": 4.5,\n      \"totalEvents\": 8,\n      \"totalResponses\": 156\n    }\n  ],\n  \"metadata\": {\n    \"dateFrom\": \"2025-01-01\",\n    \"dateTo\": \"2025-06-30\",\n    \"totalBeneficiaries\": 5,\n    \"generatedAt\": \"2025-07-01T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Report by City",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/by-city?dateFrom=2025-01-01&dateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "by-city"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"city\": \"Bangalore\",\n      \"avgScore\": 4.3,\n      \"totalEvents\": 15,\n      \"totalResponses\": 320,\n      \"participationRate\": 0.87\n    },\n    {\n      \"city\": \"Mumbai\",\n      \"avgScore\": 4.1,\n      \"totalEvents\": 10,\n      \"totalResponses\": 210,\n      \"participationRate\": 0.79\n    }\n  ],\n  \"metadata\": {\n    \"dateFrom\": \"2025-01-01\",\n    \"dateTo\": \"2025-06-30\",\n    \"totalCities\": 6,\n    \"generatedAt\": \"2025-07-01T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Report by POC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/by-poc?dateFrom=2025-01-01&dateTo=2025-06-30&pocIds=b2c3d4e5-f6a7-8901-abcd-ef2345678901",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "by-poc"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "pocIds", "value": "b2c3d4e5-f6a7-8901-abcd-ef2345678901" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"pocId\": \"b2c3d4e5-f6a7-8901-abcd-ef2345678901\",\n      \"pocName\": \"Jane Smith\",\n      \"avgScore\": 4.4,\n      \"totalEvents\": 6,\n      \"totalResponses\": 128\n    }\n  ],\n  \"metadata\": {\n    \"dateFrom\": \"2025-01-01\",\n    \"dateTo\": \"2025-06-30\",\n    \"totalPocs\": 3,\n    \"generatedAt\": \"2025-07-01T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Dashboard summary, trends, and KPIs",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard?dateFrom=2025-01-01&dateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "dashboard"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"totalEvents\": 67,\n  \"totalVolunteers\": 1250,\n  \"totalFeedbackResponses\": 3200,\n  \"avgScore\": 4.2,\n  \"participationRate\": 0.82,\n  \"topCity\": \"Bangalore\",\n  \"topBeneficiary\": \"Green Earth Foundation\",\n  \"periodStart\": \"2025-01-01\",\n  \"periodEnd\": \"2025-06-30\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Dashboard Trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard/trends?dateFrom=2025-01-01&dateTo=2025-06-30&granularity=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "dashboard", "trends"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "granularity", "value": "month" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"trends\": [\n    { \"period\": \"2025-01\", \"avgScore\": 4.0, \"totalResponses\": 480, \"eventCount\": 8 },\n    { \"period\": \"2025-02\", \"avgScore\": 4.1, \"totalResponses\": 520, \"eventCount\": 10 },\n    { \"period\": \"2025-03\", \"avgScore\": 4.3, \"totalResponses\": 610, \"eventCount\": 12 }\n  ],\n  \"granularity\": \"month\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Dashboard KPIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard/kpis?dateFrom=2025-01-01&dateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "dashboard", "kpis"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"nps\": 72,\n  \"avgFeedbackScore\": 4.2,\n  \"participationRate\": 0.82,\n  \"repeatVolunteerRate\": 0.65,\n  \"avgEventsPerVolunteer\": 2.3,\n  \"feedbackCompletionRate\": 0.91,\n  \"topPerformingCity\": \"Bangalore\",\n  \"periodStart\": \"2025-01-01\",\n  \"periodEnd\": \"2025-06-30\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "description": "Time-series, comparison, heatmap, sentiment, participation rate, and NPS",
+      "item": [
+        {
+          "name": "Time Series",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/time-series?dateFrom=2025-01-01&dateTo=2025-06-30&granularity=week&eventIds=a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "time-series"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "granularity", "value": "week" },
+                { "key": "eventIds", "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"series\": [\n    { \"period\": \"2025-W01\", \"avgScore\": 4.0, \"responseCount\": 25 },\n    { \"period\": \"2025-W02\", \"avgScore\": 4.2, \"responseCount\": 30 },\n    { \"period\": \"2025-W03\", \"avgScore\": 4.1, \"responseCount\": 28 }\n  ],\n  \"granularity\": \"week\",\n  \"dateFrom\": \"2025-01-01\",\n  \"dateTo\": \"2025-06-30\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Comparison",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/comparison?eventIds=a1b2c3d4-e5f6-7890-abcd-ef1234567890,b2c3d4e5-f6a7-8901-abcd-ef2345678901",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "comparison"],
+              "query": [
+                { "key": "eventIds", "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890,b2c3d4e5-f6a7-8901-abcd-ef2345678901" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"comparisons\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"eventName\": \"Community Clean-Up Drive 2025\",\n      \"avgScore\": 4.2,\n      \"totalResponses\": 42,\n      \"participationRate\": 0.84\n    },\n    {\n      \"eventId\": \"b2c3d4e5-f6a7-8901-abcd-ef2345678901\",\n      \"eventName\": \"Tech Mentorship Program\",\n      \"avgScore\": 4.5,\n      \"totalResponses\": 35,\n      \"participationRate\": 0.92\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Heatmap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/heatmap?dateFrom=2025-01-01&dateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "heatmap"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"heatmapData\": [\n    { \"city\": \"Bangalore\", \"latitude\": 12.9716, \"longitude\": 77.5946, \"intensity\": 0.95, \"eventCount\": 15 },\n    { \"city\": \"Mumbai\", \"latitude\": 19.076, \"longitude\": 72.8777, \"intensity\": 0.78, \"eventCount\": 10 },\n    { \"city\": \"Delhi\", \"latitude\": 28.7041, \"longitude\": 77.1025, \"intensity\": 0.62, \"eventCount\": 7 }\n  ],\n  \"dateFrom\": \"2025-01-01\",\n  \"dateTo\": \"2025-06-30\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sentiment Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/sentiment?dateFrom=2025-01-01&dateTo=2025-06-30&eventIds=a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "sentiment"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "eventIds", "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"positive\": 0.68,\n  \"neutral\": 0.22,\n  \"negative\": 0.10,\n  \"totalAnalyzed\": 3200,\n  \"topPositiveThemes\": [\"organization\", \"impact\", \"teamwork\"],\n  \"topNegativeThemes\": [\"logistics\", \"timing\"]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Participation Rate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/participation-rate?dateFrom=2025-01-01&dateTo=2025-06-30&cities=Bangalore",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "participation-rate"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "cities", "value": "Bangalore" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"overallRate\": 0.82,\n  \"byEvent\": [\n    { \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"eventName\": \"Community Clean-Up Drive 2025\", \"registered\": 50, \"attended\": 42, \"rate\": 0.84 }\n  ],\n  \"dateFrom\": \"2025-01-01\",\n  \"dateTo\": \"2025-06-30\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Net Promoter Score",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/nps?dateFrom=2025-01-01&dateTo=2025-06-30&eventIds=a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "nps"],
+              "query": [
+                { "key": "dateFrom", "value": "2025-01-01" },
+                { "key": "dateTo", "value": "2025-06-30" },
+                { "key": "eventIds", "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"nps\": 72,\n  \"promoters\": 0.78,\n  \"passives\": 0.16,\n  \"detractors\": 0.06,\n  \"totalResponses\": 3200,\n  \"byEvent\": [\n    { \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"eventName\": \"Community Clean-Up Drive 2025\", \"nps\": 75 }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "description": "Async report export and job status",
+      "item": [
+        {
+          "name": "Generate Export",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "export"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportType\": \"BY_EVENT\",\n  \"format\": \"EXCEL\",\n  \"dateFrom\": \"2025-01-01\",\n  \"dateTo\": \"2025-06-30\",\n  \"cities\": [\"Bangalore\", \"Mumbai\"],\n  \"eventIds\": [],\n  \"includeCharts\": true\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "status": "Accepted",
+              "code": 202,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"jobId\": \"d4e5f6a7-b8c9-0123-abcd-ef4567890123\",\n  \"status\": \"PENDING\",\n  \"reportType\": \"BY_EVENT\",\n  \"format\": \"EXCEL\",\n  \"createdAt\": \"2025-07-01T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Export Job Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/export/{{exportJobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "export", "{{exportJobId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Completed",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"jobId\": \"d4e5f6a7-b8c9-0123-abcd-ef4567890123\",\n  \"status\": \"COMPLETED\",\n  \"reportType\": \"BY_EVENT\",\n  \"format\": \"EXCEL\",\n  \"downloadUrl\": \"/reports/export/d4e5f6a7-b8c9-0123-abcd-ef4567890123/download\",\n  \"fileSize\": 245760,\n  \"createdAt\": \"2025-07-01T10:00:00Z\",\n  \"completedAt\": \"2025-07-01T10:00:15Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scheduled Reports",
+      "description": "CRUD operations for scheduled report configurations",
+      "item": [
+        {
+          "name": "List Scheduled Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "scheduled"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"e5f6a7b8-c9d0-1234-abcd-ef5678901234\",\n      \"name\": \"Weekly City Report\",\n      \"reportType\": \"BY_CITY\",\n      \"cronExpression\": \"0 0 9 * * MON\",\n      \"exportFormat\": \"PDF\",\n      \"status\": \"ACTIVE\",\n      \"recipients\": [\"admin@company.com\"],\n      \"lastRunAt\": \"2025-06-30T09:00:00Z\",\n      \"nextRunAt\": \"2025-07-07T09:00:00Z\"\n    }\n  ],\n  \"totalElements\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Scheduled Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "scheduled"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekly City Report\",\n  \"reportType\": \"BY_CITY\",\n  \"cronExpression\": \"0 0 9 * * MON\",\n  \"exportFormat\": \"PDF\",\n  \"filterCriteria\": {\n    \"cities\": [\"Bangalore\", \"Mumbai\"]\n  },\n  \"recipients\": [\"admin@company.com\", \"pmo@company.com\"]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"e5f6a7b8-c9d0-1234-abcd-ef5678901234\",\n  \"name\": \"Weekly City Report\",\n  \"reportType\": \"BY_CITY\",\n  \"cronExpression\": \"0 0 9 * * MON\",\n  \"exportFormat\": \"PDF\",\n  \"status\": \"ACTIVE\",\n  \"filterCriteria\": { \"cities\": [\"Bangalore\", \"Mumbai\"] },\n  \"recipients\": [\"admin@company.com\", \"pmo@company.com\"],\n  \"createdAt\": \"2025-07-01T10:00:00Z\",\n  \"nextRunAt\": \"2025-07-07T09:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Scheduled Report",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/scheduled/{{scheduleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "scheduled", "{{scheduleId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bi-Weekly City Report\",\n  \"cronExpression\": \"0 0 9 1,15 * *\",\n  \"exportFormat\": \"EXCEL\",\n  \"recipients\": [\"admin@company.com\"]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"e5f6a7b8-c9d0-1234-abcd-ef5678901234\",\n  \"name\": \"Bi-Weekly City Report\",\n  \"reportType\": \"BY_CITY\",\n  \"cronExpression\": \"0 0 9 1,15 * *\",\n  \"exportFormat\": \"EXCEL\",\n  \"status\": \"ACTIVE\",\n  \"recipients\": [\"admin@company.com\"],\n  \"updatedAt\": \"2025-07-01T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Scheduled Report",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/scheduled/{{scheduleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "scheduled", "{{scheduleId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

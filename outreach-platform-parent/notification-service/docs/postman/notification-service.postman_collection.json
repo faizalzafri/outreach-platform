@@ -1,0 +1,466 @@
+{
+  "info": {
+    "name": "Notification Service",
+    "description": "API collection for the Outreach Platform Notification Service.\nManages email delivery tracking, retry operations, notification templates, scheduling, preferences, history, and analytics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9002",
+      "description": "Base URL for the Notification Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token"
+    },
+    {
+      "key": "eventId",
+      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "description": "Sample event ID"
+    },
+    {
+      "key": "templateId",
+      "value": "t1a2b3c4-d5e6-7890-abcd-ef1234567890",
+      "description": "Sample template UUID"
+    },
+    {
+      "key": "scheduleId",
+      "value": "s1a2b3c4-d5e6-7890-abcd-ef1234567890",
+      "description": "Sample schedule UUID"
+    },
+    {
+      "key": "employeeId",
+      "value": "EMP-12345",
+      "description": "Sample employee ID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Delivery Status & Retry",
+      "description": "Track email delivery status and retry failed notifications",
+      "item": [
+        {
+          "name": "Get Delivery Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/status/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "status", "{{eventId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"totalSent\": 50,\n  \"delivered\": 45,\n  \"failed\": 3,\n  \"bounced\": 2,\n  \"pending\": 0,\n  \"deliveryRate\": 90.0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Retry Failed Notifications",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/retry/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "retry", "{{eventId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Retried",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"retriedCount\": 3,\n  \"message\": \"Queued 3 failed deliveries for retry\"\n}"
+            },
+            {
+              "name": "200 OK - No Failures",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"retriedCount\": 0,\n  \"message\": \"No failed deliveries found for event\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "History & Analytics",
+      "description": "Delivery history and analytics endpoints",
+      "item": [
+        {
+          "name": "Get Delivery History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/history?page=0&size=20&sort=sentAt,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "history"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "sentAt,desc" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"del-001\",\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"recipientEmail\": \"volunteer@example.com\",\n      \"subject\": \"Feedback Request: Community Clean-Up\",\n      \"status\": \"DELIVERED\",\n      \"sentAt\": \"2025-01-15T10:30:00Z\",\n      \"deliveredAt\": \"2025-01-15T10:30:05Z\"\n    }\n  ],\n  \"totalElements\": 150,\n  \"totalPages\": 8\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Delivery Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "analytics"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"totalSent\": 1250,\n  \"totalDelivered\": 1180,\n  \"totalFailed\": 45,\n  \"totalBounced\": 25,\n  \"deliveryRate\": 94.4,\n  \"failureRate\": 3.6,\n  \"bounceRate\": 2.0\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "description": "Notification template CRUD and preview operations",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/templates?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "templates"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"t1a2b3c4-d5e6-7890-abcd-ef1234567890\",\n      \"name\": \"Feedback Request\",\n      \"subject\": \"We'd love your feedback on {{eventName}}\",\n      \"bodyTemplate\": \"Dear {{volunteerName}},\\n\\nThank you for participating in {{eventName}}...\",\n      \"active\": true,\n      \"createdAt\": \"2025-01-10T08:00:00Z\"\n    }\n  ],\n  \"totalElements\": 5,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "templates"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Event Reminder\",\n  \"subject\": \"Reminder: {{eventName}} is coming up!\",\n  \"bodyTemplate\": \"Dear {{volunteerName}},\\n\\nThis is a friendly reminder that {{eventName}} is scheduled for {{eventDate}}.\\n\\nLocation: {{eventCity}}\\n\\nThank you!\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"t2b3c4d5-e6f7-8901-abcd-ef2345678901\",\n  \"name\": \"Event Reminder\",\n  \"subject\": \"Reminder: {{eventName}} is coming up!\",\n  \"bodyTemplate\": \"Dear {{volunteerName}},\\n\\nThis is a friendly reminder...\",\n  \"active\": true,\n  \"createdAt\": \"2025-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/templates/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "templates", "{{templateId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Feedback Request - Updated\",\n  \"subject\": \"Your feedback matters! {{eventName}}\",\n  \"bodyTemplate\": \"Hi {{volunteerName}},\\n\\nWe'd love to hear about your experience at {{eventName}}...\\n\\nBest regards\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"t1a2b3c4-d5e6-7890-abcd-ef1234567890\",\n  \"name\": \"Feedback Request - Updated\",\n  \"subject\": \"Your feedback matters! {{eventName}}\",\n  \"bodyTemplate\": \"Hi {{volunteerName}},\\n\\nWe'd love to hear about your experience...\",\n  \"active\": true,\n  \"updatedAt\": \"2025-01-15T11:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Template",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/templates/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "templates", "{{templateId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Preview Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/templates/{{templateId}}/preview",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "templates", "{{templateId}}", "preview"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variables\": {\n    \"volunteerName\": \"John Doe\",\n    \"eventName\": \"Community Clean-Up Drive 2025\",\n    \"eventDate\": \"March 15, 2025\",\n    \"eventCity\": \"Bangalore\"\n  }\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Rendered Preview",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"renderedSubject\": \"We'd love your feedback on Community Clean-Up Drive 2025\",\n  \"renderedBody\": \"Dear John Doe,\\n\\nThank you for participating in Community Clean-Up Drive 2025...\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scheduling",
+      "description": "Notification scheduling management",
+      "item": [
+        {
+          "name": "List Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/schedule?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "schedule"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"s1a2b3c4-d5e6-7890-abcd-ef1234567890\",\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"templateId\": \"t1a2b3c4-d5e6-7890-abcd-ef1234567890\",\n      \"scheduledAt\": \"2025-03-16T09:00:00Z\",\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2025-01-15T10:30:00Z\"\n    }\n  ],\n  \"totalElements\": 3,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "schedule"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"templateId\": \"{{templateId}}\",\n  \"scheduledAt\": \"2025-03-16T09:00:00Z\",\n  \"recipients\": \"ALL_VOLUNTEERS\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"s2b3c4d5-e6f7-8901-abcd-ef2345678901\",\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"templateId\": \"t1a2b3c4-d5e6-7890-abcd-ef1234567890\",\n  \"scheduledAt\": \"2025-03-16T09:00:00Z\",\n  \"recipients\": \"ALL_VOLUNTEERS\",\n  \"status\": \"PENDING\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/schedule/{{scheduleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "schedule", "{{scheduleId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Preferences",
+      "description": "Notification preference management per employee",
+      "item": [
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/preferences/{{employeeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "preferences", "{{employeeId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"employeeId\": \"EMP-12345\",\n  \"emailEnabled\": true,\n  \"feedbackReminders\": true,\n  \"eventNotifications\": true,\n  \"marketingEmails\": false,\n  \"updatedAt\": \"2025-01-10T08:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/preferences/{{employeeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "preferences", "{{employeeId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailEnabled\": true,\n  \"feedbackReminders\": true,\n  \"eventNotifications\": false,\n  \"marketingEmails\": false\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"employeeId\": \"EMP-12345\",\n  \"emailEnabled\": true,\n  \"feedbackReminders\": true,\n  \"eventNotifications\": false,\n  \"marketingEmails\": false,\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

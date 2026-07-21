@@ -1,0 +1,113 @@
+{
+  "info": {
+    "name": "AI Service",
+    "description": "API collection for the Outreach Platform AI Service.\nProvides AI-powered features for admin users including feedback summarization, anomaly detection, and natural language data queries. All endpoints are async (return 202 + jobId).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9006",
+      "description": "Base URL for the AI Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token (ROLE_ADMIN required)"
+    },
+    {
+      "key": "jobId",
+      "value": "f6a7b8c9-d0e1-2345-abcd-ef6789012345",
+      "description": "Sample AI job UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "AI Operations",
+      "description": "AI-powered analysis endpoints (async, ADMIN only)",
+      "item": [
+        {
+          "name": "Summarize Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ai/summarize",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "summarize"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"includeComments\": true,\n  \"maxTokens\": 500,\n  \"language\": \"en\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "status": "Accepted",
+              "code": 202,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"jobId\": \"f6a7b8c9-d0e1-2345-abcd-ef6789012345\",\n  \"type\": \"SUMMARIZE\",\n  \"status\": \"PENDING\",\n  \"createdAt\": \"2025-07-01T10:00:00Z\"\n}"
+            },
+            {
+              "name": "501 Feature Disabled",
+              "status": "Not Implemented",
+              "code": 501,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2025-07-01T10:00:00Z\",\n  \"status\": 501,\n  \"error\": \"AI_FEATURE_DISABLED\",\n  \"message\": \"The summarize feature is currently disabled\",\n  \"correlationId\": \"abc123\"\n}"
+            },
+            {
+              "name": "403 Forbidden (non-ADMIN)",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2025-07-01T10:00:00Z\",\n  \"status\": 403,\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Access denied. ROLE_ADMIN required.\",\n  \"correlationId\": \"abc123\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Detect Anomalies",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ai/anomalies",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "anomalies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datasetType\": \"FEEDBACK_SCORES\",\n  \"dateFrom\": \"2025-01-01\",\n  \"dateTo\": \"2025-06-30\",\n  \"eventIds\": [\"a1b2c3d4-e5f6-7890-abcd-ef1234567890\"],\n  \"sensitivity\": \"MEDIUM\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "status": "Accepted",
+              "code": 202,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"jobId\": \"f6a7b8c9-d0e1-2345-abcd-ef6789012345\",\n  \"type\": \"ANOMALY_DETECTION\",\n  \"status\": \"PENDING\",\n  \"createdAt\": \"2025-07-01T10:00:00Z\"\n}"
+            },
+            {
+              "name": "501 Feature Disabled",
+              "status": "Not Implemented",
+              "code": 501,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2025-07-01T10:00:00Z\",\n  \"status\": 501,\n  \"error\": \"AI_FEATURE_DISABLED\",\n  \"message\": \"The anomaly detection feature is currently disabled\",\n  \"correlationId\": \"abc123\"\n}"
+            }
+          ]
+        },

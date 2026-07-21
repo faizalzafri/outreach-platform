@@ -1,0 +1,396 @@
+{
+  "info": {
+    "name": "Ingestion Service",
+    "description": "API collection for the Outreach Platform Ingestion Service.\nHandles file uploads (single and bulk), dry-run validation, template downloads, and job tracking (status, progress, errors, cancellation).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9003",
+      "description": "Base URL for the Ingestion Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token"
+    },
+    {
+      "key": "jobId",
+      "value": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+      "description": "Sample job UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "File Upload",
+      "description": "Upload files for processing (single and bulk)",
+      "item": [
+        {
+          "name": "Upload Single File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "upload"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/volunteers.xlsx",
+                  "description": "Excel or CSV file with volunteer data"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "status": "Accepted",
+              "code": 202,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"fileName\": \"volunteers.xlsx\",\n  \"status\": \"ACCEPTED\",\n  \"acceptedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Empty File",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"File must not be empty\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Unsupported Extension",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Unsupported file extension: .pdf. Allowed extensions: [.xlsx, .xls, .csv]\"\n}"
+            },
+            {
+              "name": "413 Payload Too Large",
+              "status": "Payload Too Large",
+              "code": 413,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 413,\n  \"error\": \"Payload Too Large\",\n  \"message\": \"File size exceeds maximum allowed size of 10 MB\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload Bulk Files",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/upload/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "upload", "bulk"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "/path/to/volunteers-batch1.xlsx",
+                  "description": "First file in bulk upload"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "/path/to/volunteers-batch2.csv",
+                  "description": "Second file in bulk upload"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "status": "Accepted",
+              "code": 202,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\n  {\n    \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n    \"fileName\": \"volunteers-batch1.xlsx\",\n    \"status\": \"ACCEPTED\",\n    \"acceptedAt\": \"2025-01-15T10:30:00Z\"\n  },\n  {\n    \"jobId\": \"d2e3f4a5-b6c7-8901-abcd-ef2345678901\",\n    \"fileName\": \"volunteers-batch2.csv\",\n    \"status\": \"ACCEPTED\",\n    \"acceptedAt\": \"2025-01-15T10:30:00Z\"\n  }\n]"
+            },
+            {
+              "name": "400 Bad Request - Empty File in Batch",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"File must not be empty\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validation",
+      "description": "Dry-run file validation without importing",
+      "item": [
+        {
+          "name": "Validate File (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "validate"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/volunteers.xlsx",
+                  "description": "File to validate without importing"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Valid File with Errors",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"fileName\": \"volunteers.xlsx\",\n  \"totalRows\": 50,\n  \"validCount\": 48,\n  \"errorCount\": 2,\n  \"errors\": [\n    {\n      \"row\": 12,\n      \"field\": \"email\",\n      \"message\": \"Invalid email format\"\n    },\n    {\n      \"row\": 35,\n      \"field\": \"employeeId\",\n      \"message\": \"Missing required field\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "200 OK - Fully Valid File",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"fileName\": \"volunteers-clean.xlsx\",\n  \"totalRows\": 30,\n  \"validCount\": 30,\n  \"errorCount\": 0,\n  \"errors\": []\n}"
+            },
+            {
+              "name": "400 Bad Request - Empty File",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"File must not be empty\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "description": "Download import templates",
+      "item": [
+        {
+          "name": "Download Import Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "templates"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Excel Template",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+                { "key": "Content-Disposition", "value": "attachment; filename=\"volunteer-import-template.xlsx\"" }
+              ],
+              "body": "[Binary Excel file - template with headers: employeeId, fullName, email, phone, baseLocation, department, designation, skills, eventCode]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Job Tracking",
+      "description": "Job status, progress, error details, and cancellation",
+      "item": [
+        {
+          "name": "List All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/jobs?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "jobs"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated Jobs",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n      \"jobType\": \"FILE_IMPORT\",\n      \"fileName\": \"volunteers.xlsx\",\n      \"status\": \"COMPLETED\",\n      \"progress\": 100,\n      \"totalRows\": 50,\n      \"processedRows\": 50,\n      \"successCount\": 48,\n      \"errorCount\": 2,\n      \"createdAt\": \"2025-01-15T10:30:00Z\",\n      \"startedAt\": \"2025-01-15T10:30:05Z\",\n      \"completedAt\": \"2025-01-15T10:31:20Z\"\n    },\n    {\n      \"id\": \"d2e3f4a5-b6c7-8901-abcd-ef2345678901\",\n      \"jobType\": \"FILE_IMPORT\",\n      \"fileName\": \"events-q1.csv\",\n      \"status\": \"RUNNING\",\n      \"progress\": 65,\n      \"totalRows\": 200,\n      \"processedRows\": 130,\n      \"successCount\": 128,\n      \"errorCount\": 2,\n      \"createdAt\": \"2025-01-15T10:35:00Z\",\n      \"startedAt\": \"2025-01-15T10:35:02Z\",\n      \"completedAt\": null\n    }\n  ],\n  \"pageable\": {\n    \"pageNumber\": 0,\n    \"pageSize\": 20\n  },\n  \"totalElements\": 2,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Job Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "jobs", "{{jobId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Completed Job",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"jobType\": \"FILE_IMPORT\",\n  \"fileName\": \"volunteers.xlsx\",\n  \"status\": \"COMPLETED\",\n  \"progress\": 100,\n  \"totalRows\": 50,\n  \"processedRows\": 50,\n  \"successCount\": 48,\n  \"errorCount\": 2,\n  \"errors\": [\n    \"Row 12: Invalid email format for field 'email'\",\n    \"Row 35: Missing required field 'employeeId'\"\n  ],\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"startedAt\": \"2025-01-15T10:30:05Z\",\n  \"completedAt\": \"2025-01-15T10:31:20Z\",\n  \"updatedAt\": \"2025-01-15T10:31:20Z\"\n}"
+            },
+            {
+              "name": "200 OK - Running Job",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"id\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"jobType\": \"FILE_IMPORT\",\n  \"fileName\": \"volunteers-large.xlsx\",\n  \"status\": \"RUNNING\",\n  \"progress\": 45,\n  \"totalRows\": 500,\n  \"processedRows\": 225,\n  \"successCount\": 220,\n  \"errorCount\": 5,\n  \"errors\": [],\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"startedAt\": \"2025-01-15T10:30:02Z\",\n  \"completedAt\": null,\n  \"updatedAt\": \"2025-01-15T10:32:15Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Job not found: c1d2e3f4-a5b6-7890-abcd-ef1234567890\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Job Errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/jobs/{{jobId}}/errors",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "jobs", "{{jobId}}", "errors"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Errors Found",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"errorCount\": 3,\n  \"errors\": [\n    \"Row 12: Invalid email format for field 'email'\",\n    \"Row 35: Missing required field 'employeeId'\",\n    \"Row 42: Duplicate employeeId 'EMP-12345'\"\n  ]\n}"
+            },
+            {
+              "name": "200 OK - No Errors",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"errorCount\": 0,\n  \"errors\": []\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Job not found: c1d2e3f4-a5b6-7890-abcd-ef1234567890\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Job",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ingestion/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingestion", "jobs", "{{jobId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Cancelled",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"status\": \"CANCELLED\",\n  \"message\": \"Job cancelled successfully\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Cannot Cancel Completed Job",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"jobId\": \"c1d2e3f4-a5b6-7890-abcd-ef1234567890\",\n  \"status\": \"COMPLETED\",\n  \"message\": \"Cannot cancel job in COMPLETED state\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Job not found: c1d2e3f4-a5b6-7890-abcd-ef1234567890\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

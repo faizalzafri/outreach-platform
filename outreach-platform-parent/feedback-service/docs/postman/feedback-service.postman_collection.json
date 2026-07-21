@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "Feedback Service",
+    "description": "API collection for the Outreach Platform Feedback Service.\nManages volunteer feedback submission, retrieval, search, export, and metadata (categories, tags).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9001",
+      "description": "Base URL for the Feedback Service"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "OAuth2 Bearer token"
+    },
+    {
+      "key": "eventId",
+      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "description": "Sample event UUID"
+    },
+    {
+      "key": "employeeId",
+      "value": "f1e2d3c4-b5a6-7890-abcd-ef0987654321",
+      "description": "Sample employee UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Feedback CRUD",
+      "description": "Core feedback create, read, update, and delete operations",
+      "item": [
+        {
+          "name": "Submit Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"score\": 8,\n  \"comment\": \"Great event, well organized and very impactful.\",\n  \"category\": \"EVENT_QUALITY\",\n  \"tags\": [\"well-organized\", \"impactful\"],\n  \"sentiment\": \"POSITIVE\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"employeeId\": \"f1e2d3c4-b5a6-7890-abcd-ef0987654321\",\n  \"score\": 8,\n  \"comment\": \"Great event, well organized and very impactful.\",\n  \"category\": \"EVENT_QUALITY\",\n  \"tags\": [\"well-organized\", \"impactful\"],\n  \"sentiment\": \"POSITIVE\",\n  \"status\": \"SUBMITTED\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"fieldErrors\": [\n    {\n      \"field\": \"score\",\n      \"message\": \"Score must be between 1 and 10\"\n    },\n    {\n      \"field\": \"eventId\",\n      \"message\": \"Event ID is required\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "409 Conflict - Duplicate Feedback",
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Feedback already exists for event a1b2c3d4-e5f6-7890-abcd-ef1234567890 and employee f1e2d3c4-b5a6-7890-abcd-ef0987654321\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Feedback by Composite Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/{{eventId}}/{{employeeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "{{eventId}}", "{{employeeId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"employeeId\": \"f1e2d3c4-b5a6-7890-abcd-ef0987654321\",\n  \"score\": 8,\n  \"comment\": \"Great event, well organized and very impactful.\",\n  \"category\": \"EVENT_QUALITY\",\n  \"tags\": [\"well-organized\", \"impactful\"],\n  \"sentiment\": \"POSITIVE\",\n  \"status\": \"SUBMITTED\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T10:30:00Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Feedback not found for event a1b2c3d4-e5f6-7890-abcd-ef1234567890 and employee f1e2d3c4-b5a6-7890-abcd-ef0987654321\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Feedback",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/{{eventId}}/{{employeeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "{{eventId}}", "{{employeeId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 9,\n  \"comment\": \"Updated: Even better than I initially thought!\",\n  \"category\": \"EVENT_QUALITY\",\n  \"tags\": [\"well-organized\", \"impactful\", \"recommend\"]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"employeeId\": \"f1e2d3c4-b5a6-7890-abcd-ef0987654321\",\n  \"score\": 9,\n  \"comment\": \"Updated: Even better than I initially thought!\",\n  \"category\": \"EVENT_QUALITY\",\n  \"tags\": [\"well-organized\", \"impactful\", \"recommend\"],\n  \"sentiment\": \"POSITIVE\",\n  \"status\": \"SUBMITTED\",\n  \"createdAt\": \"2025-01-15T10:30:00Z\",\n  \"updatedAt\": \"2025-01-15T11:45:00Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T11:45:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Feedback not found for event a1b2c3d4-e5f6-7890-abcd-ef1234567890 and employee f1e2d3c4-b5a6-7890-abcd-ef0987654321\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T11:45:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"fieldErrors\": [\n    {\n      \"field\": \"score\",\n      \"message\": \"Score must be between 1 and 10\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Soft Delete Feedback",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/{{eventId}}/{{employeeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "{{eventId}}", "{{employeeId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Feedback not found for event a1b2c3d4-e5f6-7890-abcd-ef1234567890 and employee f1e2d3c4-b5a6-7890-abcd-ef0987654321\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Feedback Queries",
+      "description": "Search, list, and status queries for feedback",
+      "item": [
+        {
+          "name": "List Feedback by Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/event/{{eventId}}?page=0&size=20&sort=createdAt,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "event", "{{eventId}}"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "createdAt,desc" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Paginated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"employeeId\": \"f1e2d3c4-b5a6-7890-abcd-ef0987654321\",\n      \"score\": 8,\n      \"comment\": \"Great event!\",\n      \"category\": \"EVENT_QUALITY\",\n      \"tags\": [\"well-organized\", \"impactful\"],\n      \"sentiment\": \"POSITIVE\",\n      \"status\": \"SUBMITTED\",\n      \"createdAt\": \"2025-01-15T10:30:00Z\"\n    }\n  ],\n  \"pageable\": {\n    \"pageNumber\": 0,\n    \"pageSize\": 20\n  },\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Event Feedback Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/event/{{eventId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "event", "{{eventId}}", "status"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"totalVolunteers\": 25,\n  \"feedbackReceived\": 18,\n  \"feedbackPending\": 7,\n  \"completionRate\": 72.0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Feedback - All Filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/search?eventId={{eventId}}&employeeId={{employeeId}}&category=EVENT_QUALITY&sentiment=POSITIVE&status=SUBMITTED&minScore=7&maxScore=10&dateFrom=2025-01-01T00:00:00Z&dateTo=2025-12-31T23:59:59Z&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "search"],
+              "query": [
+                { "key": "eventId", "value": "{{eventId}}" },
+                { "key": "employeeId", "value": "{{employeeId}}" },
+                { "key": "category", "value": "EVENT_QUALITY" },
+                { "key": "sentiment", "value": "POSITIVE" },
+                { "key": "status", "value": "SUBMITTED" },
+                { "key": "minScore", "value": "7" },
+                { "key": "maxScore", "value": "10" },
+                { "key": "dateFrom", "value": "2025-01-01T00:00:00Z" },
+                { "key": "dateTo", "value": "2025-12-31T23:59:59Z" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Search Results",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"employeeId\": \"f1e2d3c4-b5a6-7890-abcd-ef0987654321\",\n      \"score\": 8,\n      \"comment\": \"Great event, well organized and very impactful.\",\n      \"category\": \"EVENT_QUALITY\",\n      \"tags\": [\"well-organized\", \"impactful\"],\n      \"sentiment\": \"POSITIVE\",\n      \"status\": \"SUBMITTED\",\n      \"createdAt\": \"2025-01-15T10:30:00Z\"\n    }\n  ],\n  \"pageable\": {\n    \"pageNumber\": 0,\n    \"pageSize\": 20\n  },\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Feedback - By Score Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/search?minScore=1&maxScore=5&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "search"],
+              "query": [
+                { "key": "minScore", "value": "1" },
+                { "key": "maxScore", "value": "5" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Low Score Results",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"employeeId\": \"e5f6a7b8-c9d0-1234-abcd-ef5678901234\",\n      \"score\": 3,\n      \"comment\": \"Could have been better organized.\",\n      \"category\": \"LOGISTICS\",\n      \"tags\": [\"needs-improvement\"],\n      \"sentiment\": \"NEGATIVE\",\n      \"status\": \"SUBMITTED\",\n      \"createdAt\": \"2025-01-16T09:15:00Z\"\n    }\n  ],\n  \"pageable\": {\n    \"pageNumber\": 0,\n    \"pageSize\": 20\n  },\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Feedback - By Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/search?category=LOGISTICS&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "search"],
+              "query": [
+                { "key": "category", "value": "LOGISTICS" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"content\": [\n    {\n      \"eventId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"employeeId\": \"e5f6a7b8-c9d0-1234-abcd-ef5678901234\",\n      \"score\": 6,\n      \"comment\": \"Logistics could have been smoother.\",\n      \"category\": \"LOGISTICS\",\n      \"tags\": [\"needs-improvement\"],\n      \"sentiment\": \"NEUTRAL\",\n      \"status\": \"SUBMITTED\",\n      \"createdAt\": \"2025-01-16T14:00:00Z\"\n    }\n  ],\n  \"pageable\": {\n    \"pageNumber\": 0,\n    \"pageSize\": 20\n  },\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "description": "Export feedback data as CSV",
+      "item": [
+        {
+          "name": "Export Feedback to CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/export/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "export", "{{eventId}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - CSV Download",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "text/csv" },
+                { "key": "Content-Disposition", "value": "attachment; filename=\"feedback-export-a1b2c3d4-e5f6-7890-abcd-ef1234567890.csv\"" }
+              ],
+              "body": "eventId,employeeId,score,comment,category,sentiment,status,createdAt\na1b2c3d4-e5f6-7890-abcd-ef1234567890,f1e2d3c4-b5a6-7890-abcd-ef0987654321,8,\"Great event, well organized and very impactful.\",EVENT_QUALITY,POSITIVE,SUBMITTED,2025-01-15T10:30:00Z\na1b2c3d4-e5f6-7890-abcd-ef1234567890,e5f6a7b8-c9d0-1234-abcd-ef5678901234,6,\"Logistics could have been smoother.\",LOGISTICS,NEUTRAL,SUBMITTED,2025-01-16T14:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Categories & Tags",
+      "description": "Manage feedback categories and tags metadata",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "categories"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\"EVENT_QUALITY\", \"ORGANIZATION\", \"LOGISTICS\", \"COMMUNICATION\", \"IMPACT\"]"
+            }
+          ]
+        },
+        {
+          "name": "Add Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "categories"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VOLUNTEER_EXPERIENCE\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\"EVENT_QUALITY\", \"ORGANIZATION\", \"LOGISTICS\", \"COMMUNICATION\", \"IMPACT\", \"VOLUNTEER_EXPERIENCE\"]"
+            },
+            {
+              "name": "409 Conflict - Duplicate Category",
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Category 'EVENT_QUALITY' already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "tags"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\"well-organized\", \"impactful\", \"recommend\", \"needs-improvement\", \"great-team\", \"inspiring\"]"
+            }
+          ]
+        },
+        {
+          "name": "Add Tag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feedback/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["feedback", "tags"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"life-changing\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\"well-organized\", \"impactful\", \"recommend\", \"needs-improvement\", \"great-team\", \"inspiring\", \"life-changing\"]"
+            },
+            {
+              "name": "409 Conflict - Duplicate Tag",
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"timestamp\": \"2025-01-15T10:30:00Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Tag 'well-organized' already exists\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
