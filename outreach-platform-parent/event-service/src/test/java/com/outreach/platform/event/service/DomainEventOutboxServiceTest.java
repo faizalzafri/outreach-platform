@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outreach.platform.event.model.DomainEventDocument;
 import com.outreach.platform.event.model.DomainEventStatus;
 import com.outreach.platform.event.repo.DomainEventRepository;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -26,11 +28,16 @@ class DomainEventOutboxServiceTest {
     @Mock
     private DomainEventRepository domainEventRepository;
 
+    @Mock
+    private RabbitTemplate rabbitTemplate;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private DomainEventOutboxService outboxService;
 
     @BeforeEach
     void setUp() {
-        outboxService = new DomainEventOutboxService(domainEventRepository);
+        outboxService = new DomainEventOutboxService(domainEventRepository, rabbitTemplate, objectMapper);
     }
 
     @Test

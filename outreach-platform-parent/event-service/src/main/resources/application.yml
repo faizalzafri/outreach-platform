@@ -29,6 +29,13 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
   # MongoDB
   data:
     mongodb:
@@ -83,6 +90,17 @@ event-service:
   event-code-prefix: EVT
   outbox:
     poll-interval-ms: 5000
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
 
 # Resilience4j configuration
 resilience4j:

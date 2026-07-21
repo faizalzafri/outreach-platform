@@ -29,6 +29,13 @@ spring:
   liquibase:
     enabled: false
 
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
   # MongoDB (analytics snapshots)
   data:
     mongodb:
@@ -58,6 +65,12 @@ spring:
           default:
             connect-timeout: 3000
             read-timeout: 5000
+          event-service:
+            connect-timeout: 3000
+            read-timeout: 5000
+          feedback-service:
+            connect-timeout: 3000
+            read-timeout: 5000
 
 server:
   port: 9005
@@ -78,6 +91,17 @@ report-service:
   cache-ttl-minutes: 10
   snapshot-retention-days: 365
 
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+
 # Resilience4j configuration
 resilience4j:
   circuitbreaker:
@@ -87,12 +111,23 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      event-service:
+        base-config: default
+      feedback-service:
+        base-config: default
   retry:
     configs:
       default:
         max-attempts: 3
         wait-duration: 500ms
         exponential-backoff-multiplier: 2
+    instances:
+      event-service:
+        base-config: default
+      feedback-service:
+        base-config: default
   timelimiter:
     configs:
       default:

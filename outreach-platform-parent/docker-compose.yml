@@ -59,6 +59,25 @@ services:
       start_period: 5s
     stop_grace_period: 15s
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: outreach-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: outreach
+      RABBITMQ_DEFAULT_PASS: outreach_secret
+    networks:
+      - outreach-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    stop_grace_period: 15s
+
   mailhog:
     image: mailhog/mailhog:latest
     container_name: outreach-mailhog
@@ -194,6 +213,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: redis_secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWK_SET_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
@@ -206,6 +229,8 @@ services:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
@@ -263,6 +288,10 @@ services:
       DATABASE_USERNAME: outreach
       DATABASE_PASSWORD: outreach_secret
       MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWKS_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
@@ -275,6 +304,8 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
@@ -299,6 +330,10 @@ services:
       DATABASE_USERNAME: outreach
       DATABASE_PASSWORD: outreach_secret
       MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWT_JWK_SET_URI: http://auth-service:8090/oauth2/jwks
       JWT_ISSUER_URI: http://auth-service:8090
@@ -311,6 +346,8 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
@@ -336,6 +373,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: redis_secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWK_SET_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
@@ -348,6 +389,8 @@ services:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
