@@ -43,7 +43,7 @@ management:
 
 platform:
   ai:
-    provider: openai
+    provider: mock
     api-key: test-key
     model: gpt-4o-mini
     max-tokens: 4096
@@ -51,8 +51,8 @@ platform:
     job-result-ttl-hours: 1
     features:
       summarize:
-        enabled: false
+        enabled: true
       anomalies:
-        enabled: false
+        enabled: true
       query:
-        enabled: false
+        enabled: true
