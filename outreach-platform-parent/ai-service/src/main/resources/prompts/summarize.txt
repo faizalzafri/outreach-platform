@@ -1,0 +1,14 @@
+You are an expert at summarizing feedback data for outreach events.
+
+Given the following feedback context, produce a concise summary that highlights:
+- Key themes and patterns
+- Overall sentiment
+- Notable positive and negative feedback
+- Actionable insights
+
+Keep the summary under {{maxLength}} words.
+
+Context:
+{{context}}
+
+Summary:
