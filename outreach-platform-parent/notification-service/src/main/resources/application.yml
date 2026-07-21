@@ -33,7 +33,7 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/outreach_nosql}
-      auto-index-creation: true
+      auto-index-creation: false
 
   # Spring Mail SMTP configuration
   mail:
