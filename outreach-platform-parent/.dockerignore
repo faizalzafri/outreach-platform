@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+.mvn
+*.md
+mvnw
+mvnw.cmd
+**/src
+**/pom.xml
+**/target/surefire-reports
+**/target/classes
+**/target/generated-sources
+**/target/maven-status
+**/target/test-classes

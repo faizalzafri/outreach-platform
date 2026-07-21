@@ -1,0 +1,410 @@
+services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Infrastructure Services
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: outreach-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-outreachfeedbackdb}
+      POSTGRES_USER: ${POSTGRES_USER:-outreach}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-outreach} -d ${POSTGRES_DB:-outreachfeedbackdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    stop_grace_period: 15s
+
+  mongodb:
+    image: mongo:7.0
+    container_name: outreach-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-outreach_nosql}
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    stop_grace_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: outreach-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    stop_grace_period: 15s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: outreach-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      KC_DB_USERNAME: ${POSTGRES_USER:-outreach}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    command: start-dev --import-realm
+    volumes:
+      - ./config/keycloak/outreach-realm.json:/opt/keycloak/data/import/outreach-realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200\\|UP'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 15s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: outreach-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8025 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    stop_grace_period: 15s
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Platform Services
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  config-server:
+    build:
+      context: ./config-server
+    container_name: outreach-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      CONFIG_REPO_PATH: file:/config
+      CONFIG_SERVER_USER: ${CONFIG_SERVER_USER:-configadmin}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:-configsecret}
+      ENCRYPT_KEY: ${ENCRYPT_KEY:-dev-encrypt-key-change-in-production}
+      EUREKA_ENABLED: "true"
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+        -Dspring.profiles.active=native
+    volumes:
+      - ./config:/config:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 15s
+
+  discovery-service:
+    build:
+      context: ./discovery-service
+    container_name: outreach-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 15s
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+    container_name: outreach-gateway
+    ports:
+      - "7093:7093"
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7093/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 25s
+    stop_grace_period: 15s
+
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: outreach-auth
+    ports:
+      - "8090:8090"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 25s
+    stop_grace_period: 15s
+
+  event-service:
+    build:
+      context: ./event-service
+    container_name: outreach-event
+    ports:
+      - "9004:9004"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9004/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+  feedback-service:
+    build:
+      context: ./feedback-service
+    container_name: outreach-feedback
+    ports:
+      - "9001:9001"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9001/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: outreach-notification
+    ports:
+      - "9002:9002"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9002/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+  ingestion-service:
+    build:
+      context: ./ingestion-service
+    container_name: outreach-ingestion
+    ports:
+      - "9003:9003"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9003/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+  report-service:
+    build:
+      context: ./report-service
+    container_name: outreach-report
+    ports:
+      - "9005:9005"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
+      DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9005/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: outreach-ai
+    ports:
+      - "9006:9006"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
+      EUREKA_URI: http://discovery-service:8761/eureka
+      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JAVA_OPTS: >-
+        -XX:+UseG1GC
+        -XX:MaxRAMPercentage=75.0
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9006/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 15s
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────────────────────────────────────────
+
+volumes:
+  postgres-data:
+    driver: local
+  mongodb-data:
+    driver: local
