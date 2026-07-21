@@ -1,0 +1,118 @@
+spring:
+  application:
+    name: report-service
+
+  # PostgreSQL datasource (READ-ONLY access)
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+      read-only: true
+
+  # JPA / Hibernate (read-only, no schema management)
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  # Liquibase disabled (read-only service, schema managed elsewhere)
+  liquibase:
+    enabled: false
+
+  # MongoDB (analytics snapshots)
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/outreach_nosql}
+      auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # Cache configuration
+  cache:
+    type: redis
+
+  # Security - OAuth2 Resource Server JWT validation
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI:http://localhost:8090/oauth2/jwks}
+
+  # OpenFeign client configuration
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 5000
+
+server:
+  port: 9005
+  shutdown: graceful
+
+# Service discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+# Report Service custom properties
+report-service:
+  default-page-size: 20
+  max-page-size: 100
+  cache-ttl-minutes: 10
+  snapshot-retention-days: 365
+
+# Resilience4j configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+    instances:
+      default:
+        base-config: default
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms
+        exponential-backoff-multiplier: 2
+    instances:
+      default:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+    instances:
+      default:
+        base-config: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,refresh
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
