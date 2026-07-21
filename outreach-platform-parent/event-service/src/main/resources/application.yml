@@ -73,6 +73,8 @@ event-service:
   max-events-per-page: 50
   default-page-size: 20
   event-code-prefix: EVT
+  outbox:
+    poll-interval-ms: 5000
 
 # Resilience4j configuration
 resilience4j:
