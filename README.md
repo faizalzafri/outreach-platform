@@ -1,0 +1,108 @@
+# Outreach Platform
+
+Corporate volunteer outreach management system. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights.
+
+## Functional Overview
+
+**Event Management** — Create, publish, and track outreach events through their lifecycle (Draft → Published → Active → Completed → Archived). Assign POC coordinators, enroll volunteers, mark attendance.
+
+**Volunteer Management** — Maintain volunteer profiles with skills, department, and availability. Track participation history and leaderboard rankings. Search by skills and location.
+
+**Bulk Data Import** — Upload Excel/CSV files to import volunteers and event data. Row-level validation with structured error reporting. Job tracking with progress.
+
+**Feedback Collection** — Volunteers rate events (1-5) with open-ended answers. One submission per volunteer per event. Categorization, tagging, sentiment tracking. Multi-criteria search and export.
+
+**Email Notifications** — Template-based emails triggered by events (welcome, feedback request, status changes). Delivery tracking with retry. Scheduling and preference management.
+
+**Analytics & Reporting** — Dashboard with KPIs, trends, NPS, sentiment breakdown. Aggregate by event, city, beneficiary, or POC. Time-series with configurable granularity. Async export (PDF/CSV/Excel).
+
+**AI Insights (Admin)** — Feedback summarization, anomaly detection, natural language queries. Feature-toggled. Provider-agnostic (OpenAI, mock).
+
+**Administration** — User CRUD with roles (Admin/PMO/POC). Audit log. System configuration.
+
+## Tech Stack
+
+- Java 21, Spring Boot 3.4, Spring Cloud 2024.0
+- PostgreSQL 16 (domain data), MongoDB 7 (events outbox, audit, jobs), Redis 7 (caching, rate limiting)
+- Keycloak 26 / Spring Authorization Server (OAuth2/OIDC)
+- Docker Compose for local development
+
+## Services
+
+| Service | Port | Responsibility |
+|---------|------|---------------|
+| config-server | 8888 | Centralized configuration |
+| discovery-service | 8761 | Eureka service registry |
+| gateway-service | 7093 | API gateway, JWT validation, rate limiting |
+| auth-service | 8090 | OAuth2/OIDC identity provider |
+| event-service | 9004 | Event lifecycle, volunteers, beneficiaries, admin |
+| feedback-service | 9001 | Feedback collection and search |
+| notification-service | 9002 | Email templates, dispatch, delivery tracking |
+| ingestion-service | 9003 | File upload, parsing, job tracking |
+| report-service | 9005 | Analytics, aggregation, export |
+| ai-service | 9006 | AI summarization, anomaly detection |
+
+## Prerequisites
+
+- Java 21
+- Docker Desktop
+- Maven (wrapper included)
+
+## Quick Start
+
+```bash
+# Clone and enter project
+cd outreach-platform/outreach-platform-parent
+
+# Build all services
+./mvnw clean package -DskipTests
+
+# Start everything
+docker compose up -d
+
+# Verify
+docker compose ps
+```
+
+Services start in dependency order (infra → platform → business). Full stack takes ~2 minutes.
+
+## Run Without Docker
+
+```bash
+# Start infrastructure manually (PostgreSQL, MongoDB, Redis)
+# Then run individual services:
+./mvnw spring-boot:run -pl event-service
+./mvnw spring-boot:run -pl feedback-service
+# etc.
+```
+
+## Run Tests
+
+```bash
+# Unit tests (no Docker needed)
+./mvnw test -DfailIfNoTests=false
+
+# Integration tests (requires Docker for Testcontainers)
+./mvnw verify
+```
+
+## User Roles
+
+| Role | Access |
+|------|--------|
+| Admin | Full access — users, events, reports, AI, audit |
+| PMO | Events, reports, feedback, volunteers |
+| POC | Assigned events, enrolled volunteers, attendance |
+
+## API Access
+
+All APIs require JWT authentication via the gateway at `http://localhost:7093/api/`.
+
+```bash
+# Example: list events
+curl -H "Authorization: Bearer <token>" http://localhost:7093/api/events
+```
+
+## Environment Variables
+
+See `.env.example` in `outreach-platform-parent/` for all configurable values.
