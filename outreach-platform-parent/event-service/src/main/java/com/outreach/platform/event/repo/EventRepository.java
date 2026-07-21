@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,4 +53,6 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
             Pageable pageable);
 
     long countByStatus(EventStatus status);
+
+    long countByStatusIn(Collection<EventStatus> statuses);
 }
