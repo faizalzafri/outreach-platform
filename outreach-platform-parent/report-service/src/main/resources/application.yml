@@ -86,25 +86,16 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
-    instances:
-      default:
-        base-config: default
   retry:
     configs:
       default:
         max-attempts: 3
         wait-duration: 500ms
         exponential-backoff-multiplier: 2
-    instances:
-      default:
-        base-config: default
   timelimiter:
     configs:
       default:
         timeout-duration: 5s
-    instances:
-      default:
-        base-config: default
 
 management:
   endpoints:
