@@ -4,6 +4,9 @@ import com.outreach.platform.report.model.ScheduledReportCreateRequest;
 import com.outreach.platform.report.model.ScheduledReportDto;
 import com.outreach.platform.report.model.ScheduledReportUpdateRequest;
 import com.outreach.platform.report.service.ScheduledReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,6 +29,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/reports/scheduled")
+@Tag(name = "Scheduled Reports", description = "CRUD operations for cron-based scheduled report configurations")
 public class ScheduledReportController {
 
     private final ScheduledReportService scheduledReportService;

@@ -11,6 +11,9 @@ import com.outreach.platform.event.model.dto.UserStatusRequest;
 import com.outreach.platform.event.model.dto.UserUpdateRequest;
 import com.outreach.platform.event.service.AdminService;
 import com.outreach.platform.event.service.AuditLogService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -40,6 +43,7 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/admin")
+@Tag(name = "Admin Operations", description = "User management, audit log, system configuration, and dashboard statistics")
 public class AdminController {
 
     private final AdminService adminService;
@@ -53,49 +57,39 @@ public class AdminController {
 
     // ─── User Management ────────────────────────────────────────────────────────
 
-    /**
-     * List all users with pagination.
-     */
+    @Operation(summary = "List users", description = "Lists all platform users with pagination")
     @GetMapping("/users")
     public ResponseEntity<Page<UserDto>> listUsers(Pageable pageable) {
         Page<UserDto> users = adminService.listUsers(pageable);
         return ResponseEntity.ok(users);
     }
 
-    /**
-     * Create a new user account.
-     */
+    @Operation(summary = "Create user", description = "Creates a new user account")
     @PostMapping("/users")
     public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserDto created = adminService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * Update an existing user.
-     */
+    @Operation(summary = "Update user", description = "Updates an existing user account")
     @PutMapping("/users/{id}")
-    public ResponseEntity<UserDto> updateUser(@PathVariable UUID id,
+    public ResponseEntity<UserDto> updateUser(@Parameter(description = "User UUID") @PathVariable UUID id,
                                               @Valid @RequestBody UserUpdateRequest request) {
         UserDto updated = adminService.updateUser(id, request);
         return ResponseEntity.ok(updated);
     }
 
-    /**
-     * Enable or disable a user account.
-     */
+    @Operation(summary = "Change user status", description = "Enables or disables a user account")
     @PatchMapping("/users/{id}/status")
-    public ResponseEntity<UserDto> changeUserStatus(@PathVariable UUID id,
+    public ResponseEntity<UserDto> changeUserStatus(@Parameter(description = "User UUID") @PathVariable UUID id,
                                                     @Valid @RequestBody UserStatusRequest request) {
         UserDto updated = adminService.enableDisableUser(id, request);
         return ResponseEntity.ok(updated);
     }
 
-    /**
-     * Change a user's role.
-     */
+    @Operation(summary = "Change user role", description = "Changes a user's assigned role")
     @PatchMapping("/users/{id}/role")
-    public ResponseEntity<UserDto> changeUserRole(@PathVariable UUID id,
+    public ResponseEntity<UserDto> changeUserRole(@Parameter(description = "User UUID") @PathVariable UUID id,
                                                   @Valid @RequestBody UserRoleChangeRequest request) {
         UserDto updated = adminService.changeRole(id, request);
         return ResponseEntity.ok(updated);
@@ -103,16 +97,14 @@ public class AdminController {
 
     // ─── Audit Log ──────────────────────────────────────────────────────────────
 
-    /**
-     * Query audit log entries with optional filters and pagination.
-     */
+    @Operation(summary = "Query audit log", description = "Queries audit log entries with optional filters and pagination")
     @GetMapping("/audit-log")
     public ResponseEntity<Page<AuditLogEntry>> queryAuditLog(
-            @RequestParam(required = false) String userId,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) String resourceType,
-            @RequestParam(required = false) Instant dateFrom,
-            @RequestParam(required = false) Instant dateTo,
+            @Parameter(description = "Filter by user ID") @RequestParam(required = false) String userId,
+            @Parameter(description = "Filter by action") @RequestParam(required = false) String action,
+            @Parameter(description = "Filter by resource type") @RequestParam(required = false) String resourceType,
+            @Parameter(description = "Start of date range") @RequestParam(required = false) Instant dateFrom,
+            @Parameter(description = "End of date range") @RequestParam(required = false) Instant dateTo,
             Pageable pageable) {
 
         AuditLogSearchCriteria criteria = new AuditLogSearchCriteria(
@@ -122,9 +114,7 @@ public class AdminController {
         return ResponseEntity.ok(page);
     }
 
-    /**
-     * Export audit log entries as CSV.
-     */
+    @Operation(summary = "Export audit log", description = "Exports audit log entries as CSV")
     @GetMapping("/audit-log/export")
     public ResponseEntity<byte[]> exportAuditLog(
             @RequestParam(required = false) String userId,
@@ -147,9 +137,7 @@ public class AdminController {
 
     // ─── System Configuration ───────────────────────────────────────────────────
 
-    /**
-     * View current system configuration.
-     */
+    @Operation(summary = "Get system config", description = "Returns current system configuration")
     @GetMapping("/system/config")
     public ResponseEntity<SystemConfigDto> getSystemConfig() {
         SystemConfigDto config = new SystemConfigDto(
@@ -165,9 +153,7 @@ public class AdminController {
         return ResponseEntity.ok(config);
     }
 
-    /**
-     * Update system configuration (returns updated view).
-     */
+    @Operation(summary = "Update system config", description = "Updates system configuration")
     @PutMapping("/system/config")
     public ResponseEntity<SystemConfigDto> updateSystemConfig(@RequestBody SystemConfigDto config) {
         // Configuration updates would be persisted to a config store in a full implementation.
@@ -177,9 +163,7 @@ public class AdminController {
 
     // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-    /**
-     * Admin dashboard statistics: user, event, and volunteer counts.
-     */
+    @Operation(summary = "Dashboard statistics", description = "Admin dashboard with user, event, and volunteer counts")
     @GetMapping("/dashboard/stats")
     public ResponseEntity<AdminDashboardStats> dashboardStats() {
         AdminDashboardStats stats = adminService.getDashboardStats();

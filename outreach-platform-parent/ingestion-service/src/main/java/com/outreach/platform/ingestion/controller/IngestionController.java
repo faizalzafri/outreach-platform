@@ -5,6 +5,9 @@ import com.outreach.platform.ingestion.model.ParseResult;
 import com.outreach.platform.ingestion.model.ValidationResult;
 import com.outreach.platform.ingestion.service.FileParserService;
 import com.outreach.platform.ingestion.service.JobTrackingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -32,6 +35,7 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/ingestion")
+@Tag(name = "File Ingestion", description = "File upload, validation, and template download for data import")
 public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
@@ -54,9 +58,10 @@ public class IngestionController {
     /**
      * Upload a single file for processing. Returns 202 Accepted with a job ID.
      */
+    @Operation(summary = "Upload file", description = "Uploads a single file for processing, returns 202 Accepted with a job ID")
     @PostMapping("/upload")
     public ResponseEntity<FileUploadResponse> uploadFile(
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @Parameter(description = "File to upload") @RequestParam("file") MultipartFile file) throws IOException {
 
         validateNotEmpty(file);
         String extension = fileParserService.getExtension(file.getOriginalFilename());
@@ -86,9 +91,10 @@ public class IngestionController {
     /**
      * Upload multiple files for processing. Returns 202 Accepted with a list of job IDs.
      */
+    @Operation(summary = "Bulk upload", description = "Uploads multiple files for processing, returns 202 Accepted with job IDs")
     @PostMapping("/upload/bulk")
     public ResponseEntity<List<FileUploadResponse>> uploadBulk(
-            @RequestParam("files") List<MultipartFile> files) throws IOException {
+            @Parameter(description = "Files to upload") @RequestParam("files") List<MultipartFile> files) throws IOException {
 
         List<FileUploadResponse> responses = new ArrayList<>();
         for (MultipartFile file : files) {
@@ -121,9 +127,10 @@ public class IngestionController {
     /**
      * Dry-run validation: parse and validate the file without importing data.
      */
+    @Operation(summary = "Validate file", description = "Dry-run validation: parses and validates a file without importing data")
     @PostMapping("/validate")
     public ResponseEntity<ValidationResult> validateFile(
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @Parameter(description = "File to validate") @RequestParam("file") MultipartFile file) throws IOException {
 
         validateNotEmpty(file);
 
@@ -143,6 +150,7 @@ public class IngestionController {
     /**
      * Download the volunteer import template (empty Excel with correct headers).
      */
+    @Operation(summary = "Download template", description = "Downloads the volunteer import Excel template with correct headers")
     @GetMapping("/templates")
     public ResponseEntity<byte[]> downloadTemplate() throws IOException {
         byte[] content = generateTemplate();

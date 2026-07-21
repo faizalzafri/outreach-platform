@@ -5,6 +5,9 @@ import com.outreach.platform.ai.entity.AiJobDocument;
 import com.outreach.platform.ai.model.*;
 import com.outreach.platform.ai.repo.AiJobRepository;
 import com.outreach.platform.ai.service.AiService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,6 +27,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/ai")
+@Tag(name = "AI Operations", description = "AI-powered summarization, anomaly detection, and natural language queries (ROLE_ADMIN only)")
 public class AiController {
 
     private final AiService aiService;
@@ -42,6 +46,7 @@ public class AiController {
     /**
      * Submit a summarization job.
      */
+    @Operation(summary = "Summarize feedback", description = "Submits a feedback summarization job (async, returns 202 with jobId)")
     @PostMapping("/summarize")
     public ResponseEntity<?> summarize(@Valid @RequestBody SummarizeRequest request) {
         if (!properties.features().summarize().enabled()) {
@@ -61,6 +66,7 @@ public class AiController {
     /**
      * Submit an anomaly detection job.
      */
+    @Operation(summary = "Detect anomalies", description = "Submits an anomaly detection job on feedback dataset (async, returns 202 with jobId)")
     @PostMapping("/anomalies")
     public ResponseEntity<?> detectAnomalies(@Valid @RequestBody AnomalyRequest request) {
         if (!properties.features().anomalies().enabled()) {
@@ -80,6 +86,7 @@ public class AiController {
     /**
      * Submit a natural language query job.
      */
+    @Operation(summary = "Natural language query", description = "Submits a natural language query job (async, returns 202 with jobId)")
     @PostMapping("/query")
     public ResponseEntity<?> query(@Valid @RequestBody QueryRequest request) {
         if (!properties.features().query().enabled()) {
@@ -99,8 +106,9 @@ public class AiController {
     /**
      * Retrieve AI job status and result.
      */
+    @Operation(summary = "Get job result", description = "Retrieves AI job status and result by job ID")
     @GetMapping("/jobs/{jobId}")
-    public ResponseEntity<AiJobResponse> getJobResult(@PathVariable String jobId) {
+    public ResponseEntity<AiJobResponse> getJobResult(@Parameter(description = "Job ID") @PathVariable String jobId) {
         return aiJobRepository.findById(jobId)
                 .map(job -> ResponseEntity.ok(new AiJobResponse(
                         job.getId(),
@@ -114,6 +122,7 @@ public class AiController {
     /**
      * AI service health and capabilities status.
      */
+    @Operation(summary = "AI status", description = "Returns AI service health and feature capabilities status")
     @GetMapping("/status")
     public ResponseEntity<AiStatusResponse> status() {
         Map<String, Boolean> features = new LinkedHashMap<>();

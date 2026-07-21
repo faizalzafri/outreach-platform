@@ -1,0 +1,4 @@
+# Production profile - disable Swagger UI, keep /v3/api-docs for tooling
+springdoc:
+  swagger-ui:
+    enabled: false

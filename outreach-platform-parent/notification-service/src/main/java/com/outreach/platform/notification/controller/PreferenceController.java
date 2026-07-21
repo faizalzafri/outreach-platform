@@ -3,6 +3,9 @@ package com.outreach.platform.notification.controller;
 import com.outreach.platform.notification.model.dto.PreferenceDto;
 import com.outreach.platform.notification.model.dto.PreferenceUpdateRequest;
 import com.outreach.platform.notification.service.NotificationPreferenceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/notifications/preferences")
+@Tag(name = "Notification Preferences", description = "Manage per-employee notification preferences")
 public class PreferenceController {
 
     private final NotificationPreferenceService preferenceService;
