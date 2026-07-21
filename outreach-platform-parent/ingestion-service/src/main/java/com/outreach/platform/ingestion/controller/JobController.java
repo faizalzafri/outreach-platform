@@ -2,6 +2,9 @@ package com.outreach.platform.ingestion.controller;
 
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
 import com.outreach.platform.ingestion.service.JobTrackingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +20,7 @@ import java.util.Map;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/ingestion/jobs")
+@Tag(name = "Job Tracking", description = "Ingestion job status, progress, error details, and cancellation")
 public class JobController {
 
     private final JobTrackingService jobTrackingService;
@@ -29,6 +33,7 @@ public class JobController {
     /**
      * List all jobs (paginated, sorted by createdAt desc).
      */
+    @Operation(summary = "List jobs", description = "Lists all ingestion jobs with pagination")
     @GetMapping
     public ResponseEntity<Page<JobTrackingDocument>> listJobs(
             @RequestParam(defaultValue = "0") int page,
@@ -40,8 +45,9 @@ public class JobController {
     /**
      * Get job status, progress, and errors.
      */
+    @Operation(summary = "Get job", description = "Retrieves job status, progress, and error details")
     @GetMapping("/{jobId}")
-    public ResponseEntity<JobTrackingDocument> getJob(@PathVariable String jobId) {
+    public ResponseEntity<JobTrackingDocument> getJob(@Parameter(description = "Job ID") @PathVariable String jobId) {
         return jobTrackingService.getJob(jobId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -50,8 +56,9 @@ public class JobController {
     /**
      * Cancel a pending or running job.
      */
+    @Operation(summary = "Cancel job", description = "Cancels a pending or running job")
     @DeleteMapping("/{jobId}")
-    public ResponseEntity<Map<String, Object>> cancelJob(@PathVariable String jobId) {
+    public ResponseEntity<Map<String, Object>> cancelJob(@Parameter(description = "Job ID") @PathVariable String jobId) {
         boolean cancelled = jobTrackingService.cancelJob(jobId);
         if (cancelled) {
             return ResponseEntity.ok(Map.of(
@@ -72,8 +79,9 @@ public class JobController {
     /**
      * Get detailed error rows for a job.
      */
+    @Operation(summary = "Get job errors", description = "Retrieves detailed error information for a job")
     @GetMapping("/{jobId}/errors")
-    public ResponseEntity<Map<String, Object>> getJobErrors(@PathVariable String jobId) {
+    public ResponseEntity<Map<String, Object>> getJobErrors(@Parameter(description = "Job ID") @PathVariable String jobId) {
         return jobTrackingService.getJob(jobId)
                 .map(job -> {
                     List<String> errors = job.getErrors();

@@ -6,6 +6,9 @@ import com.outreach.platform.notification.model.dto.DeliveryStatusSummary;
 import com.outreach.platform.notification.model.dto.RetryResponse;
 import com.outreach.platform.notification.service.DeliveryTrackingService;
 import com.outreach.platform.notification.service.EmailRetryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/notifications")
+@Tag(name = "Email Delivery", description = "Email delivery status, retry operations, history, and analytics")
 public class DeliveryController {
 
     private final DeliveryTrackingService deliveryTrackingService;

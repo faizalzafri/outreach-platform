@@ -15,6 +15,9 @@ import com.outreach.platform.report.model.SentimentBreakdownDto;
 import com.outreach.platform.report.model.TimeSeriesDataPoint;
 import com.outreach.platform.report.model.TrendDataDto;
 import com.outreach.platform.report.service.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +34,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/reports")
+@Tag(name = "Report Analytics", description = "Aggregation, analytics, KPIs, trends, and comparison endpoints")
 public class ReportController {
 
     private final ReportService reportService;

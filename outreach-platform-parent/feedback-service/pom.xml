@@ -105,6 +105,12 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- API Documentation: SpringDoc OpenAPI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+
         <!-- Test: Testcontainers -->
         <dependency>
             <groupId>org.testcontainers</groupId>

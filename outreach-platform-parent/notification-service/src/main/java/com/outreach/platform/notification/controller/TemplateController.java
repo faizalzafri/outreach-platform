@@ -6,6 +6,9 @@ import com.outreach.platform.notification.model.dto.TemplatePreviewRequest;
 import com.outreach.platform.notification.model.dto.TemplatePreviewResponse;
 import com.outreach.platform.notification.model.dto.TemplateUpdateRequest;
 import com.outreach.platform.notification.service.TemplateService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -30,6 +33,7 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/notifications/templates")
+@Tag(name = "Notification Templates", description = "Notification template CRUD, preview, and management operations")
 public class TemplateController {
 
     private final TemplateService templateService;

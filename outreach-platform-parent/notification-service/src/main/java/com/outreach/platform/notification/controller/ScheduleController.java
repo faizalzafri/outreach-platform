@@ -3,6 +3,9 @@ package com.outreach.platform.notification.controller;
 import com.outreach.platform.notification.model.dto.ScheduleCreateRequest;
 import com.outreach.platform.notification.model.dto.ScheduleDto;
 import com.outreach.platform.notification.service.NotificationScheduleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -26,6 +29,7 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/notifications/schedule")
+@Tag(name = "Notification Scheduling", description = "Create, list, and cancel notification schedules")
 public class ScheduleController {
 
     private final NotificationScheduleService scheduleService;

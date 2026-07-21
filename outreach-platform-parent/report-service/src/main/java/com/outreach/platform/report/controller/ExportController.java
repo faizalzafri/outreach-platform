@@ -4,6 +4,9 @@ import com.outreach.platform.report.model.ExportJobDto;
 import com.outreach.platform.report.model.ExportJobStatus;
 import com.outreach.platform.report.model.ExportRequest;
 import com.outreach.platform.report.service.ExportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +28,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/reports")
+@Tag(name = "Report Export", description = "Asynchronous report export to PDF, CSV, and Excel")
 public class ExportController {
 
     private final ExportService exportService;

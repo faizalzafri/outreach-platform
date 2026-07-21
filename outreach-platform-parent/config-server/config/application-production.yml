@@ -55,6 +55,11 @@ logging:
   pattern:
     console: '{"timestamp":"%d","level":"%p","service":"%X{service}","trace":"%X{traceId}","span":"%X{spanId}","message":"%m"}%n'
 
+# SpringDoc - disable Swagger UI in production, keep /v3/api-docs available for tooling
+springdoc:
+  swagger-ui:
+    enabled: false
+
 # SMTP settings for production
 platform.notification:
   smtp:

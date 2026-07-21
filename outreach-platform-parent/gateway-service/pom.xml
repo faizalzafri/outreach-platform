@@ -51,6 +51,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- API Documentation: SpringDoc OpenAPI (WebFlux) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+        </dependency>
+
         <!-- Observability: Micrometer Tracing with OpenTelemetry bridge -->
         <dependency>
             <groupId>io.micrometer</groupId>
