@@ -8,7 +8,7 @@ spring:
     password: test
     driver-class-name: org.postgresql.Driver
     hikari:
-      read-only: true
+      read-only: false
 
   jpa:
     hibernate:
@@ -21,22 +21,24 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/test_outreach
-    redis:
-      host: localhost
-      port: 6379
 
   cache:
-    type: none
+    type: simple
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8090/oauth2/jwks
+          issuer-uri: http://localhost:9999/not-used
 
   cloud:
     discovery:
       enabled: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
 
 eureka:
   client:
