@@ -28,6 +28,13 @@ spring:
   liquibase:
     enabled: false
 
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
   # MongoDB
   data:
     mongodb:
@@ -80,17 +87,26 @@ resilience4j:
         sliding-window-size: 10
         minimum-number-of-calls: 5
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
+        wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
         automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      event-service:
+        base-config: default
   retry:
     configs:
       default:
         max-attempts: 3
         wait-duration: 500ms
+        exponential-backoff-multiplier: 2
         retry-exceptions:
           - java.io.IOException
           - java.net.SocketTimeoutException
+          - feign.FeignException$ServiceUnavailable
+          - feign.RetryableException
+    instances:
+      event-service:
+        base-config: default
   ratelimiter:
     configs:
       default:
@@ -105,6 +121,9 @@ spring.cloud.openfeign:
       default:
         connect-timeout: 3000
         read-timeout: 5000
+      event-service:
+        connect-timeout: 3000
+        read-timeout: 5000
 
 # Ingestion service custom properties
 ingestion-service:
@@ -115,6 +134,17 @@ ingestion-service:
     - .xls
     - .csv
   max-concurrent-jobs: 5
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
 
 # JWT configuration
 spring.security.oauth2.resourceserver.jwt:

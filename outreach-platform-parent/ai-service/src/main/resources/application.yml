@@ -116,6 +116,17 @@ platform:
       query:
         enabled: ${AI_QUERY_ENABLED:false}
 
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+
 
 # Identity Provider configuration (shared via common-lib)
 idp:
