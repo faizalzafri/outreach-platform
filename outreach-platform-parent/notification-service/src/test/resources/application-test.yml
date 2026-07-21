@@ -2,6 +2,12 @@ spring:
   application:
     name: notification-service
 
+  # Exclude OAuth2 Resource Server and Mail Health auto-configuration in tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.mail.MailHealthContributorAutoConfiguration
+
   # Use H2 for tests (avoid requiring PostgreSQL)
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
@@ -34,15 +40,13 @@ spring:
   thymeleaf:
     cache: false
 
-  # Disable security for tests
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8090
-
 server:
   port: 0
+
+# Disable security for integration tests
+app:
+  security:
+    enabled: false
 
 # Disable Eureka in tests
 eureka:
