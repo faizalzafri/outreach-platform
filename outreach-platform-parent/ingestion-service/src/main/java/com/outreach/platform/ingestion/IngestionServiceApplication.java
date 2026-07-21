@@ -9,7 +9,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * Main application entry point for the Ingestion Service.
  * Handles Excel/CSV file upload, parsing, validation, and job tracking.
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.outreach.platform")
 @EnableFeignClients
 @ConfigurationPropertiesScan
 public class IngestionServiceApplication {

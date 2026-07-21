@@ -250,11 +250,14 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-outreachfeedbackdb}
       DATABASE_USERNAME: ${POSTGRES_USER:-outreach}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-outreach_secret}
+      MONGODB_URI: mongodb://mongodb:27017/${MONGO_DB:-outreach_nosql}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
       EUREKA_URI: http://discovery-service:8761/eureka
-      JWK_SET_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      IDP_PROVIDER: keycloak
+      IDP_JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
       JAVA_OPTS: >-
         -XX:+UseG1GC
         -XX:MaxRAMPercentage=75.0
