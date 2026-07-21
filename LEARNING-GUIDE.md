@@ -793,3 +793,161 @@ This guide documents the framework features, design patterns, and engineering co
 1. **Transactional Outbox vs. Polling Consumer** — The notification service polls for domain events. Study the coupling issue: if the event-service publishes to MongoDB and the notification-service also reads from MongoDB, they share a database. A message broker (Kafka/RabbitMQ) would decouple them fully. When does the complexity of a broker pay off?
 2. **Email Delivery Guarantees** — SMTP `send()` returning success means the message was accepted by the next hop, not delivered to the inbox. Study: bounce handling (DSN), delivery receipts, email reputation, and why tracking actual delivery requires webhook integrations (SES, SendGrid).
 3. **Thymeleaf Security in User-Provided Templates** — Templates stored by admin users could contain malicious expressions (`${T(java.lang.Runtime).exec(...)}`). Study Thymeleaf's expression restrictions, sandboxing options, and why `StandardExpressionParser` limits what expressions can do.
+
+
+---
+
+## Tasks 13.1–13.4: Report Service (Full Implementation)
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`JdbcTemplate` with Native SQL** | Executes raw SQL queries with parameter binding. Used instead of JPA for read-only aggregate queries that span multiple tables with GROUP BY, AVG, COUNT, and window functions. | JPA/JPQL is awkward for complex analytics queries. JdbcTemplate gives full SQL control with parameterized queries (SQL injection safe) and zero ORM overhead for read-only workloads. |
+| **`@Cacheable` with Key Expressions** | `@Cacheable(value = "reportCache", key = "'byEvent:' + #params.hashCode()")` — caches method return values by a computed key. | Analytics queries are expensive (multi-table joins, aggregations). Caching the result for 10 minutes means repeated dashboard loads hit Redis, not PostgreSQL. |
+| **`@CacheEvict(allEntries = true)`** | Invalidates ALL entries in the cache when new data arrives. | When an `ImportJobCompleted` event fires, all cached analytics become stale. Bulk eviction is simpler and safer than fine-grained per-key invalidation for analytics. |
+| **`@Async` with ThreadPoolTaskExecutor** | Export generation runs asynchronously on a dedicated thread pool. Returns 202 immediately; client polls for completion. | PDF/Excel generation is CPU-intensive (seconds). Async prevents tying up request threads and provides a natural job-polling pattern. |
+| **Read-Only HikariCP (`read-only: true`)** | Connection pool configured as read-only. | Read-only connections skip transaction logging overhead on some databases and signal intent clearly. Also prevents accidental writes in a service designed for queries only. |
+| **Spring `@EventListener`** | `ReportCacheInvalidationListener` listens for `ImportJobCompletedEvent` and evicts report caches. | Decouples cache invalidation from the event source. The report-service reacts to domain events without tight coupling to the ingestion-service. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **CQRS (Command Query Responsibility Segregation)** | The report-service is the "query side" — it only reads. Write responsibility lives in event-service, feedback-service, and ingestion-service. Separating read and write paths allows independent optimization (caching, read replicas, denormalized views). |
+| **Async Job Pattern** | Export requests return 202 + jobId. Clients poll for status. This decouples request time from processing time — the same pattern used by the AI service. |
+| **Dynamic Query Building** | `appendFilters()` method conditionally adds WHERE clauses based on which parameters are non-null. Produces different SQL per request without Criteria API complexity. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@Cacheable(value, key)` | Cache method result with computed key |
+| `@CacheEvict(value, allEntries)` | Bulk cache invalidation |
+| `JdbcTemplate.query(sql, RowMapper, args)` | Execute SQL with row-by-row mapping |
+| `@Async("exportTaskExecutor")` | Run method on named thread pool |
+| `@EventListener` | React to Spring application events |
+| `MongoRepository` | CRUD for export job documents and analytics snapshots |
+
+### Concepts to Study Further
+
+1. **CQRS with Event Sourcing** — This project uses a lightweight CQRS (separate read service) without event sourcing. Study full CQRS + Event Sourcing (Axon Framework, EventStoreDB) where the query model is built from an event log. Understand when the complexity pays off (audit requirements, temporal queries) vs. when simple separation suffices.
+2. **Materialized Views vs. Runtime Aggregation** — The report-service computes aggregations at query time. An alternative is pre-computing materialized views (PostgreSQL `CREATE MATERIALIZED VIEW CONCURRENTLY`) that refresh on a schedule. Study the trade-off: real-time accuracy vs. query performance vs. refresh cost.
+3. **Cache Stampede Prevention** — When the cache is evicted, all concurrent requests hit the database simultaneously (thundering herd). Study solutions: probabilistic early expiration, request coalescing (singleflight), cache warming on event receipt, and stale-while-revalidate patterns.
+
+---
+
+## Tasks 14.1–14.4: AI Service (Full Implementation)
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Spring AI (`ChatClient`)** | Abstraction over AI providers (OpenAI, Bedrock, Ollama). Provides a fluent `prompt().user(text).call().content()` API for model invocations. | Provider-agnostic AI integration. Switching from OpenAI to Bedrock requires only a dependency and config change, not code rewrite. |
+| **`@ConditionalOnProperty` for Provider Selection** | `MockAiService` activates when `platform.ai.provider=mock`; `OpenAiServiceImpl` when `provider=openai`. | Same binary, different behavior per environment. Dev uses mock (no API key needed), prod uses real provider. Zero code changes between environments. |
+| **`@CircuitBreaker` + `@Retry` (Resilience4j)** | Circuit breaker opens at 50% failure rate over 10 calls (60s recovery). Retry attempts 2 times with 2s backoff before giving up. | AI APIs are flaky (rate limits, timeouts, outages). Circuit breaker prevents cascade; retry handles transient failures. Combined: the system degrades gracefully rather than failing hard. |
+| **Feature Toggles (`AiServiceProperties.Features`)** | Each AI capability (summarize, anomalies, query) has an independent `enabled` boolean. Disabled features return 501 immediately. | Progressive rollout. Enable one feature at a time, monitor cost/latency, disable instantly if issues arise — without deployment. |
+| **`CompletableFuture` + `@Async`** | AI operations return `CompletableFuture<AiJobResult>`. The controller creates a job document, fires the async call, and returns 202 immediately. | AI calls take 5-30 seconds. Async decouples request latency from AI response time. Client polls for result instead of holding a connection open. |
+| **`ResourceLoader` for Prompt Templates** | `resourceLoader.getResource("classpath:prompts/summarize.txt")` loads prompt text from files. | Prompts are data, not code. They can be versioned, reviewed, and A/B tested independently of Java code. Engineers tune prompts without recompiling. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Strategy (Provider Selection)** | `AiService` interface with `MockAiService` and `OpenAiServiceImpl` — Spring selects the active strategy via property. |
+| **Interface-Based Abstraction** | The controller depends on `AiService` interface, not a concrete provider. Adding a new provider (Bedrock, Ollama) requires only a new implementation + property value. |
+| **Fallback (Circuit Breaker)** | When the circuit opens, fallback methods throw `AiProviderUnavailableException` → 503 response. The system communicates "try later" instead of crashing. |
+| **Job Document Pattern** | `AiJobDocument` tracks: PENDING → RUNNING → COMPLETED/FAILED with timestamps and TTL. Same pattern as export jobs in report-service. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@CircuitBreaker(name, fallbackMethod)` | Resilience4j circuit breaker with named fallback |
+| `@Retry(name)` | Retry with configured backoff |
+| `@ConditionalOnProperty(name, havingValue, matchIfMissing)` | Bean activation based on config |
+| `ChatClient.Builder.build()` | Creates a Spring AI chat client |
+| `chatClient.prompt().user(text).call().content()` | Fluent AI invocation API |
+| `CompletableFuture.completedFuture(result)` | Wrap sync result for async interface |
+| `ProblemDetail` / `ErrorResponse` | RFC 7807 error responses (501, 503) |
+
+### Concepts to Study Further
+
+1. **Token Economics and Cost Control** — AI API calls cost money per token. Study: how to estimate token count before calling (tokenizers), how to set `max_tokens` appropriately, how to monitor monthly spend, and how to implement cost budgets per feature/user.
+2. **Prompt Engineering Patterns** — The templates use simple `{{variable}}` substitution. Study: few-shot prompting (include examples in the prompt), chain-of-thought (ask the model to reason step by step), retrieval-augmented generation (RAG — inject relevant data into the prompt), and system/user message separation.
+3. **Circuit Breaker State Machine in Depth** — CLOSED → OPEN → HALF_OPEN → CLOSED. Study: how `slidingWindowSize` affects sensitivity, why `waitDurationInOpenState` matters for recovery, how `permittedNumberOfCallsInHalfOpenState` probes recovery, and how to expose circuit breaker state via actuator for dashboards.
+
+---
+
+## Tasks 16.1–16.4: Caching, Health Indicators, and Observability
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`RedisCacheManager` with Jackson Serializer** | Programmatic cache manager storing values as JSON in Redis with configurable TTL. | JSON values are human-readable in Redis CLI (`GET key` shows actual data). TTL prevents unbounded memory growth. Jackson serializer handles complex objects (nested DTOs, collections, dates). |
+| **`@ConditionalOnMissingBean(CacheManager.class)`** | The shared `DefaultRedisCacheConfig` in common-lib only activates when no service-specific cache manager exists. | Services with custom cache configs (feedback, report) keep their own. Services without explicit config get sensible defaults automatically. |
+| **Custom `HealthIndicator` Interface** | Implement `health()` → return `Health.up()` or `Health.down()` with details. Spring Boot auto-discovers implementations. | PostgreSQL, MongoDB, Redis health indicators are auto-configured. SMTP and IdP indicators are custom because Spring Boot doesn't auto-detect their health. |
+| **Readiness vs. Liveness Probes** | `management.endpoint.health.probes.enabled=true` exposes `/actuator/health/readiness` and `/actuator/health/liveness` separately. | Kubernetes uses liveness to know when to restart (JVM stuck). Readiness determines when to route traffic (all dependencies healthy). Separating them prevents unnecessary restarts when a dependency is temporarily down. |
+| **Micrometer Tracing Bridge (`micrometer-tracing-bridge-otel`)** | Bridges Spring's Micrometer Tracing API to OpenTelemetry's SDK. Trace context is automatically propagated across HTTP boundaries. | One dependency gives you distributed tracing across all services. OpenFeign and Gateway automatically add `traceparent` headers (W3C format). No manual code needed. |
+| **OTLP Exporter** | `opentelemetry-exporter-otlp` sends trace spans to any OTLP-compatible collector (Jaeger, Tempo, Datadog). | Vendor-neutral trace export. Switch collectors by changing a URL, not code. |
+| **`@Scheduled` Health Transition Logger** | Polls health endpoint every 30s, compares to previous state, logs WARN on degradation and INFO on recovery. | Proactive alerting without external monitoring. Even before Prometheus/Grafana is set up, operators see health transitions in application logs. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Auto-Configuration (Convention over Configuration)** | `DefaultRedisCacheConfig` and `HealthAutoConfiguration` are auto-configurations registered via `AutoConfiguration.imports`. Services get caching and health monitoring by simply depending on common-lib — zero explicit configuration. |
+| **Decorator (Cache Proxy)** | `@Cacheable` creates a proxy around the service method. The proxy checks Redis before invoking the actual method. If cached, returns immediately. If not, calls the method, stores the result, then returns. The service code is unaware of caching. |
+| **Observer (Health Transition Logger)** | The logger observes health state without modifying it. It polls, compares, and reacts — pure observation. The health indicators themselves are unaffected. |
+| **Fallback Default with Override** | `@ConditionalOnMissingBean` provides a default that any service can override by defining its own bean. Same pattern used throughout Spring Boot (default ObjectMapper, default SecurityFilterChain, etc.). |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@Cacheable(value, key)` | Cache method result |
+| `@CacheEvict(value, key)` | Remove specific cache entry on mutation |
+| `@ConditionalOnMissingBean` | Register bean only if no override exists |
+| `@ConditionalOnProperty` | Activate bean based on config property |
+| `HealthIndicator.health()` | Custom health probe returning UP/DOWN |
+| `management.tracing.sampling.probability` | Control trace sampling rate (0.0–1.0) |
+| `management.otlp.tracing.endpoint` | OTLP collector destination URL |
+| `Health.up().withDetail(key, value).build()` | Construct health response with metadata |
+
+### Concepts to Study Further
+
+1. **Cache Aside vs. Read-Through vs. Write-Through** — This project uses Cache Aside (`@Cacheable` checks cache, falls back to DB). Study Read-Through (cache loads from DB automatically on miss) and Write-Through (writes go to cache AND DB). Understand when each pattern is appropriate and how Spring's cache abstraction maps to them.
+2. **OpenTelemetry Instrumentation Layers** — Auto-instrumentation (agent), manual instrumentation (`Span.current().setAttribute()`), and SDK configuration. Study how Micrometer Tracing abstracts over OTel, how to add custom spans to business operations, and how to configure sampling for production (1% sampling at scale).
+3. **Health Check Anti-Patterns** — Health checks that do too much work (full DB queries), checks with no timeout (hang forever if dependency is slow), checks that cascade (one unhealthy dep takes the whole service down). Study: shallow vs. deep health checks, circuit breaker integration with health, and Kubernetes `initialDelaySeconds` tuning.
+
+---
+
+## Tasks 17.1–17.3: Containerization and Docker Compose
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Multi-Stage Docker Builds** | Stage 1 builds the JAR (or uses pre-built). Stage 2 copies only the JAR into a minimal JRE runtime image. | Reduces image size dramatically (JDK Alpine ~350MB → JRE Alpine ~150MB). Attack surface shrinks. Build tools aren't in the production image. |
+| **`eclipse-temurin:21-jre-alpine`** | Eclipse Adoptium's official JRE 21 on Alpine Linux. | Alpine is ~5MB base. Temurin is the de-facto open-source JDK distribution. The JRE variant excludes compiler/tools — further size reduction. |
+| **Non-Root User (`adduser -S appuser`)** | Creates a system user with no login shell. The application runs as this user via `USER appuser`. | Principle of least privilege. If the container is compromised, the attacker has unprivileged access. They can't install packages, modify system files, or escalate easily. |
+| **Docker Compose `depends_on` with `condition: service_healthy`** | Services only start after their dependencies pass health checks. | Prevents race conditions on startup. Without this, the event-service might start before PostgreSQL is accepting connections, causing Liquibase to fail. |
+| **`stop_grace_period: 15s`** | Docker sends SIGTERM, waits 15 seconds, then SIGKILL if still running. | Spring Boot's graceful shutdown drains in-flight requests before exiting. 15 seconds gives enough time for request completion without hanging indefinitely. |
+| **Named Volumes** | `postgres-data` and `mongodb-data` persist across `docker compose down` / `up` cycles. | Development data survives container restarts. `docker compose down -v` explicitly removes volumes when a clean slate is needed. |
+| **`.env.example` Pattern** | Template file documenting all environment variables with safe defaults. Developers copy to `.env` and customize. | Self-documenting configuration. New developers know immediately what variables exist and what values to set. The `.env` file is gitignored. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Infrastructure as Code** | Docker Compose YAML defines the entire platform topology declaratively. One command (`docker compose up`) creates a complete local environment. Reproducible across machines. |
+| **Dependency Graph (DAG)** | Services declare dependencies explicitly. Docker Compose resolves the startup order. Config-server → Discovery → Gateway → Business services mirrors the actual runtime dependency chain. |
+| **Health Check Contract** | Every service exposes `/actuator/health`. Docker Compose uses `wget` to probe this endpoint. This creates a universal health contract — same endpoint used by Docker, Kubernetes, load balancers, and monitoring. |
+| **Environment Variable Injection** | All configuration flows through environment variables. The same Docker image runs in dev/staging/prod — only the env vars change. Twelve-Factor App principle #3 (Config). |
+
+### Concepts to Study Further
+
+1. **Docker Layer Caching and Build Optimization** — Each Dockerfile instruction creates a layer. Layers are cached if inputs haven't changed. Study: how to order instructions for maximum cache hits (dependencies before source code), multi-stage builds that share layers, and `.dockerignore` impact on build context size.
+2. **Container Orchestration Beyond Compose** — Docker Compose is for local dev. Production uses Kubernetes (Deployments, Services, ConfigMaps, Secrets, Ingress, HPA). Study: how Docker Compose concepts map to K8s resources, helm charts for templating, and the difference between Docker networking and K8s pod networking.
+3. **Container Security Hardening** — Non-root is the minimum. Study: distroless images (no shell at all), read-only filesystems (`--read-only`), seccomp profiles, capability dropping (`--cap-drop ALL`), and image vulnerability scanning (Trivy, Snyk).
