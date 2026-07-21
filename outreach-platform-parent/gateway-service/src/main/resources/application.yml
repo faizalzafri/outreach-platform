@@ -21,8 +21,9 @@ spring:
   # Redis configuration for rate limiting
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
   # OAuth2 Resource Server - JWT validation via JWKS
   # Uses the idp.jwks-uri property to resolve the correct endpoint for the active provider
@@ -173,7 +174,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,circuitbreakers
+        include: health,info,metrics,prometheus,circuitbreakers
   endpoint:
     health:
       show-details: when_authorized
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+    propagation:
+      type: w3c
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}

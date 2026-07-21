@@ -39,6 +39,14 @@ spring:
       max-connections-per-host: 20
       connect-timeout: 5000
       socket-timeout: 10000
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  # Cache
+  cache:
+    type: redis
 
   # Security - OAuth2 Resource Server JWT validation
   security:
