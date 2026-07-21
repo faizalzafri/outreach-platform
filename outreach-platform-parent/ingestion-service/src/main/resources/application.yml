@@ -76,9 +76,6 @@ resilience4j:
         wait-duration-in-open-state: 10s
         permitted-number-of-calls-in-half-open-state: 3
         automatic-transition-from-open-to-half-open-enabled: true
-    instances:
-      default:
-        base-config: default
   retry:
     configs:
       default:
@@ -87,18 +84,12 @@ resilience4j:
         retry-exceptions:
           - java.io.IOException
           - java.net.SocketTimeoutException
-    instances:
-      default:
-        base-config: default
   ratelimiter:
     configs:
       default:
         limit-for-period: 50
         limit-refresh-period: 1s
         timeout-duration: 0s
-    instances:
-      default:
-        base-config: default
 
 # OpenFeign
 spring.cloud.openfeign:

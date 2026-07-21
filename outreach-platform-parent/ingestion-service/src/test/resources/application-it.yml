@@ -1,0 +1,42 @@
+spring:
+  # Disable JPA since ingestion service only uses MongoDB for testing
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+  data:
+    jpa:
+      repositories:
+        enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  # Disable cloud features
+  cloud:
+    discovery:
+      enabled: false
+
+  # File upload size limits
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 30MB
+
+# Disable Eureka client
+eureka:
+  client:
+    enabled: false
+
+# Ingestion service properties
+ingestion-service:
+  input-directory: ${java.io.tmpdir}
+  max-file-size-mb: 25
+  allowed-extensions:
+    - .xlsx
+    - .xls
+    - .csv
+  max-concurrent-jobs: 5
