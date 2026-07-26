@@ -23,10 +23,11 @@ RUN mvn dependency:go-offline -B -pl event-service -am
 COPY common-lib/src common-lib/src
 COPY event-service/src event-service/src
 
-RUN mvn package -B -pl event-service -am -DskipTests
+RUN mvn package -B -pl event-service -am -DskipTests \
+    && mv event-service/target/*.jar /app.jar
 
 # ───────────────────────────────────────────────────────────────
-# Stage 2: Runtime
+# Stage 2: Runtime — minimal JRE
 # ───────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 
@@ -34,9 +35,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY --from=builder /build/event-service/target/*.jar app.jar
-
-RUN chown appuser:appgroup app.jar
+COPY --from=builder --chown=appuser:appgroup /app.jar app.jar
 
 USER appuser
 
