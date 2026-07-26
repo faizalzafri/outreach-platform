@@ -1,15 +1,12 @@
 # ───────────────────────────────────────────────────────────────
-# Stage 1: Build — compile and package the JAR with Maven
+# Stage 1: Build — compile and package the JAR
 # ───────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /build
 
-# Copy parent POM and Maven wrapper
-COPY pom.xml mvnw ./
-COPY .mvn .mvn
-
-# Copy module POMs for dependency resolution
+# Copy all module POMs for dependency resolution (cached layer)
+COPY pom.xml ./
 COPY common-lib/pom.xml common-lib/pom.xml
 COPY config-server/pom.xml config-server/pom.xml
 COPY discovery-service/pom.xml discovery-service/pom.xml
@@ -22,18 +19,18 @@ COPY ingestion-service/pom.xml ingestion-service/pom.xml
 COPY report-service/pom.xml report-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
 
-# Download dependencies (cached layer)
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B -pl config-server -am
+# Download dependencies (cached unless POMs change)
+RUN mvn dependency:go-offline -B -pl config-server -am
 
-# Copy source code
+# Copy source
 COPY common-lib/src common-lib/src
 COPY config-server/src config-server/src
 
-# Build the JAR (skip tests — they run in CI)
-RUN ./mvnw package -B -pl config-server -am -DskipTests
+# Build JAR
+RUN mvn package -B -pl config-server -am -DskipTests
 
 # ───────────────────────────────────────────────────────────────
-# Stage 2: Runtime — minimal JRE image
+# Stage 2: Runtime
 # ───────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 

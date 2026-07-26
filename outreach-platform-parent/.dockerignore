@@ -1,14 +1,15 @@
+# Exclude unnecessary files from Docker build context
 .git
 .gitignore
 .idea
-.mvn
 *.md
-mvnw
-mvnw.cmd
-**/src
-**/pom.xml
 **/target/surefire-reports
+**/target/failsafe-reports
 **/target/classes
 **/target/generated-sources
 **/target/maven-status
 **/target/test-classes
+**/target/spotbugsXml.xml
+**/target/site
+**/docs
+**/src/test

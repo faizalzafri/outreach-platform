@@ -1,13 +1,11 @@
 # ───────────────────────────────────────────────────────────────
 # Stage 1: Build
 # ───────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /build
 
-COPY pom.xml mvnw ./
-COPY .mvn .mvn
-
+COPY pom.xml ./
 COPY common-lib/pom.xml common-lib/pom.xml
 COPY config-server/pom.xml config-server/pom.xml
 COPY discovery-service/pom.xml discovery-service/pom.xml
@@ -20,12 +18,12 @@ COPY ingestion-service/pom.xml ingestion-service/pom.xml
 COPY report-service/pom.xml report-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
 
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B -pl ingestion-service -am
+RUN mvn dependency:go-offline -B -pl ingestion-service -am
 
 COPY common-lib/src common-lib/src
 COPY ingestion-service/src ingestion-service/src
 
-RUN ./mvnw package -B -pl ingestion-service -am -DskipTests
+RUN mvn package -B -pl ingestion-service -am -DskipTests
 
 # ───────────────────────────────────────────────────────────────
 # Stage 2: Runtime
