@@ -100,7 +100,8 @@ services:
 
   config-server:
     build:
-      context: ./config-server
+      context: .
+      dockerfile: config-server/Dockerfile
     container_name: outreach-config-server
     ports:
       - "8888:8888"
@@ -120,7 +121,8 @@ services:
 
   discovery-service:
     build:
-      context: ./discovery-service
+      context: .
+      dockerfile: discovery-service/Dockerfile
     container_name: outreach-discovery
     ports:
       - "8761:8761"
@@ -141,7 +143,8 @@ services:
 
   gateway-service:
     build:
-      context: ./gateway-service
+      context: .
+      dockerfile: gateway-service/Dockerfile
     container_name: outreach-gateway
     ports:
       - "7093:7093"
@@ -169,7 +172,8 @@ services:
 
   auth-service:
     build:
-      context: ./auth-service
+      context: .
+      dockerfile: auth-service/Dockerfile
     container_name: outreach-auth
     ports:
       - "8090:8090"
@@ -201,7 +205,8 @@ services:
 
   event-service:
     build:
-      context: ./event-service
+      context: .
+      dockerfile: event-service/Dockerfile
     container_name: outreach-event
     ports:
       - "9004:9004"
@@ -244,7 +249,8 @@ services:
 
   feedback-service:
     build:
-      context: ./feedback-service
+      context: .
+      dockerfile: feedback-service/Dockerfile
     container_name: outreach-feedback
     ports:
       - "9001:9001"
@@ -279,7 +285,8 @@ services:
 
   notification-service:
     build:
-      context: ./notification-service
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: outreach-notification
     ports:
       - "9002:9002"
@@ -321,7 +328,8 @@ services:
 
   ingestion-service:
     build:
-      context: ./ingestion-service
+      context: .
+      dockerfile: ingestion-service/Dockerfile
     container_name: outreach-ingestion
     ports:
       - "9003:9003"
@@ -361,7 +369,8 @@ services:
 
   report-service:
     build:
-      context: ./report-service
+      context: .
+      dockerfile: report-service/Dockerfile
     container_name: outreach-report
     ports:
       - "9005:9005"
@@ -404,7 +413,8 @@ services:
 
   ai-service:
     build:
-      context: ./ai-service
+      context: .
+      dockerfile: ai-service/Dockerfile
     container_name: outreach-ai
     ports:
       - "9006:9006"
