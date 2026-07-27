@@ -54,10 +54,29 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/.well-known/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
-                .formLogin(Customizer.withDefaults());
+                .formLogin(Customizer.withDefaults())
+                .requestCache(cache -> cache
+                        .requestCache(new org.springframework.security.web.savedrequest.HttpSessionRequestCache() {{
+                            setMatchingRequestParameterName(null);
+                            setRequestMatcher(request -> {
+                                String uri = request.getRequestURI();
+                                // Don't cache Chrome DevTools or .well-known requests
+                                return !uri.startsWith("/.well-known") && !uri.contains("appspecific");
+                            });
+                        }})
+                )
+                .logout(logout -> logout
+                        .logoutRequestMatcher(new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/logout", "GET"))
+                        .logoutSuccessUrl("http://localhost:5173/login")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                );
 
         return http.build();
     }
