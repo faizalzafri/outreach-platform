@@ -1,0 +1,109 @@
+/**
+ * Volunteer List Content Styles
+ */
+
+.container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ----------- Search Bar ----------- */
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  flex: 1;
+  max-width: 400px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+/* ----------- Availability Badge ----------- */
+
+.availabilityBadge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.availabilityBadge--available {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.availabilityBadge--unavailable {
+  background: var(--color-red-100);
+  color: var(--color-red-700);
+}
+
+.availabilityBadge--on_leave {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+/* ----------- Actions ----------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.actionLink {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.actionLink:hover {
+  text-decoration: underline;
+}
+
+.actionLink:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

@@ -11,9 +11,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { Event, EventStatus } from '@/types/domain';
+import type { Event, EventStatus, Volunteer } from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
-import type { NormalizedError } from '@/types/api';
+import type { NormalizedError, PageResponse } from '@/types/api';
 
 import { Route } from '../$eventId';
 import styles from './EventDetailContent.module.css';
@@ -63,6 +63,131 @@ function DetailField({ label, value }: { label: string; value: string | number |
     <div className={styles['detailField']}>
       <dt className={styles['detailLabel']}>{label}</dt>
       <dd className={styles['detailValue']}>{value ?? '—'}</dd>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Volunteers Tab — Enrollment + List
+// ---------------------------------------------------------------------------
+
+function VolunteersTab({ eventId }: { eventId: string }) {
+  const queryClient = useQueryClient();
+  const [enrollEmployeeId, setEnrollEmployeeId] = useState('');
+  const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollSuccess, setEnrollSuccess] = useState(false);
+
+  // Fetch enrolled volunteers
+  const { data: volunteersData, isLoading: volunteersLoading } = useQuery<PageResponse<Volunteer>>({
+    queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
+    queryFn: async () => {
+      const response = await httpClient.get<PageResponse<Volunteer>>(
+        `/events/${eventId}/volunteers`,
+        { params: { page: 1, size: 50 } },
+      );
+      return response.data;
+    },
+  });
+
+  // Enroll mutation
+  const enrollMutation = useMutation<unknown, NormalizedError, string>({
+    mutationFn: async (empId) => {
+      const response = await httpClient.post(`/events/${eventId}/volunteers`, {
+        employeeId: empId,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      setEnrollEmployeeId('');
+      setEnrollError(null);
+      setEnrollSuccess(true);
+      void queryClient.invalidateQueries({
+        queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
+      });
+      setTimeout(() => setEnrollSuccess(false), 3000);
+    },
+    onError: (err) => {
+      setEnrollSuccess(false);
+      // Map specific error types
+      if (err.message.toLowerCase().includes('duplicate') || err.message.toLowerCase().includes('already enrolled')) {
+        setEnrollError('This volunteer is already enrolled in this event.');
+      } else if (err.message.toLowerCase().includes('capacity') || err.message.toLowerCase().includes('full')) {
+        setEnrollError('Event is at maximum volunteer capacity.');
+      } else if (err.message.toLowerCase().includes('status') || err.message.toLowerCase().includes('invalid')) {
+        setEnrollError('Cannot enroll volunteers in the current event status.');
+      } else {
+        setEnrollError(err.message || 'Enrollment failed.');
+      }
+    },
+  });
+
+  const handleEnroll = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!enrollEmployeeId.trim()) return;
+      setEnrollError(null);
+      enrollMutation.mutate(enrollEmployeeId.trim());
+    },
+    [enrollEmployeeId, enrollMutation],
+  );
+
+  return (
+    <div>
+      {/* Enrollment form */}
+      <form className={styles['enrollForm']} onSubmit={handleEnroll}>
+        <input
+          type="text"
+          className={styles['enrollInput']}
+          placeholder="Enter Employee ID to enroll..."
+          value={enrollEmployeeId}
+          onChange={(e) => setEnrollEmployeeId(e.target.value)}
+          aria-label="Employee ID to enroll"
+        />
+        <button
+          type="submit"
+          className={styles['enrollBtn']}
+          disabled={enrollMutation.isPending || !enrollEmployeeId.trim()}
+        >
+          {enrollMutation.isPending ? 'Enrolling...' : 'Enroll'}
+        </button>
+      </form>
+      {enrollSuccess && (
+        <p className={styles['enrollSuccess']} role="status">Volunteer enrolled successfully.</p>
+      )}
+      {enrollError && (
+        <p className={styles['enrollError']} role="alert">{enrollError}</p>
+      )}
+
+      {/* Enrolled volunteers list */}
+      {volunteersLoading && (
+        <p className={styles['tabPlaceholder']}>Loading volunteers...</p>
+      )}
+      {volunteersData && volunteersData.content.length > 0 ? (
+        <table className={styles['volunteerTable']}>
+          <thead>
+            <tr>
+              <th scope="col">Employee ID</th>
+              <th scope="col">Name</th>
+              <th scope="col">Department</th>
+              <th scope="col">Availability</th>
+            </tr>
+          </thead>
+          <tbody>
+            {volunteersData.content.map((vol) => (
+              <tr key={vol.employeeId}>
+                <td>{vol.employeeId}</td>
+                <td>{vol.name}</td>
+                <td>{vol.department}</td>
+                <td>{vol.availability}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        !volunteersLoading && (
+          <p className={styles['tabPlaceholder']}>No volunteers enrolled yet.</p>
+        )
+      )}
     </div>
   );
 }
@@ -233,11 +358,9 @@ export function EventDetailContent() {
         </dl>
       )}
 
-      {/* Placeholder tab content */}
+      {/* Volunteers tab with enrollment */}
       {tab === 'volunteers' && (
-        <div className={styles['tabPlaceholder']}>
-          <p>Volunteer enrollment and list will be shown here.</p>
-        </div>
+        <VolunteersTab eventId={eventId} />
       )}
       {tab === 'feedback' && (
         <div className={styles['tabPlaceholder']}>
