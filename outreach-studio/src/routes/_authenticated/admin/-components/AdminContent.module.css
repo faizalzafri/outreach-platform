@@ -1,5 +1,5 @@
 /**
- * Admin Content Styles
+ * Admin Content Styles — User Administration page
  */
 
 .container {
@@ -8,284 +8,373 @@
   margin: 0 auto;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .pageTitle {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 1.5rem;
+  margin: 0;
 }
 
-/* ----------- Header Bar ----------- */
+/* ----------- Create User Form ----------- */
 
-.headerBar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.createSection {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
-.createBtn {
-  padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+.createSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.createSectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 1rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
 }
 
-.createBtn:hover {
+.toggleBtn:hover {
   opacity: 0.9;
 }
 
-.createBtn:focus-visible {
+.toggleBtn:focus {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-/* ----------- Create Form ----------- */
+.createForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: flex-start;
+}
 
-.formOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.4);
+@media (max-width: 768px) {
+  .createForm {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldGroup {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.formPanel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.formTitle {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 1.25rem;
-}
-
-.formField {
-  margin-bottom: 1rem;
-}
-
-.formLabel {
-  display: block;
-  font-size: 0.75rem;
+.label {
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-secondary);
-  margin-bottom: 0.25rem;
 }
 
-.formInput {
-  width: 100%;
+.input {
   padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-sizing: border-box;
-}
-
-.formInput:focus {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -1px;
-}
-
-.formSelect {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.select {
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  font-size: 0.875rem;
   color: var(--text-primary);
-  box-sizing: border-box;
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+  cursor: pointer;
 }
 
-.formSelect:focus {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -1px;
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .fieldError {
   font-size: 0.75rem;
-  color: var(--color-danger-600, #dc2626);
-  margin-top: 0.25rem;
+  color: var(--color-danger-600);
+  margin: 0;
 }
 
-.formError {
-  font-size: 0.8125rem;
-  color: var(--color-danger-600, #dc2626);
-  margin-bottom: 0.75rem;
+.serverError {
+  background: var(--color-red-100);
+  color: var(--color-red-700);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 
 .formActions {
   display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  margin-top: 1.25rem;
+  align-items: flex-end;
+  padding-top: 1.25rem;
 }
 
 .submitBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1.25rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  background: var(--accent);
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.submitBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.submitBtn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .submitBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.submitBtn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+.spinner {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 
-.cancelBtn {
-  padding: 0.5rem 1.25rem;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----------- Status Badges ----------- */
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge--enabled {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.badge--disabled {
+  background: var(--color-red-100);
+  color: var(--color-red-700);
+}
+
+.badge--locked {
+  background: var(--color-amber-100, #fef3c7);
+  color: var(--color-amber-700, #92400e);
+}
+
+/* ----------- Actions ----------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
   font-size: 0.8125rem;
   font-weight: 500;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  color: var(--accent);
+  background: none;
+  border: none;
   cursor: pointer;
+  padding: 0;
 }
 
-.cancelBtn:hover {
-  background: var(--bg-hover);
+.actionBtn:hover {
+  text-decoration: underline;
 }
 
-.cancelBtn:focus-visible {
+.actionBtn:focus {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.actionBtnDanger {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-danger-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.actionBtnDanger:hover {
+  text-decoration: underline;
+}
+
+.actionBtnDanger:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 /* ----------- Confirmation Dialog ----------- */
 
-.confirmOverlay {
+.dialogOverlay {
   position: fixed;
   inset: 0;
-  z-index: 110;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
 }
 
-.confirmPanel {
+.dialog {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
-  width: 100%;
-  max-width: 380px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-.confirmTitle {
+.dialogTitle {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 0.75rem;
 }
 
-.confirmMessage {
+.dialogMessage {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin: 0 0 1.25rem;
+  line-height: 1.5;
 }
 
-.confirmActions {
+.dialogActions {
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.75rem;
 }
 
-.confirmBtn {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+.dialogConfirmBtn {
+  padding: 0.4rem 1rem;
+  background: var(--color-danger-600);
+  color: #fff;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-danger-600, #dc2626);
-  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.confirmBtn:focus-visible {
+.dialogConfirmBtn:hover {
+  opacity: 0.9;
+}
+
+.dialogConfirmBtn:focus {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-/* ----------- Table Badges ----------- */
-
-.badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: var(--radius-sm, 4px);
-  line-height: 1.4;
-}
-
-.badgeEnabled {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badgeDisabled {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.badgeLocked {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* ----------- Action Buttons ----------- */
-
-.actionBtn {
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm, 4px);
+.dialogCancelBtn {
+  padding: 0.4rem 1rem;
   background: var(--bg-surface);
   color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: border-color 0.15s;
 }
 
-.actionBtn:hover {
-  background: var(--bg-hover);
+.dialogCancelBtn:hover {
+  border-color: var(--text-muted);
 }
 
-.actionBtn:focus-visible {
+.dialogCancelBtn:focus {
   outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-.actions {
-  display: flex;
-  gap: 0.375rem;
-  flex-wrap: wrap;
+/* ----------- Role Select in Table ----------- */
+
+.roleSelect {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+
+.roleSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }

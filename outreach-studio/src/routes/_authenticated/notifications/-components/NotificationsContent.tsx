@@ -14,6 +14,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
+import { useToast } from '@/hooks/useToast';
 import type { NotificationTemplate, DeliveryRecord, NotificationType } from '@/types/domain';
 
 import styles from './NotificationsContent.module.css';
@@ -234,60 +235,28 @@ function TemplateEditor({
 }
 
 // ---------------------------------------------------------------------------
-// Preview Modal
+// Preview Modal — only shown when preview data is successfully loaded
 // ---------------------------------------------------------------------------
 
 function PreviewModal({
-  templateId,
+  data,
   onClose,
 }: {
-  templateId: string;
+  data: PreviewResponse;
   onClose: () => void;
 }) {
-  const { data, isLoading, isError, error } = useQuery<PreviewResponse>({
-    queryKey: ['notifications', 'preview', templateId],
-    queryFn: async () => {
-      const response = await httpClient.get<PreviewResponse>(
-        `/notifications/templates/${templateId}/preview`
-      );
-      return response.data;
-    },
-  });
-
-  if (isError) {
-    return (
-      <div className={styles['previewOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Preview error">
-        <div className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
-          <h2 className={styles['previewTitle']}>Preview Failed</h2>
-          <div className={styles['errorMessage']}>
-            {(error as { message?: string })?.message ?? 'Failed to load preview'}
-          </div>
-          <div className={styles['formActions']}>
-            <button type="button" className={styles['btnSecondary']} onClick={onClose}>Close</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles['previewOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Template preview">
       <div className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles['previewTitle']}>Template Preview</h2>
-        {isLoading ? (
-          <p>Loading preview...</p>
-        ) : (
-          <>
-            {data?.renderedSubject && (
-              <div style={{ marginBottom: '1rem' }}>
-                <strong>Subject:</strong> {data.renderedSubject}
-              </div>
-            )}
-            <div className={styles['previewContent']}>
-              {data?.renderedBody ?? ''}
-            </div>
-          </>
+        {data.renderedSubject && (
+          <div style={{ marginBottom: '1rem' }}>
+            <strong>Subject:</strong> {data.renderedSubject}
+          </div>
         )}
+        <div className={styles['previewContent']}>
+          {data.renderedBody ?? ''}
+        </div>
         <div className={styles['formActions']}>
           <button type="button" className={styles['btnSecondary']} onClick={onClose}>Close</button>
         </div>
@@ -303,8 +272,9 @@ function PreviewModal({
 function TemplatesTab() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewResponse | null>(null);
   const queryClient = useQueryClient();
+  const { error: showError } = useToast();
 
   const handleEdit = (template: NotificationTemplate) => {
     setEditingTemplate(template);
@@ -319,6 +289,22 @@ function TemplatesTab() {
   const handleSaved = () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.templates() });
   };
+
+  const previewMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await httpClient.get<PreviewResponse>(
+        `/notifications/templates/${id}/preview`
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setPreviewData(data);
+    },
+    onError: (err) => {
+      // Don't open/close modal on failure — show error message inline
+      showError((err as { message?: string })?.message ?? 'Preview could not be generated');
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -364,7 +350,7 @@ function TemplatesTab() {
       cell: ({ row }) => {
         const template = row.original;
         return (
-          <div>
+          <div className={styles['actionGroup']}>
             <button
               type="button"
               className={styles['actionBtn']}
@@ -375,7 +361,8 @@ function TemplatesTab() {
             <button
               type="button"
               className={styles['actionBtn']}
-              onClick={() => setPreviewId(template.id)}
+              onClick={() => previewMutation.mutate(template.id)}
+              disabled={previewMutation.isPending}
             >
               Preview
             </button>
@@ -383,6 +370,7 @@ function TemplatesTab() {
               type="button"
               className={styles['actionBtn']}
               onClick={() => cloneMutation.mutate(template.id)}
+              disabled={cloneMutation.isPending}
             >
               Clone
             </button>
@@ -401,7 +389,7 @@ function TemplatesTab() {
         );
       },
     },
-  ], [cloneMutation, deleteMutation]);
+  ], [cloneMutation, deleteMutation, previewMutation]);
 
   const templateQueryKey = useMemo(() => queryKeys.notifications.templates(), []);
 
@@ -429,10 +417,10 @@ function TemplatesTab() {
         />
       )}
 
-      {previewId && (
+      {previewData && (
         <PreviewModal
-          templateId={previewId}
-          onClose={() => setPreviewId(null)}
+          data={previewData}
+          onClose={() => setPreviewData(null)}
         />
       )}
     </>
