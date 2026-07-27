@@ -1,22 +1,178 @@
 /**
  * Event List Content (lazy-loaded)
  *
- * Placeholder for the event list page implementation.
+ * Displays events in a DataTable with columns: code, name, status, date,
+ * city, POC, volunteer count, and actions (View/Edit/Delete).
+ * Includes a "Create Event" button navigating to the create form.
  */
 
+import { useMemo } from 'react';
+import { Link } from '@tanstack/react-router';
+import type { ColumnDef } from '@tanstack/react-table';
+
+import { DataTable } from '@/components/data-table/DataTable';
+import { queryKeys } from '@/lib/query-keys';
+import type { Event, EventStatus } from '@/types/domain';
+
 import { Route } from '../index';
+import styles from './EventListContent.module.css';
+
+// ---------------------------------------------------------------------------
+// Status badge styling
+// ---------------------------------------------------------------------------
+
+const STATUS_VARIANT: Record<EventStatus, string> = {
+  DRAFT: 'draft',
+  PUBLISHED: 'published',
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+  ARCHIVED: 'archived',
+  CANCELLED: 'cancelled',
+};
+
+function StatusBadge({ status }: { status: EventStatus }) {
+  const variant = STATUS_VARIANT[status] ?? 'draft';
+  return (
+    <span className={`${styles['badge']} ${styles[`badge--${variant}`]}`}>
+      {status}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Column definitions
+// ---------------------------------------------------------------------------
+
+const columns: ColumnDef<Event, unknown>[] = [
+  {
+    accessorKey: 'code',
+    header: 'Code',
+    enableSorting: true,
+    enableColumnFilter: false,
+  },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    enableSorting: true,
+    enableColumnFilter: false,
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    enableSorting: true,
+    enableColumnFilter: true,
+    meta: {
+      filterType: 'select',
+      filterOptions: [
+        { label: 'Draft', value: 'DRAFT' },
+        { label: 'Published', value: 'PUBLISHED' },
+        { label: 'Active', value: 'ACTIVE' },
+        { label: 'Completed', value: 'COMPLETED' },
+        { label: 'Archived', value: 'ARCHIVED' },
+        { label: 'Cancelled', value: 'CANCELLED' },
+      ],
+    },
+    cell: ({ getValue }) => <StatusBadge status={getValue() as EventStatus} />,
+  },
+  {
+    accessorKey: 'startDate',
+    header: 'Date',
+    enableSorting: true,
+    enableColumnFilter: false,
+    cell: ({ row }) => {
+      const start = row.original.startDate;
+      const end = row.original.endDate;
+      const fmt = (iso: string) => new Date(iso).toLocaleDateString();
+      return (
+        <span>
+          {fmt(start)} – {fmt(end)}
+        </span>
+      );
+    },
+  },
+  {
+    accessorKey: 'city',
+    header: 'City',
+    enableSorting: true,
+    enableColumnFilter: true,
+    meta: { filterType: 'text' },
+  },
+  {
+    accessorKey: 'primaryPoc',
+    header: 'POC',
+    enableSorting: false,
+    enableColumnFilter: false,
+  },
+  {
+    accessorKey: 'volunteerCount',
+    header: 'Volunteers',
+    enableSorting: true,
+    enableColumnFilter: false,
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    enableSorting: false,
+    enableColumnFilter: false,
+    enableHiding: false,
+    cell: ({ row }) => (
+      <div className={styles['actions']}>
+        <Link
+          to="/events/$eventId"
+          params={{ eventId: row.original.id }}
+          search={{ tab: 'overview' }}
+          className={styles['actionLink']}
+        >
+          View
+        </Link>
+        <Link
+          to="/events/$eventId"
+          params={{ eventId: row.original.id }}
+          search={{ tab: 'overview' }}
+          className={styles['actionLink']}
+        >
+          Edit
+        </Link>
+        <button
+          type="button"
+          className={styles['actionBtn']}
+          aria-label={`Delete event ${row.original.name}`}
+        >
+          Delete
+        </button>
+      </div>
+    ),
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function EventListContent() {
   const search = Route.useSearch();
 
+  const queryKey = useMemo(
+    () => queryKeys.events.list({ page: search.page, size: search.size, status: search.status, search: search.search }),
+    [search.page, search.size, search.status, search.search],
+  );
+
   return (
-    <div>
-      <h1>Events</h1>
-      <p>
-        Page {search.page}, Size {search.size}
-        {search.status && `, Status: ${search.status}`}
-        {search.search && `, Search: ${search.search}`}
-      </p>
+    <div className={styles['container']}>
+      <div className={styles['header']}>
+        <h1 className={styles['pageTitle']}>Events</h1>
+        <Link to="/events/create" className={styles['createBtn']}>
+          Create Event
+        </Link>
+      </div>
+
+      <DataTable<Event>
+        columns={columns}
+        queryKey={queryKey}
+        endpoint="/events"
+        defaultPageSize={search.size}
+        emptyMessage="No events found."
+      />
     </div>
   );
 }
