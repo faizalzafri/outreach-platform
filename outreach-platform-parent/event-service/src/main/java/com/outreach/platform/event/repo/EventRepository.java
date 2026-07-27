@@ -32,8 +32,8 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
 
     @Query("SELECT e FROM EventEntity e WHERE " +
             "(:status IS NULL OR e.status = :status) AND " +
-            "(:city IS NULL OR LOWER(e.city) = LOWER(:city)) AND " +
-            "(:category IS NULL OR LOWER(e.category) = LOWER(:category)) AND " +
+            "(:city IS NULL OR LOWER(e.city) = LOWER(CAST(:city AS string))) AND " +
+            "(:category IS NULL OR LOWER(e.category) = LOWER(CAST(:category AS string))) AND " +
             "(:dateFrom IS NULL OR e.eventDate >= :dateFrom) AND " +
             "(:dateTo IS NULL OR e.eventDate <= :dateTo)")
     Page<EventEntity> findByFilters(
