@@ -8,8 +8,10 @@
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
+import { useMemo } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
+import { filterNavigationByRoles } from '@/lib/navigation-filter';
 import { Sidebar, type NavigationGroup } from './Sidebar';
 import { Header } from './Header';
 import styles from './LayoutShell.module.css';
@@ -112,7 +114,14 @@ function AuditLogIcon() {
 
 /**
  * Default navigation groups for the Outreach FMS sidebar.
- * Role filtering will be added in task 8.4.
+ *
+ * Role-based visibility rules:
+ * - ROLE_ADMIN: all sections
+ * - ROLE_PMO: Dashboard, Events, Volunteers, Feedback, Reports
+ * - ROLE_POC: Dashboard, Events (assigned), Volunteers (enrolled), Feedback
+ *
+ * Items with empty requiredRoles are visible to all authenticated users.
+ * Requirements: 9.1, 9.4, 9.5
  */
 const navigationGroups: NavigationGroup[] = [
   {
@@ -124,29 +133,29 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Management',
     items: [
-      { label: 'Events', href: '/events', icon: EventsIcon, requiredRoles: [] },
-      { label: 'Volunteers', href: '/volunteers', icon: VolunteersIcon, requiredRoles: [] },
-      { label: 'Feedback', href: '/feedback', icon: FeedbackIcon, requiredRoles: [] },
+      { label: 'Events', href: '/events', icon: EventsIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC'] },
+      { label: 'Volunteers', href: '/volunteers', icon: VolunteersIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC'] },
+      { label: 'Feedback', href: '/feedback', icon: FeedbackIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC'] },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Ingestion', href: '/ingestion', icon: IngestionIcon, requiredRoles: [] },
-      { label: 'Notifications', href: '/notifications', icon: NotificationsIcon, requiredRoles: [] },
+      { label: 'Ingestion', href: '/ingestion', icon: IngestionIcon, requiredRoles: ['ROLE_ADMIN'] },
+      { label: 'Notifications', href: '/notifications', icon: NotificationsIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
   },
   {
     label: 'Analytics',
     items: [
-      { label: 'Reports', href: '/reports', icon: ReportsIcon, requiredRoles: [] },
+      { label: 'Reports', href: '/reports', icon: ReportsIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO'] },
     ],
   },
   {
     label: 'System',
     items: [
-      { label: 'Administration', href: '/admin', icon: AdminIcon, requiredRoles: [] },
-      { label: 'Audit Log', href: '/audit-log', icon: AuditLogIcon, requiredRoles: [] },
+      { label: 'Administration', href: '/admin', icon: AdminIcon, requiredRoles: ['ROLE_ADMIN'] },
+      { label: 'Audit Log', href: '/audit-log', icon: AuditLogIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
   },
 ];
@@ -154,7 +163,7 @@ const navigationGroups: NavigationGroup[] = [
 export function LayoutShell({ children }: LayoutShellProps) {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
   // Get active route from window.location (will be replaced by TanStack Router's useLocation)
   const activeRoute = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -166,6 +175,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
   // Provide a fallback user for rendering if not yet authenticated
   const displayUser = user ?? { sub: '', name: 'User', email: '', roles: [] };
 
+  // Filter navigation by user roles (multi-role users get union of permissions)
+  const userRoles = user?.roles ?? [];
+  const filteredNavigationGroups = useMemo(
+    () => filterNavigationByRoles(navigationGroups, userRoles),
+    [userRoles]
+  );
+
   const mainClasses = [
     styles.mainWrapper,
     sidebarCollapsed ? styles.sidebarCollapsed : '',
@@ -173,12 +189,33 @@ export function LayoutShell({ children }: LayoutShellProps) {
     .filter(Boolean)
     .join(' ');
 
+  // Show loading state while roles are resolving
+  if (isLoading) {
+    return (
+      <div className={styles.layout}>
+        <div
+          role="status"
+          aria-label="Loading navigation"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            width: '100%',
+          }}
+        >
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.layout}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={toggleSidebar}
-        navigationGroups={navigationGroups}
+        navigationGroups={filteredNavigationGroups}
         activeRoute={activeRoute}
       />
 

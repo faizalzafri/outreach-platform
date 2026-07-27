@@ -6,3 +6,11 @@ export type { SidebarProps, NavigationGroup, NavigationItem } from './Sidebar';
 
 export { Header } from './Header';
 export type { HeaderProps } from './Header';
+
+export { ForbiddenPage } from './ForbiddenPage';
+
+export { ProtectedRoute } from './ProtectedRoute';
+export type { ProtectedRouteProps } from './ProtectedRoute';
+
+export { RequireRole } from './RequireRole';
+export type { RequireRoleProps } from './RequireRole';

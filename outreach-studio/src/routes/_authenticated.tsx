@@ -8,21 +8,48 @@
  * Requirements: 3.6, 3.7
  */
 
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
+import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
 
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Preserve the current URL so the user can be redirected back after login
+      const currentPath = window.location.pathname + window.location.search;
+      void navigate({
+        to: '/login',
+        search: { redirect: currentPath },
+      });
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  if (isLoading) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          width: '100%',
+        }}
+      >
+        <span>Loading...</span>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    // Preserve the current URL so the user can be redirected back after login
-    const currentPath = window.location.pathname + window.location.search;
-    const loginUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
-    window.location.href = loginUrl;
     return null;
   }
 
