@@ -26,19 +26,33 @@ import type {
 
 function getKeycloakConfig(): KeycloakConfig {
   return {
-    url: import.meta.env.VITE_KEYCLOAK_URL as string || 'http://localhost:8080',
-    realm: import.meta.env.VITE_KEYCLOAK_REALM as string || 'outreach',
-    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string || 'outreach-studio',
+    url: import.meta.env.VITE_KEYCLOAK_URL as string || 'http://localhost:8090',
+    realm: import.meta.env.VITE_KEYCLOAK_REALM as string || '',
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string || 'outreach-dashboard',
   };
 }
 
 function getKeycloakEndpoints(config: KeycloakConfig) {
-  const base = `${config.url}/realms/${config.realm}/protocol/openid-connect`;
+  // If a realm is configured, use Keycloak-style endpoints
+  if (config.realm) {
+    const base = `${config.url}/realms/${config.realm}/protocol/openid-connect`;
+    return {
+      authorization: `${base}/auth`,
+      token: `${base}/token`,
+      logout: `${base}/logout`,
+      revoke: `${base}/revoke`,
+    };
+  }
+
+  // Otherwise, use Spring Authorization Server endpoints
+  // Authorization endpoint uses the full URL (browser redirect)
+  // Token/revoke use relative paths (proxied via Vite in dev, Nginx in prod)
+  // Logout uses the full URL (browser redirect to end server session)
   return {
-    authorization: `${base}/auth`,
-    token: `${base}/token`,
-    logout: `${base}/logout`,
-    revoke: `${base}/revoke`,
+    authorization: `${config.url}/oauth2/authorize`,
+    token: `/oauth2/token`,
+    logout: `${config.url}/connect/logout`,
+    revoke: `/oauth2/revoke`,
   };
 }
 
@@ -345,7 +359,7 @@ export function createAuthModule(): AuthModule {
   async function logout(): Promise<void> {
     const currentRefreshToken = state.refreshToken;
 
-    // Attempt to revoke tokens at Keycloak
+    // Attempt to revoke tokens
     if (currentRefreshToken) {
       try {
         const body = new URLSearchParams({
@@ -365,6 +379,10 @@ export function createAuthModule(): AuthModule {
     }
 
     clearSession();
+
+    // Redirect to auth server's logout which invalidates the session
+    // and redirects back to our login page (configured in SecurityConfig)
+    window.location.href = `${config.url}/logout`;
   }
 
   function getAccessToken(): string | null {

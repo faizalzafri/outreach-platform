@@ -37,6 +37,10 @@ export default defineConfig({
         target: 'http://localhost:7093',
         changeOrigin: true,
       },
+      '/oauth2': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
     },
   },
   build: {
