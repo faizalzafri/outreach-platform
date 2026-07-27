@@ -78,8 +78,8 @@
 }
 
 .availabilityBadge--on_leave {
-  background: var(--color-gray-100);
-  color: var(--color-gray-700);
+  background: var(--color-warning-50);
+  color: var(--color-warning-700);
 }
 
 /* ----------- Actions ----------- */
