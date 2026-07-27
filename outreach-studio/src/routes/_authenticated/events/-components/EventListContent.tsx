@@ -6,12 +6,13 @@
  * Includes a "Create Event" button navigating to the create form.
  */
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/data-table/DataTable';
 import { queryKeys } from '@/lib/query-keys';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { Event, EventStatus } from '@/types/domain';
 
 import { Route } from '../index';
@@ -151,10 +152,17 @@ const columns: ColumnDef<Event, unknown>[] = [
 
 export function EventListContent() {
   const search = Route.useSearch();
+  const [searchText, setSearchText] = useState(search.search ?? '');
+  const debouncedSearch = useDebounce(searchText, 300);
 
   const queryKey = useMemo(
-    () => queryKeys.events.list({ page: search.page, size: search.size, status: search.status, search: search.search }),
-    [search.page, search.size, search.status, search.search],
+    () => queryKeys.events.list({
+      page: search.page,
+      size: search.size,
+      status: search.status,
+      search: debouncedSearch || undefined,
+    }),
+    [search.page, search.size, search.status, debouncedSearch],
   );
 
   return (
@@ -164,6 +172,18 @@ export function EventListContent() {
         <Link to="/events/create" className={styles['createBtn']}>
           Create Event
         </Link>
+      </div>
+
+      {/* Search text filter */}
+      <div className={styles['searchBar']}>
+        <input
+          type="text"
+          className={styles['searchInput']}
+          placeholder="Search events by name, code, or city..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          aria-label="Search events"
+        />
       </div>
 
       <DataTable<Event>
