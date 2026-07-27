@@ -50,8 +50,8 @@ auth-server:
   clients:
     dashboard:
       client-id: outreach-dashboard
-      redirect-uri: http://localhost:4200/*
-      post-logout-redirect-uri: http://localhost:4200/*
+      redirect-uri: http://localhost:5173/callback
+      post-logout-redirect-uri: http://localhost:5173/login
     services:
       client-id: outreach-services
       client-secret: ${AUTH_SERVICE_CLIENT_SECRET:CHANGE_ME_IN_PRODUCTION}
