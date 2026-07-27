@@ -449,7 +449,7 @@ export function DashboardContent() {
         <div className={styles['chartGrid']}>
           {/* Feedback Trends Line Chart (full width) */}
           <FeedbackTrendsChart
-            data={trendsData?.feedbackTrends}
+            data={Array.isArray(trendsData?.feedbackTrends) ? trendsData.feedbackTrends : Array.isArray(trendsData) ? trendsData as unknown as TrendDataPoint[] : []}
             isLoading={trendsLoading}
             isError={trendsError}
             error={trendsErrorObj}
@@ -464,7 +464,7 @@ export function DashboardContent() {
 
           {/* Event Status Bar Chart — uses lifecycle-stats endpoint with fallback to trends */}
           <EventStatusChart
-            data={lifecycleData ?? trendsData?.eventStatusDistribution}
+            data={Array.isArray(lifecycleData) ? lifecycleData : Array.isArray(trendsData?.eventStatusDistribution) ? trendsData.eventStatusDistribution : []}
             isLoading={lifecycleLoading && trendsLoading}
             isError={lifecycleError && trendsError}
             error={lifecycleErrorObj ?? trendsErrorObj}
@@ -473,7 +473,7 @@ export function DashboardContent() {
 
           {/* Feedback Score Pie Chart */}
           <FeedbackScoreChart
-            data={trendsData?.feedbackScoreDistribution}
+            data={Array.isArray(trendsData?.feedbackScoreDistribution) ? trendsData.feedbackScoreDistribution : []}
             isLoading={trendsLoading}
             isError={trendsError}
             error={trendsErrorObj}
