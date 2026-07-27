@@ -5,8 +5,6 @@
  * - Hamburger toggle button for mobile sidebar
  * - Authenticated user's name and role
  * - Logout button
- *
- * Requirements: 2.1, 2.3
  */
 
 import type { UserProfile } from '@/types/auth';

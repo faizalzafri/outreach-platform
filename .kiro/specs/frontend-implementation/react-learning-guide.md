@@ -1837,3 +1837,72 @@ if (isLoading) {
 | **Empty Required Roles** | Convention: an empty roles array means the item is accessible to any authenticated user |
 
 ---
+
+---
+
+## Commands Reference: npm/npx Commands Used in This Project
+
+This section documents all the npm and npx commands executed while building this project, what they do, and when you'd use them.
+
+### Project Initialization
+
+| Command | Purpose |
+|---------|---------|
+| `npm create vite@latest outreach-studio -- --template react-ts` | Scaffolds a new Vite + React + TypeScript project |
+| `cd outreach-studio && npm install` | Installs all dependencies listed in package.json |
+
+### Installing Dependencies
+
+| Command | Purpose |
+|---------|---------|
+| `npm install react react-dom` | Core React libraries (already included by template) |
+| `npm install @tanstack/react-router` | Type-safe file-based routing library |
+| `npm install @tanstack/react-query` | Server state management (caching, background refetch) |
+| `npm install @tanstack/react-table` | Headless table library for data grids |
+| `npm install zustand` | Lightweight client state management |
+| `npm install axios` | HTTP client with interceptor support |
+| `npm install uuid` | UUID v4 generation for correlation IDs |
+| `npm install zod` | TypeScript-first schema validation |
+
+### Installing Dev Dependencies
+
+| Command | Purpose |
+|---------|---------|
+| `npm install -D @tanstack/router-plugin` | Vite plugin for TanStack Router file-based route generation |
+| `npm install -D @tanstack/router-devtools` | Browser devtools panel for inspecting routes |
+| `npm install -D @types/uuid` | TypeScript type definitions for the uuid package |
+| `npm install -D vitest` | Vite-native test runner (Jest-compatible API) |
+| `npm install -D @testing-library/react` | Component testing via user behavior simulation |
+| `npm install -D @testing-library/jest-dom` | Custom Jest/Vitest matchers for DOM assertions |
+| `npm install -D @testing-library/user-event` | Realistic user interaction simulation |
+| `npm install -D jsdom` | Browser DOM implementation for Node.js (test environment) |
+| `npm install -D msw` | Mock Service Worker for network-level API mocking |
+| `npm install -D jest-axe` | Automated accessibility (a11y) testing |
+| `npm install -D vite-plugin-checker` | TypeScript type checking during dev with browser overlay |
+
+### Daily Development Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Starts Vite dev server with HMR on http://localhost:5173 |
+| `npm run build` | Type-checks (tsc) then bundles for production into dist/ |
+| `npm run test` | Runs Vitest in watch mode (interactive, re-runs on file changes) |
+| `npm run test -- --run` | Runs all tests once and exits (for CI/scripts) |
+| `npm run preview` | Serves the production build locally for verification |
+
+### Understanding the Commands
+
+**`npm run build`** actually executes `tsc -b && vite build`:
+1. `tsc -b` — TypeScript compiler in build mode, checks ALL files for type errors
+2. `vite build` — Bundles the app using Rollup, applies tree-shaking, code-splits routes, outputs to `dist/`
+
+**`npm run test`** executes `vitest` which:
+1. Starts in watch mode by default (re-runs affected tests on file save)
+2. Uses the `jsdom` environment to simulate a browser DOM
+3. Loads `src/test/setup.ts` which initializes MSW and global test utilities
+
+**`npm run dev`** executes `vite` which:
+1. Starts an HTTP server serving your source files directly (no bundling!)
+2. Transforms TypeScript/JSX on-the-fly using esbuild
+3. Proxies `/api` requests to `http://localhost:7093` (the API Gateway)
+4. Enables Hot Module Replacement — edits appear instantly without page reload

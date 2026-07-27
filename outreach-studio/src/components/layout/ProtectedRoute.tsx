@@ -5,8 +5,6 @@
  * - If authorized → renders children
  * - If unauthorized → renders 403 Forbidden page
  * - If roles are still loading → renders a loading indicator
- *
- * Requirements: 9.2, 9.3, 9.8, 9.9
  */
 
 import { usePermission } from '@/hooks/usePermission';

@@ -2,7 +2,6 @@
  * Admin Content (lazy-loaded)
  *
  * Placeholder for the user administration page implementation.
- * Actual user management UI will be implemented in task 19.
  */
 
 import { Route } from '../index';

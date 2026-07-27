@@ -2,7 +2,6 @@
  * Reports Content (lazy-loaded)
  *
  * Placeholder for the reports page implementation.
- * Actual charts, filters, and export will be implemented in task 18.
  */
 
 import { Route } from '../index';

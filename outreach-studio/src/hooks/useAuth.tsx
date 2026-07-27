@@ -5,8 +5,6 @@
  * - Initializes auth module on mount
  * - Subscribes to auth state changes
  * - Exposes user, isAuthenticated, isLoading, login, logout
- *
- * Requirements: 4.6, 9.8
  */
 
 import {

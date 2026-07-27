@@ -4,8 +4,6 @@
  * Displays details for a single event with lifecycle transition controls.
  * Supports nested tabs: Overview, Volunteers, Feedback, Notifications, Audit History.
  * Uses React.lazy + Suspense for code splitting.
- *
- * Requirements: 3.2, 3.3
  */
 
 import { createFileRoute } from '@tanstack/react-router';

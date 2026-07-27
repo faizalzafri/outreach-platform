@@ -3,8 +3,6 @@
  *
  * Form for creating a new event with Zod validation.
  * Uses React.lazy + Suspense for code splitting.
- *
- * Requirements: 3.2, 3.3
  */
 
 import { createFileRoute } from '@tanstack/react-router';

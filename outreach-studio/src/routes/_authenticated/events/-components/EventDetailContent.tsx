@@ -2,7 +2,6 @@
  * Event Detail Content (lazy-loaded)
  *
  * Placeholder for the event detail page implementation.
- * Actual event details with tabs will be implemented in task 12.
  */
 
 import { Route } from '../$eventId';

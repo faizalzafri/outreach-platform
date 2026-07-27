@@ -2,7 +2,6 @@
  * Authenticated Index Route
  *
  * Landing page for authenticated users (dashboard placeholder).
- * This is a temporary placeholder until the dashboard is implemented in task 11.
  */
 
 import { createFileRoute } from '@tanstack/react-router';

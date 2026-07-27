@@ -3,8 +3,6 @@
  *
  * Filters navigation groups based on user roles.
  * Multi-role users get the union of all permissions.
- *
- * Requirements: 9.1, 9.4, 9.5
  */
 
 import type { NavigationGroup } from '@/components/layout/Sidebar';

@@ -2,7 +2,6 @@
  * Feedback Content (lazy-loaded)
  *
  * Placeholder for the feedback page implementation.
- * Actual feedback form and list will be implemented in task 14.
  */
 
 import { Route } from '../index';

@@ -6,8 +6,6 @@
  *
  * Route search param schemas use .catch() to gracefully handle invalid input —
  * invalid params are discarded and defaults applied rather than throwing errors.
- *
- * Requirements: 3.4, 3.5
  */
 
 import { z } from 'zod';

@@ -6,8 +6,6 @@
  * - AuthProvider (authentication context)
  * - ToastContainer (global notifications)
  * - TanStack Router Devtools (development only)
- *
- * Requirements: 3.1
  */
 
 import { createRootRoute, Outlet } from '@tanstack/react-router';

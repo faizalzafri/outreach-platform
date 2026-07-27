@@ -4,8 +4,6 @@
  * Guards all child routes behind authentication.
  * Redirects unauthenticated users to /login, preserving the requested URL
  * as a `redirect` search param so the user can be returned after login.
- *
- * Requirements: 3.6, 3.7
  */
 
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';

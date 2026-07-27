@@ -3,8 +3,6 @@
  *
  * Displayed when a user attempts to access a route they are not authorized for.
  * Shows a clear message and a link back to the dashboard.
- *
- * Requirements: 9.3, 9.9
  */
 
 import styles from './ForbiddenPage.module.css';

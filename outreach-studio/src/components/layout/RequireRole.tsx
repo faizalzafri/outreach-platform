@@ -7,8 +7,6 @@
  * - While loading → renders nothing (null) to avoid flicker
  *
  * Useful for showing/hiding UI elements (buttons, sections) based on role.
- *
- * Requirements: 9.4, 9.5, 9.7, 9.8
  */
 
 import type { ReactNode } from 'react';

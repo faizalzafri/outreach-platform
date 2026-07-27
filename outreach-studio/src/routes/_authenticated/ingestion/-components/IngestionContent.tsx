@@ -2,7 +2,6 @@
  * Ingestion Content (lazy-loaded)
  *
  * Placeholder for the data ingestion page implementation.
- * Actual upload UI and job tracking will be implemented in task 16.
  */
 
 import { Route } from '../index';

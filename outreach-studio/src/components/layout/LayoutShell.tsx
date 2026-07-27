@@ -4,8 +4,6 @@
  * Composes the Sidebar, Header, and main content area into a cohesive layout.
  * Uses semantic HTML elements (nav, header, main) for accessibility.
  * Manages sidebar state via Zustand UI store and auth via useAuth hook.
- *
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
 import { useMemo } from 'react';
@@ -122,7 +120,6 @@ function AuditLogIcon() {
  * - ROLE_POC: Dashboard, Events (assigned), Volunteers (enrolled), Feedback
  *
  * Items with empty requiredRoles are visible to all authenticated users.
- * Requirements: 9.1, 9.4, 9.5
  */
 const navigationGroups: NavigationGroup[] = [
   {

@@ -4,8 +4,6 @@
  * Displays profile, participation history, and feedback score trends
  * for a specific volunteer.
  * Uses React.lazy + Suspense for code splitting.
- *
- * Requirements: 3.2, 3.3
  */
 
 import { createFileRoute } from '@tanstack/react-router';

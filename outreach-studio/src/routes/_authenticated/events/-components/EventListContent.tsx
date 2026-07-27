@@ -2,7 +2,6 @@
  * Event List Content (lazy-loaded)
  *
  * Placeholder for the event list page implementation.
- * Actual DataTable with event data will be implemented in task 12.
  */
 
 import { Route } from '../index';

@@ -4,8 +4,6 @@
  * Initiates the OAuth2 Authorization Code + PKCE flow by redirecting
  * the user to Keycloak. If the user is already authenticated, redirects
  * to the dashboard (or to the URL specified in the `redirect` search param).
- *
- * Requirements: 3.6
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';

@@ -2,7 +2,6 @@
  * Audit Log Content (lazy-loaded)
  *
  * Placeholder for the audit log page implementation.
- * Actual audit trail with expandable JSON will be implemented in task 19.
  */
 
 import { Route } from '../index';

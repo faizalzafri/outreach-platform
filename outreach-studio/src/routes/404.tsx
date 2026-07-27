@@ -3,8 +3,6 @@
  *
  * Displayed when no route matches the current URL.
  * Provides a link back to the dashboard.
- *
- * Requirements: 3.7
  */
 
 import { createFileRoute, Link } from '@tanstack/react-router';

@@ -2,7 +2,6 @@
  * Event Create Content (lazy-loaded)
  *
  * Placeholder for the event creation form.
- * Actual TanStack Form + Zod validation will be implemented in task 12.
  */
 
 export function EventCreateContent() {

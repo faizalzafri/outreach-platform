@@ -4,8 +4,6 @@
  * Handles the redirect back from Keycloak after authentication.
  * Extracts `code` and `state` from URL search params and exchanges
  * them for tokens via authModule.handleCallback().
- *
- * Requirements: 3.6
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';

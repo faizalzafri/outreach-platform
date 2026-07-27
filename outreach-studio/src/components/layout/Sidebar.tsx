@@ -5,8 +5,6 @@
  * Highlights the currently active route using TanStack Router's Link component.
  * Supports responsive collapse to overlay on mobile (< 768px) with
  * outside click and Escape dismissal.
- *
- * Requirements: 2.1, 2.2, 2.4, 2.5
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';

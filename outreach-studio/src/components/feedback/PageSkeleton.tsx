@@ -4,8 +4,6 @@
  * A loading skeleton displayed as the Suspense fallback while
  * route components are being lazily loaded via code splitting.
  * Mimics the general page layout to reduce layout shift.
- *
- * Requirements: 3.3
  */
 
 import type { CSSProperties } from 'react';

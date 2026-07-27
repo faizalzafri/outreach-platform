@@ -6,8 +6,6 @@
  *
  * Multi-role users are granted the union of all their role permissions —
  * if ANY of the user's roles matches ANY of the required roles, access is granted.
- *
- * Requirements: 9.1, 9.2, 9.7, 9.8
  */
 
 import { useAuth } from '@/hooks/useAuth';

@@ -2,7 +2,6 @@
  * Volunteer Detail Content (lazy-loaded)
  *
  * Placeholder for the volunteer detail page implementation.
- * Actual profile display and participation history will be implemented in task 13.
  */
 
 import { Route } from '../$employeeId';

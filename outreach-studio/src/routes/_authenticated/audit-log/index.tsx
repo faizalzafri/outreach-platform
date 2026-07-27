@@ -4,8 +4,6 @@
  * Displays audit trail entries with filters and expandable JSON payloads.
  * Validates search params with Zod schema using .catch() to discard invalid params.
  * Uses React.lazy + Suspense for code splitting.
- *
- * Requirements: 3.2, 3.4, 3.5
  */
 
 import { createFileRoute } from '@tanstack/react-router';
