@@ -289,3 +289,95 @@
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
+/* ----------- Enrollment Form ----------- */
+
+.enrollForm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.enrollInput {
+  flex: 1;
+  max-width: 300px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+}
+
+.enrollInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.enrollBtn {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.enrollBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.enrollBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.enrollBtn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.enrollSuccess {
+  font-size: 0.8125rem;
+  color: var(--color-green-700);
+  margin: 0 0 1rem;
+}
+
+.enrollError {
+  font-size: 0.8125rem;
+  color: var(--color-danger-600);
+  margin: 0 0 1rem;
+}
+
+/* ----------- Volunteer Table in Tab ----------- */
+
+.volunteerTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.volunteerTable th,
+.volunteerTable td {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.volunteerTable th {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.75rem;
+}
+
+.volunteerTable td {
+  color: var(--text-primary);
+}
