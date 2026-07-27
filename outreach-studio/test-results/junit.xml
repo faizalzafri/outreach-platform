@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="2" failures="0" errors="0" time="0.0509211">
-    <testsuite name="src/test/utils.test.tsx" timestamp="2026-07-27T07:29:13.820Z" hostname="ConveraGXLFY74" tests="2" failures="0" errors="0" skipped="0" time="0.0509211">
-        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; renders a component within providers" time="0.0410532">
+<testsuites name="vitest tests" tests="2" failures="0" errors="0" time="0.0531178">
+    <testsuite name="src/test/utils.test.tsx" timestamp="2026-07-27T14:22:45.541Z" hostname="ConveraGXLFY74" tests="2" failures="0" errors="0" skipped="0" time="0.0531178">
+        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; renders a component within providers" time="0.0424768">
         </testcase>
-        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; returns a queryClient instance" time="0.0046821">
+        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; returns a queryClient instance" time="0.0050563">
         </testcase>
     </testsuite>
 </testsuites>

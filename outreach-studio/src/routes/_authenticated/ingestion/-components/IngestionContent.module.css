@@ -1,0 +1,204 @@
+/**
+ * Ingestion Content Styles
+ */
+
+.container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem;
+}
+
+/* ----------- Upload Zone ----------- */
+
+.uploadSection {
+  margin-bottom: 2rem;
+}
+
+.dropzone {
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  background: var(--bg-surface);
+}
+
+.dropzone:hover,
+.dropzoneActive {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.dropzoneDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dropzoneDisabled:hover {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.dropzoneIcon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  color: var(--text-secondary);
+}
+
+.dropzoneText {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.dropzoneHint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.fileInput {
+  display: none;
+}
+
+/* ----------- Upload Progress ----------- */
+
+.progressSection {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.progressLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.progressPercent {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.progressBarContainer {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-muted);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progressInfo {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.progressInfoItem {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.progressInfoValue {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ----------- Status badges ----------- */
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusInProgress {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.statusCompleted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.statusCompletedWithErrors {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusFailed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ----------- Error Message ----------- */
+
+.errorMessage {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.timeoutMessage {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+/* ----------- Job List Section ----------- */
+
+.jobListSection {
+  margin-top: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem;
+}
