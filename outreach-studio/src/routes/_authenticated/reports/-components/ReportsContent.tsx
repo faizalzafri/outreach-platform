@@ -198,7 +198,17 @@ export function ReportsContent() {
     cities: selectedCities.length > 0 ? selectedCities : undefined,
   }), [startDate, endDate, granularity, selectedEvents, selectedCities]);
 
-  // Fetch report data
+  // Fetch report data — endpoint changes based on active tab
+  const reportEndpoint = useMemo(() => {
+    const endpoints: Record<AggregationTab, string> = {
+      event: '/reports/by-event',
+      beneficiary: '/reports/by-beneficiary',
+      city: '/reports/by-city',
+      poc: '/reports/by-poc',
+    };
+    return endpoints[activeTab];
+  }, [activeTab]);
+
   const {
     data,
     isLoading,
@@ -208,26 +218,21 @@ export function ReportsContent() {
   } = useQuery<ReportResponse>({
     queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.sub : null],
     queryFn: async () => {
-      const response = await httpClient.get<ReportResponse>('/reports/feedback', {
+      const response = await httpClient.get<ReportResponse>(reportEndpoint, {
         params: queryParams,
       });
       return response.data;
     },
   });
 
-  // Fetch available filter options
-  const { data: filterOptions } = useQuery<FilterOptionsResponse>({
-    queryKey: ['reports', 'filter-options', isPocOnly ? user?.sub : null],
-    queryFn: async () => {
-      const params = isPocOnly ? { pocId: user?.sub } : undefined;
-      const response = await httpClient.get<FilterOptionsResponse>(
-        '/reports/filter-options',
-        { params }
-      );
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // cache 5 min
-  });
+  // Filter options are not available from a dedicated API endpoint.
+  // Users can type values directly or leave filters empty.
+  const filterOptions: FilterOptionsResponse = useMemo(() => ({
+    events: [],
+    cities: [],
+    beneficiaries: [],
+    pocs: [],
+  }), []);
 
   // --- Export state ---
   const [exportStatus, setExportStatus] = useState<'idle' | 'polling' | 'completed' | 'failed' | 'timeout'>('idle');
@@ -363,7 +368,7 @@ export function ReportsContent() {
             onChange={(e) => handleMultiSelectChange(e, setSelectedEvents)}
             aria-label="Filter by events"
           >
-            {filterOptions?.events?.map((evt) => (
+            {filterOptions.events.map((evt) => (
               <option key={evt.id} value={evt.id}>{evt.name}</option>
             ))}
           </select>
@@ -379,7 +384,7 @@ export function ReportsContent() {
             onChange={(e) => handleMultiSelectChange(e, setSelectedCities)}
             aria-label="Filter by cities"
           >
-            {filterOptions?.cities?.map((city) => (
+            {filterOptions.cities.map((city) => (
               <option key={city} value={city}>{city}</option>
             ))}
           </select>
@@ -395,7 +400,7 @@ export function ReportsContent() {
             onChange={(e) => handleMultiSelectChange(e, setSelectedBeneficiaries)}
             aria-label="Filter by beneficiaries"
           >
-            {filterOptions?.beneficiaries?.map((b) => (
+            {filterOptions.beneficiaries.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
@@ -414,7 +419,7 @@ export function ReportsContent() {
             aria-disabled={isPocOnly}
             title={isPocOnly ? 'POC filter is restricted to your assigned events' : undefined}
           >
-            {filterOptions?.pocs?.map((poc) => (
+            {filterOptions.pocs.map((poc) => (
               <option key={poc.id} value={poc.id}>{poc.name}</option>
             ))}
           </select>
