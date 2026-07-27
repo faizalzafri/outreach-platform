@@ -2,6 +2,16 @@
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'CANCELLED';
 
+/** Valid lifecycle transitions for each event status. */
+export const EVENT_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
+  DRAFT: ['PUBLISHED', 'CANCELLED'],
+  PUBLISHED: ['ACTIVE', 'CANCELLED'],
+  ACTIVE: ['COMPLETED'],
+  COMPLETED: ['ARCHIVED'],
+  ARCHIVED: [],
+  CANCELLED: [],
+};
+
 export interface Event {
   id: string;
   code: string;
