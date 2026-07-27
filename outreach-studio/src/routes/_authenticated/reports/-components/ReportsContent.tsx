@@ -2,10 +2,10 @@
  * Reports Content (lazy-loaded)
  *
  * Displays reports with filter controls, line chart visualization,
- * supporting data table, and tab-based aggregation views.
+ * supporting data table, tab-based aggregation views, and async export.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LineChart,
@@ -20,6 +20,7 @@ import {
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
+import { useToast } from '@/hooks/useToast';
 import type { TrendParams } from '@/types/api';
 
 import { Route } from '../index';
@@ -66,6 +67,27 @@ const TAB_LABELS: Record<AggregationTab, string> = {
   city: 'By City',
   poc: 'By POC',
 };
+
+// ---------------------------------------------------------------------------
+// Export types
+// ---------------------------------------------------------------------------
+
+type ExportFormat = 'PDF' | 'CSV' | 'EXCEL';
+
+interface ExportJobStatus {
+  jobId: string;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  downloadUrl?: string;
+}
+
+const EXPORT_FORMAT_OPTIONS: { value: ExportFormat; label: string }[] = [
+  { value: 'PDF', label: 'PDF' },
+  { value: 'CSV', label: 'CSV' },
+  { value: 'EXCEL', label: 'Excel' },
+];
+
+const EXPORT_POLL_INTERVAL = 5_000; // 5 seconds
+const EXPORT_MAX_DURATION = 120_000; // 2 minutes
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -160,6 +182,83 @@ export function ReportsContent() {
     setSelectedCities(values);
   };
 
+  // --- Export state ---
+  const [exportStatus, setExportStatus] = useState<'idle' | 'polling' | 'completed' | 'failed' | 'timeout'>('idle');
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const exportPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const exportStartRef = useRef<number>(0);
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (exportPollRef.current) {
+        clearInterval(exportPollRef.current);
+      }
+    };
+  }, []);
+
+  const startExport = useCallback(async (format: ExportFormat) => {
+    setShowFormatMenu(false);
+    setExportStatus('polling');
+    setDownloadUrl(null);
+    exportStartRef.current = Date.now();
+
+    try {
+      const response = await httpClient.post<{ jobId: string }>('/reports/export', {
+        format,
+        filters: {
+          startDate,
+          endDate,
+          granularity,
+          eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
+          cities: selectedCities.length > 0 ? selectedCities : undefined,
+        },
+      });
+
+      const jobId = response.data.jobId;
+
+      // Start polling
+      exportPollRef.current = setInterval(async () => {
+        const elapsed = Date.now() - exportStartRef.current;
+        if (elapsed >= EXPORT_MAX_DURATION) {
+          if (exportPollRef.current) clearInterval(exportPollRef.current);
+          exportPollRef.current = null;
+          setExportStatus('timeout');
+          toastError('Export timed out. Please try again.');
+          return;
+        }
+
+        try {
+          const statusRes = await httpClient.get<ExportJobStatus>(`/reports/export/${jobId}/status`);
+          const job = statusRes.data;
+
+          if (job.status === 'COMPLETED') {
+            if (exportPollRef.current) clearInterval(exportPollRef.current);
+            exportPollRef.current = null;
+            setExportStatus('completed');
+            setDownloadUrl(job.downloadUrl ?? null);
+            toastSuccess('Export completed successfully.');
+          } else if (job.status === 'FAILED') {
+            if (exportPollRef.current) clearInterval(exportPollRef.current);
+            exportPollRef.current = null;
+            setExportStatus('failed');
+            toastError('Export failed. Please try again.');
+          }
+        } catch {
+          if (exportPollRef.current) clearInterval(exportPollRef.current);
+          exportPollRef.current = null;
+          setExportStatus('failed');
+          toastError('Failed to check export status.');
+        }
+      }, EXPORT_POLL_INTERVAL);
+    } catch {
+      setExportStatus('failed');
+      toastError('Failed to start export.');
+    }
+  }, [startDate, endDate, granularity, selectedEvents, selectedCities, toastSuccess, toastError]);
+
   return (
     <div className={styles['container']}>
       <h1 className={styles['pageTitle']}>Reports</h1>
@@ -231,6 +330,61 @@ export function ReportsContent() {
             ))}
           </select>
         </div>
+      </div>
+
+      {/* Export Controls */}
+      <div className={styles['exportBar']}>
+        <div className={styles['exportGroup']}>
+          <button
+            type="button"
+            className={styles['exportBtn']}
+            disabled={exportStatus === 'polling'}
+            onClick={() => setShowFormatMenu((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={showFormatMenu}
+          >
+            {exportStatus === 'polling' ? (
+              <>
+                <span className={styles['spinner']} aria-hidden="true" />
+                Exporting…
+              </>
+            ) : (
+              'Export'
+            )}
+          </button>
+          {showFormatMenu && (
+            <div className={styles['formatMenu']} role="menu">
+              {EXPORT_FORMAT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="menuitem"
+                  className={styles['formatMenuItem']}
+                  onClick={() => void startExport(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {exportStatus === 'completed' && downloadUrl && (
+          <a
+            href={downloadUrl}
+            className={styles['downloadLink']}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+          >
+            Download Report
+          </a>
+        )}
+        {exportStatus === 'failed' && (
+          <span className={styles['exportError']}>Export failed. Try again.</span>
+        )}
+        {exportStatus === 'timeout' && (
+          <span className={styles['exportError']}>Export timed out.</span>
+        )}
       </div>
 
       {/* Tab Navigation */}

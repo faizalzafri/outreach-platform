@@ -48,6 +48,37 @@
   outline-offset: 2px;
 }
 
+/* ----------- Search Bar ----------- */
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  flex: 1;
+  max-width: 400px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
 /* ----------- Status Badges ----------- */
 
 .badge {
