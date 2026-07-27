@@ -8,7 +8,7 @@ export function DashboardContent() {
   return (
     <div>
       <h1>Dashboard</h1>
-      <p>Welcome to the Outreach FMS Dashboard.</p>
+      <p>Welcome to the Outreach Studio Dashboard.</p>
     </div>
   );
 }
