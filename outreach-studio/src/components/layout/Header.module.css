@@ -1,0 +1,109 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 1.5rem;
+  background-color: var(--header-bg, #ffffff);
+  border-bottom: 1px solid var(--header-border, #e2e8f0);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hamburgerBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  color: var(--header-text, #1e293b);
+}
+
+.hamburgerBtn:hover {
+  background-color: var(--header-hover, #f1f5f9);
+}
+
+.hamburgerBtn:focus-visible {
+  outline: 2px solid var(--focus-ring, #60a5fa);
+  outline-offset: 2px;
+}
+
+.hamburgerIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+
+.userName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--header-text, #1e293b);
+}
+
+.userRole {
+  font-size: 0.75rem;
+  color: var(--header-muted, #64748b);
+}
+
+.logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--logout-text, #dc2626);
+  background: none;
+  border: 1px solid var(--logout-border, #fecaca);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.logoutBtn:hover {
+  background-color: var(--logout-hover-bg, #fef2f2);
+}
+
+.logoutBtn:focus-visible {
+  outline: 2px solid var(--focus-ring, #60a5fa);
+  outline-offset: 2px;
+}
+
+.logoutIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+@media (max-width: 767px) {
+  .hamburgerBtn {
+    display: flex;
+  }
+
+  .userInfo {
+    display: none;
+  }
+}
