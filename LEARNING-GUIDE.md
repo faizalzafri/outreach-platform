@@ -1214,3 +1214,100 @@ This section documents the framework features, design patterns, and engineering 
 1. **TanStack Query Mutations and Optimistic Updates** — `useMutation` for create/update/delete operations. Study optimistic updates (update cache before server confirms), rollback on failure, and `onMutate`/`onError`/`onSettled` lifecycle.
 2. **Query Invalidation Strategies** — When to invalidate (after mutation), what to invalidate (broad vs narrow), and alternatives like `setQueryData` for instant cache updates without refetch.
 3. **Infinite Queries and Pagination** — `useInfiniteQuery` for cursor-based pagination, `getNextPageParam`, and how it integrates with the query key factory pattern for cache management.
+
+
+---
+
+## Frontend-Backend Auth Integration (Spring Authorization Server + React SPA)
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Spring Security Form Login** | `formLogin(Customizer.withDefaults())` enables a built-in login page that accepts username/password POST submissions and establishes an HTTP session. | The Authorization Server requires interactive user authentication before issuing authorization codes. Form login provides this without a custom login UI on the server side. |
+| **Request Cache Customization** | `HttpSessionRequestCache` with a custom `setRequestMatcher()` filters which requests are saved for post-login redirect. | Without customization, Chrome DevTools requests to `/.well-known/appspecific/...` get cached as the "saved request," causing the auth server to redirect to a DevTools URL instead of the OAuth authorize endpoint after login. |
+| **GET-based Logout** | `logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))` allows logout via a simple browser redirect (GET request) instead of requiring a CSRF-protected POST. | The SPA cannot POST to a cross-origin `/logout` endpoint with a valid CSRF token. A GET-based logout allows the SPA to redirect the browser to the auth server's logout URL, which destroys the session and redirects back. |
+| **`logoutSuccessUrl`** | Configures where the auth server redirects after successfully destroying the session. | After server-side session invalidation, the user is sent back to the SPA's login page (`http://localhost:5173/login`), completing the full logout circle. |
+| **CSRF Handling for Logout** | By switching to GET-based logout with `AntPathRequestMatcher`, CSRF protection is implicitly bypassed for the logout endpoint. | Standard Spring Security logout requires a CSRF token via POST. Since the SPA uses a browser redirect (not a form POST), GET-based logout sidesteps the CSRF requirement entirely. |
+| **`permitAll` for `.well-known` Paths** | `.requestMatchers("/.well-known/**").permitAll()` allows unauthenticated access to OIDC discovery and JWKS endpoints. | Resource servers and SPAs need to fetch `/.well-known/openid-configuration` and JWKS keys without authentication. Without `permitAll`, these requests would redirect to the login form. |
+| **`AntPathRequestMatcher`** | A `RequestMatcher` implementation that matches URL patterns with HTTP method specificity. | Used to restrict the logout endpoint to GET method only — preventing accidental session destruction from other HTTP methods while enabling simple browser redirects. |
+| **OAuth2 Client Registration in JDBC** | `RegisteredClient` objects are persisted in a JDBC-backed `RegisteredClientRepository` with client settings stored as JSON columns. | Survives server restarts. Client registrations (redirect URIs, scopes, PKCE requirements) are durable and queryable, unlike in-memory registration which resets on every deploy. |
+| **`RegisteredClient` with PKCE** | `clientSettings(ClientSettings.builder().requireProofKey(true).build())` enforces PKCE for the registered OAuth2 client. | Mandatory PKCE ensures that even if an authorization code is intercepted, it cannot be exchanged without the original code verifier. Critical for public clients (SPAs) that cannot store client secrets. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Proxy Pattern (Vite Dev Proxy)** | The SPA's Vite dev server proxies `/oauth2/token` requests to `localhost:8090`. The browser thinks it's talking to the same origin, eliminating CORS issues. The proxy transparently forwards to the auth server. |
+| **Saved Request Filtering** | A custom `HttpSessionRequestCache` with a predicate-based `RequestMatcher` ignores Chrome DevTools requests (`/.well-known/appspecific`). Only legitimate OAuth authorize requests are saved for post-login redirect. |
+| **Session-Based Logout with Redirect** | Logout is a multi-step chain: SPA clears local state → browser redirects to auth server `/logout` → server invalidates session + deletes cookies → server redirects to SPA login page. Each step is stateless from the SPA's perspective. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@Order(2)` | Ensures the default security filter chain runs after the authorization server filter chain (`@Order(1)`), establishing correct filter precedence. |
+| `SecurityFilterChain` | The composable security configuration unit in Spring Security 6+. Multiple chains can coexist with `@Order` determining priority. |
+| `HttpSessionRequestCache.setRequestMatcher()` | Predicate that determines which requests are eligible for caching. Returns `false` for requests that should never trigger a post-login redirect. |
+| `AntPathRequestMatcher("/logout", "GET")` | Matches only GET requests to `/logout`. Enables browser-redirect-based logout without CSRF token requirements. |
+| `logoutSuccessUrl("http://localhost:5173/login")` | Configures the redirect target after successful server-side logout. |
+| `deleteCookies("JSESSIONID")` | Explicitly removes the session cookie during logout, ensuring the browser doesn't send a stale session on subsequent requests. |
+
+### Problems Solved
+
+| Problem | Root Cause | Solution |
+|---------|-----------|----------|
+| **Chrome DevTools `.well-known/appspecific` interfering with saved request** | Chrome DevTools makes background requests to `/.well-known/appspecific/com.chrome.devtools/...` which Spring Security's request cache saved as the "intended destination." After login, the user was redirected to this DevTools URL instead of the OAuth authorize endpoint. | Custom `HttpSessionRequestCache` with a `RequestMatcher` that returns `false` for any URI containing `appspecific` or starting with `/.well-known`. Only legitimate OAuth requests are cached. |
+| **CORS on token exchange** | The SPA on `localhost:5173` cannot POST to `localhost:8090/oauth2/token` because browsers block cross-origin requests without proper CORS headers. Adding CORS headers to the auth server introduces security complexity. | Vite dev server proxy: `/oauth2` is proxied to `localhost:8090`. The token exchange request goes to the same origin (from the browser's perspective), bypassing CORS entirely. In production, Nginx handles this same-origin proxying. |
+| **Logout not ending server session** | Calling the SPA's local logout only cleared JavaScript state. The auth server's HTTP session remained alive, so the next login attempt would skip the login form (auto-authenticated via the existing session). | Two-phase logout: (1) SPA clears local tokens and state, (2) SPA redirects browser to `auth-server/logout` (GET). The auth server invalidates the session, deletes `JSESSIONID`, and redirects back to the SPA login page. |
+
+### Concepts to Study Further
+
+1. **OIDC RP-Initiated Logout vs. Spring Security `/logout`** — OIDC defines a formal RP-Initiated Logout spec (`/connect/logout` with `id_token_hint` and `post_logout_redirect_uri`). Spring Authorization Server supports this, but the current implementation uses Spring Security's built-in `/logout` endpoint instead. Study the differences: session management, front-channel vs. back-channel logout, and when each approach is appropriate.
+2. **Spring Security Request Cache Mechanism** — Deep dive into `HttpSessionRequestCache`, `SavedRequest`, and `RequestCacheAwareFilter`. Understand how the cache interacts with the authorization code flow: the original `/oauth2/authorize` request is saved, login happens, then the saved request is replayed. Critical for debugging "redirect after login goes to the wrong URL" issues.
+3. **CORS vs. Same-Origin Proxy for OAuth2 Token Exchange** — Compare the three approaches: (a) CORS headers on the auth server, (b) dev proxy in Vite / Nginx reverse proxy in production, (c) BFF (Backend-for-Frontend) pattern where the token exchange happens server-side. Each has different security, complexity, and deployment trade-offs.
+
+
+---
+
+## Custom Thymeleaf Login Page for Spring Authorization Server
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`spring-boot-starter-thymeleaf`** | Template engine for rendering server-side HTML pages. Integrates with Spring Security's form login mechanism. | Replaces Spring Security's auto-generated login form with a branded HTML page without needing a separate frontend. |
+| **`.formLogin(form -> form.loginPage("/login").permitAll())`** | Tells Spring Security to use a custom URL for the login page instead of the default `/login` form. `.permitAll()` ensures unauthenticated users can access it. | Without `.loginPage()`, Spring Security generates a basic unstyled form. With it, you control the entire HTML/CSS. |
+| **`@Controller` + `@GetMapping("/login")`** | A Spring MVC controller that returns the Thymeleaf template name. Spring resolves `"login"` → `templates/login.html`. | Separates routing from template rendering. The controller can later add model attributes (branding, feature flags) to the template. |
+| **Thymeleaf `th:action="@{/login}"`** | Generates the form action URL with proper context path handling. Equivalent to `action="/login"` but safe across different deployment contexts. | Ensures the form POSTs to Spring Security's authentication filter regardless of whether the app is deployed at root or a sub-path. |
+| **Thymeleaf CSRF: `th:name="${_csrf.parameterName}" th:value="${_csrf.token}"`** | Includes Spring Security's CSRF token as a hidden form field. Required for POST requests when CSRF protection is enabled. | Without the CSRF token, the form submission would be rejected with a 403 Forbidden. Spring Security requires it for all state-changing requests. |
+| **`th:if="${param.error}"` / `th:if="${param.logout}"`** | Thymeleaf conditional rendering based on URL query parameters. Spring Security redirects to `/login?error` on failure and `/login?logout` on successful logout. | Enables context-aware messages without JavaScript — the template shows the right message based on what happened. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Self-Contained Template** | All CSS is inline within a `<style>` block in the HTML. No external stylesheets, no build step needed. The template is a single file that renders independently. |
+| **Visual Consistency (Brand System)** | The auth server login page uses the exact same colors, typography, spacing, and component styles as the React SPA. Users experience a seamless visual flow across the redirect boundary. |
+| **Progressive Enhancement** | The form works without JavaScript. The HTML is semantic (`<form>`, `<label>`, `<input>`, `role` attributes). CSS provides the visual polish. |
+| **Convention over Configuration** | Spring Boot auto-discovers Thymeleaf templates in `src/main/resources/templates/`. No explicit template resolver configuration needed. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@Controller` | Marks a class as a Spring MVC controller returning view names (not `@RestController` which returns response bodies) |
+| `@GetMapping("/login")` | Maps GET requests to `/login` to this method |
+| `HttpSecurity.formLogin(form -> form.loginPage("/login"))` | Configures the custom login page URL |
+| `.permitAll()` on formLogin | Allows the login page, login processing URL, and failure URL to be accessed without authentication |
+| `th:action="@{/login}"` | Thymeleaf URL expression for form action |
+| `th:if="${param.error}"` | Conditional rendering based on request parameters |
+| `${_csrf.parameterName}` / `${_csrf.token}` | CSRF token injection for secure form submission |
+
+### Concepts to Study Further
+
+1. **Thymeleaf Layout Dialect** — For larger applications with multiple server-rendered pages, the Layout Dialect provides template inheritance (like Django templates). Study `layout:decorate` and `layout:fragment` for shared headers/footers.
+2. **Spring Security Form Login Architecture** — The `/login` POST is handled by `UsernamePasswordAuthenticationFilter`. Study how `AuthenticationManager` → `AuthenticationProvider` → `UserDetailsService` chain works, and how `AuthenticationSuccessHandler` decides where to redirect after login.
+3. **CSRF in OAuth2 Flows** — CSRF protection is essential for the login form but must be carefully managed in the OAuth2 authorization endpoint. Study why Spring Security's Authorization Server filter chain (Order 1) handles CSRF differently from the form login chain (Order 2).
+
+---

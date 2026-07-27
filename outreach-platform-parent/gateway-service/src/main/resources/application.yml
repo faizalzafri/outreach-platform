@@ -48,11 +48,6 @@ spring:
             - Path=/api/feedback/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: ingestion-service
           uri: lb://ingestion-service
@@ -60,11 +55,6 @@ spring:
             - Path=/api/ingestion/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: event-service
           uri: lb://event-service
@@ -72,11 +62,6 @@ spring:
             - Path=/api/events/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: report-service
           uri: lb://report-service
@@ -84,11 +69,6 @@ spring:
             - Path=/api/reports/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: notification-service
           uri: lb://notification-service
@@ -96,11 +76,6 @@ spring:
             - Path=/api/notifications/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: admin-service
           uri: lb://event-service
@@ -108,11 +83,6 @@ spring:
             - Path=/api/admin/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
         - id: ai-service
           uri: lb://ai-service
@@ -120,17 +90,12 @@ spring:
             - Path=/api/ai/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 120
-                key-resolver: "#{@authenticatedKeyResolver}"
 
 # Eureka client configuration
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
     register-with-eureka: true
     fetch-registry: true
   instance:

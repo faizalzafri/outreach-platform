@@ -154,7 +154,7 @@ services:
       REDIS_PORT: "6379"
       REDIS_PASSWORD: redis_secret
       IDP_PROVIDER: keycloak
-      IDP_JWKS_URI: http://keycloak:8080/realms/outreach/protocol/openid-connect/certs
+      IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
     networks:
       - outreach-net
     depends_on:
