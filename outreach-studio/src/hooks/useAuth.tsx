@@ -32,10 +32,29 @@ export interface AuthProviderProps {
   children: ReactNode;
 }
 
+/**
+ * When VITE_AUTH_BYPASS=true, the app uses a mock admin user instead of
+ * requiring a real Keycloak connection. Set in .env.development for local dev.
+ */
+const AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS === 'true';
+
+const MOCK_USER: UserProfile = {
+  sub: 'dev-user-001',
+  name: 'Dev Admin',
+  email: 'admin@outreach.dev',
+  roles: ['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC'],
+};
+
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [authState, setAuthState] = useState<AuthState>(() => authModule.getState());
+  const [authState, setAuthState] = useState<AuthState>(() =>
+    AUTH_BYPASS
+      ? { accessToken: 'mock-token', refreshToken: null, user: MOCK_USER, isAuthenticated: true, isLoading: false }
+      : authModule.getState()
+  );
 
   useEffect(() => {
+    if (AUTH_BYPASS) return; // Skip real auth initialization
+
     // Subscribe to auth state changes
     const unsubscribe = authModule.onStateChange((newState) => {
       setAuthState(newState);
@@ -52,6 +71,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (AUTH_BYPASS) {
+      // In bypass mode, just reload the page
+      window.location.reload();
+      return;
+    }
     await authModule.logout();
   }, []);
 
