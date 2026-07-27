@@ -46,13 +46,13 @@ function StatusBadge({ status }: { status: EventStatus }) {
 
 const columns: ColumnDef<Event, unknown>[] = [
   {
-    accessorKey: 'code',
+    accessorKey: 'eventCode',
     header: 'Code',
     enableSorting: true,
     enableColumnFilter: false,
   },
   {
-    accessorKey: 'name',
+    accessorKey: 'eventName',
     header: 'Name',
     enableSorting: true,
     enableColumnFilter: false,
@@ -76,14 +76,15 @@ const columns: ColumnDef<Event, unknown>[] = [
     cell: ({ getValue }) => <StatusBadge status={getValue() as EventStatus} />,
   },
   {
-    accessorKey: 'startDate',
+    accessorKey: 'eventDate',
     header: 'Date',
     enableSorting: true,
     enableColumnFilter: false,
     cell: ({ row }) => {
-      const start = row.original.startDate;
-      const end = row.original.endDate;
-      const fmt = (iso: string) => new Date(iso).toLocaleDateString();
+      const start = row.original.eventDate;
+      const end = row.original.eventEndDate;
+      const fmt = (dateStr: string) =>
+        new Date(dateStr + 'T00:00:00').toLocaleDateString();
       return (
         <span>
           {fmt(start)} – {fmt(end)}
@@ -99,13 +100,13 @@ const columns: ColumnDef<Event, unknown>[] = [
     meta: { filterType: 'text' },
   },
   {
-    accessorKey: 'primaryPoc',
-    header: 'POC',
+    accessorKey: 'createdBy',
+    header: 'Created By',
     enableSorting: false,
     enableColumnFilter: false,
   },
   {
-    accessorKey: 'volunteerCount',
+    accessorKey: 'registeredCount',
     header: 'Volunteers',
     enableSorting: true,
     enableColumnFilter: false,
@@ -137,7 +138,7 @@ const columns: ColumnDef<Event, unknown>[] = [
         <button
           type="button"
           className={styles['actionBtn']}
-          aria-label={`Delete event ${row.original.name}`}
+          aria-label={`Delete event ${row.original.eventName}`}
         >
           Delete
         </button>

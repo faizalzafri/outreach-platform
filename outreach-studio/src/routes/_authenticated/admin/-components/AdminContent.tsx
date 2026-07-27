@@ -46,9 +46,8 @@ function StatusBadge({ status }: { status: UserStatus }) {
   );
 }
 
-function formatLastLogin(lastLogin: string | null): string {
-  if (!lastLogin) return 'Never';
-  return new Date(lastLogin).toLocaleString();
+function deriveStatus(user: User): UserStatus {
+  return user.enabled ? 'ENABLED' : 'DISABLED';
 }
 
 function validateField(fieldName: string, value: unknown): string | undefined {
@@ -224,13 +223,6 @@ export function AdminContent() {
     [changeStatusMutation],
   );
 
-  const handleUnlock = useCallback(
-    (userId: string) => {
-      changeStatusMutation.mutate({ userId, status: 'ENABLED' });
-    },
-    [changeStatusMutation],
-  );
-
   // --- Column definitions ---
 
   const columns: ColumnDef<User, unknown>[] = useMemo(
@@ -272,26 +264,18 @@ export function AdminContent() {
         ),
       },
       {
-        accessorKey: 'status',
+        accessorKey: 'enabled',
         header: 'Status',
         enableSorting: true,
         enableColumnFilter: true,
         meta: {
           filterType: 'select',
           filterOptions: [
-            { label: 'Enabled', value: 'ENABLED' },
-            { label: 'Disabled', value: 'DISABLED' },
-            { label: 'Locked', value: 'LOCKED' },
+            { label: 'Enabled', value: 'true' },
+            { label: 'Disabled', value: 'false' },
           ],
         },
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
-      },
-      {
-        accessorKey: 'lastLogin',
-        header: 'Last Login',
-        enableSorting: true,
-        enableColumnFilter: false,
-        cell: ({ getValue }) => formatLastLogin(getValue() as string | null),
+        cell: ({ row }) => <StatusBadge status={deriveStatus(row.original)} />,
       },
       {
         id: 'actions',
@@ -301,10 +285,11 @@ export function AdminContent() {
         enableHiding: false,
         cell: ({ row }) => {
           const user = row.original;
+          const status = deriveStatus(user);
           return (
             <div className={styles['actions']}>
               {/* Status toggle: Disable/Enable */}
-              {user.status === 'ENABLED' && (
+              {status === 'ENABLED' && (
                 <button
                   type="button"
                   className={styles['actionBtnDanger']}
@@ -314,7 +299,7 @@ export function AdminContent() {
                   Disable
                 </button>
               )}
-              {user.status === 'DISABLED' && (
+              {status === 'DISABLED' && (
                 <button
                   type="button"
                   className={styles['actionBtn']}
@@ -324,23 +309,12 @@ export function AdminContent() {
                   Enable
                 </button>
               )}
-              {/* Locked: show Unlock action */}
-              {user.status === 'LOCKED' && (
-                <button
-                  type="button"
-                  className={styles['actionBtn']}
-                  onClick={() => handleUnlock(user.id)}
-                  aria-label={`Unlock account for ${user.username}`}
-                >
-                  Unlock
-                </button>
-              )}
             </div>
           );
         },
       },
     ],
-    [handleRoleChange, handleStatusChange, handleUnlock],
+    [handleRoleChange, handleStatusChange],
   );
 
   // --- Query key for DataTable ---

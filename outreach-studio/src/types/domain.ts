@@ -14,22 +14,21 @@ export const EVENT_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
 
 export interface Event {
   id: string;
-  code: string;
-  name: string;
+  eventCode: string;
+  eventName: string;
   description: string;
   status: EventStatus;
-  startDate: string;
-  endDate: string;
+  eventDate: string;
+  eventEndDate: string;
   city: string;
   venue: string;
   category: string;
   maxVolunteers: number;
-  primaryPoc: string;
-  secondaryPoc?: string;
-  volunteerCount: number;
+  registeredCount: number;
   attendedCount: number;
-  notAttendedCount: number;
-  averageFeedbackScore: number | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
 
 export type VolunteerAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'ON_LEAVE';
@@ -115,8 +114,7 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
-  status: UserStatus;
-  lastLogin: string | null;
+  enabled: boolean;
 }
 
 export interface DashboardKPIs {

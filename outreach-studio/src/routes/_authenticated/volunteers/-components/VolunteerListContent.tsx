@@ -15,7 +15,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/data-table/DataTable';
 import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
-import type { User, UserStatus } from '@/types/domain';
+import type { User } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './VolunteerListContent.module.css';
@@ -24,17 +24,12 @@ import styles from './VolunteerListContent.module.css';
 // Status badge
 // ---------------------------------------------------------------------------
 
-const STATUS_LABEL: Record<UserStatus, string> = {
-  ENABLED: 'Active',
-  DISABLED: 'Disabled',
-  LOCKED: 'Locked',
-};
-
-function StatusBadge({ status }: { status: UserStatus }) {
-  const variant = status.toLowerCase();
+function StatusBadge({ enabled }: { enabled: boolean }) {
+  const variant = enabled ? 'enabled' : 'disabled';
+  const label = enabled ? 'Active' : 'Disabled';
   return (
     <span className={`${styles['availabilityBadge']} ${styles[`availabilityBadge--${variant}`]}`}>
-      {STATUS_LABEL[status] ?? status}
+      {label}
     </span>
   );
 }
@@ -67,31 +62,20 @@ const columns: ColumnDef<User, unknown>[] = [
     },
   },
   {
-    accessorKey: 'status',
+    accessorKey: 'enabled',
     header: 'Status',
     enableSorting: true,
     enableColumnFilter: true,
     meta: {
       filterType: 'select',
       filterOptions: [
-        { label: 'Active', value: 'ENABLED' },
-        { label: 'Disabled', value: 'DISABLED' },
-        { label: 'Locked', value: 'LOCKED' },
+        { label: 'Active', value: 'true' },
+        { label: 'Disabled', value: 'false' },
       ],
     },
-    cell: ({ getValue }) => (
-      <StatusBadge status={getValue() as UserStatus} />
+    cell: ({ row }) => (
+      <StatusBadge enabled={row.original.enabled} />
     ),
-  },
-  {
-    accessorKey: 'lastLogin',
-    header: 'Last Login',
-    enableSorting: true,
-    enableColumnFilter: false,
-    cell: ({ getValue }) => {
-      const val = getValue() as string | null;
-      return val ? new Date(val).toLocaleDateString() : '—';
-    },
   },
   {
     id: 'actions',
