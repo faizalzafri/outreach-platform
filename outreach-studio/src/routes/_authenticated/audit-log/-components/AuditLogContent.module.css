@@ -1,0 +1,363 @@
+/**
+ * Audit Log Content Styles
+ */
+
+.container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.exportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.exportBtn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.exportBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ----------- Filters ----------- */
+
+.filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filterLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.filterInput {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  min-width: 140px;
+  transition: border-color 0.15s;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.filterInput::placeholder {
+  color: var(--text-muted);
+}
+
+.filterSelect {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  min-width: 130px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* ----------- Table ----------- */
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.thead {
+  background: var(--bg-muted);
+}
+
+.th {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.thSortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.thSortable:hover {
+  color: var(--text-primary);
+}
+
+.thContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sortIndicator {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.sortIndicatorActive {
+  color: var(--accent);
+}
+
+.tr {
+  border-bottom: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.tr:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.02));
+}
+
+.trExpanded {
+  background: var(--bg-muted);
+}
+
+.td {
+  padding: 0.5rem 0.75rem;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* ----------- Expanded Row (JSON Payload) ----------- */
+
+.expandedRow {
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-muted);
+}
+
+.expandedCell {
+  padding: 0.75rem 1rem;
+}
+
+.payloadContainer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.payloadPre {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ----------- States ----------- */
+
+.loadingState {
+  padding: 2rem;
+  text-align: center;
+}
+
+.skeletonRow {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.skeletonCell {
+  padding: 0.5rem 0.75rem;
+}
+
+.skeletonBar {
+  height: 1rem;
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-surface) 50%, var(--bg-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.errorState {
+  padding: 2rem;
+  text-align: center;
+}
+
+.errorMessage {
+  font-size: 0.875rem;
+  color: var(--color-danger-600);
+  margin: 0 0 1rem;
+}
+
+.retryBtn {
+  padding: 0.4rem 1rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.retryBtn:hover {
+  opacity: 0.9;
+}
+
+.retryBtn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.emptyState {
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--text-muted);
+  margin: 0 auto 0.75rem;
+}
+
+.emptyMessage {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ----------- Load More ----------- */
+
+.loadMoreContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.loadMoreBtn {
+  padding: 0.5rem 1.5rem;
+  background: var(--bg-surface);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.loadMoreBtn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.loadMoreBtn:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.loadMoreBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loadMoreInfo {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+/* ----------- Responsive ----------- */
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterInput,
+  .filterSelect {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
