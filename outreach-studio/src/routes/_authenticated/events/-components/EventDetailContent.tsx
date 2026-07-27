@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { Event, EventStatus, Volunteer } from '@/types/domain';
+import type { Event, EventStatus, Volunteer, FeedbackSubmission } from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
 
@@ -191,6 +191,67 @@ function VolunteersTab({ eventId }: { eventId: string }) {
         )
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feedback Tab — Real data from feedback-service
+// ---------------------------------------------------------------------------
+
+const EMOJI_MAP = ['', '😞', '😕', '😐', '🙂', '😄'];
+
+function FeedbackTab({ eventId }: { eventId: string }) {
+  const { data, isLoading, isError, error, refetch } = useQuery<PageResponse<FeedbackSubmission>>({
+    queryKey: [...queryKeys.feedback.all, 'event', eventId],
+    queryFn: async () => {
+      const response = await httpClient.get<PageResponse<FeedbackSubmission>>(
+        `/feedback/event/${eventId}`,
+        { params: { page: 1, size: 50 } },
+      );
+      return response.data;
+    },
+  });
+
+  if (isLoading) {
+    return <p className={styles['tabPlaceholder']}>Loading feedback...</p>;
+  }
+
+  if (isError) {
+    return (
+      <div className={styles['tabPlaceholder']}>
+        <p>{(error as { message?: string })?.message ?? 'Failed to load feedback'}</p>
+        <button type="button" className={styles['enrollBtn']} onClick={() => void refetch()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!data || data.content.length === 0) {
+    return <p className={styles['tabPlaceholder']}>No feedback submissions yet for this event.</p>;
+  }
+
+  return (
+    <table className={styles['volunteerTable']}>
+      <thead>
+        <tr>
+          <th scope="col">Employee ID</th>
+          <th scope="col">Score</th>
+          <th scope="col">Category</th>
+          <th scope="col">Submitted At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.content.map((fb) => (
+          <tr key={fb.id}>
+            <td>{fb.anonymous ? '(anonymous)' : fb.employeeId}</td>
+            <td>{EMOJI_MAP[fb.emojiScore] ?? fb.emojiScore}</td>
+            <td>{fb.category}</td>
+            <td>{new Date(fb.submittedAt).toLocaleString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -374,9 +435,7 @@ export function EventDetailContent() {
         <VolunteersTab eventId={eventId} />
       )}
       {tab === 'feedback' && (
-        <div className={styles['tabPlaceholder']}>
-          <p>Feedback submissions for this event will be shown here.</p>
-        </div>
+        <FeedbackTab eventId={eventId} />
       )}
       {tab === 'notifications' && (
         <div className={styles['tabPlaceholder']}>

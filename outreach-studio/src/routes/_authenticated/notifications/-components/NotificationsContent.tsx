@@ -517,7 +517,7 @@ function DeliveryTab() {
     <DataTable<DeliveryRecord>
       columns={columns}
       queryKey={deliveryQueryKey}
-      endpoint="/notifications/deliveries"
+      endpoint="/notifications/history"
       defaultPageSize={10}
       emptyMessage="No delivery records found."
     />
