@@ -1,15 +1,19 @@
 /**
  * Login Route
  *
- * Initiates the OAuth2 Authorization Code + PKCE flow by redirecting
- * the user to Keycloak. If the user is already authenticated, redirects
- * to the dashboard (or to the URL specified in the `redirect` search param).
+ * Branded login page for Outreach Studio. Shows a centered card with
+ * the application branding and a "Sign In" button that initiates the
+ * OAuth2 Authorization Code + PKCE flow via authModule.login().
+ *
+ * If the user is already authenticated, redirects to the dashboard
+ * (or to the URL specified in the `redirect` search param).
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { authModule } from '@/lib/auth';
+import styles from './login.module.css';
 
 interface LoginSearchParams {
   redirect?: string;
@@ -26,31 +30,60 @@ function LoginPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { redirect: redirectUrl } = Route.useSearch();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Already authenticated — redirect to requested URL or dashboard
       void navigate({ to: redirectUrl || '/' });
-      return;
     }
-
-    // Initiate OAuth login flow
-    authModule.login();
   }, [isAuthenticated, navigate, redirectUrl]);
 
+  const handleSignIn = useCallback(() => {
+    setIsRedirecting(true);
+    authModule.login();
+  }, []);
+
   return (
-    <div
-      role="status"
-      aria-label="Redirecting to login"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        width: '100%',
-      }}
-    >
-      <span>Redirecting to login...</span>
+    <div className={styles.page}>
+      <div className={styles.card}>
+        {/* Brand */}
+        <div className={styles.brand}>
+          <span className={styles.brandIcon} aria-hidden="true">
+            ◈
+          </span>
+          <span className={styles.brandName}>Outreach Studio</span>
+        </div>
+
+        {/* Heading */}
+        <h1 className={styles.heading}>Welcome back</h1>
+        <p className={styles.subtitle}>
+          Sign in to continue to Outreach Studio
+        </p>
+
+        {/* Sign In Button / Redirecting State */}
+        {isRedirecting ? (
+          <div className={styles.redirecting} role="status" aria-label="Redirecting to authentication">
+            <div className={styles.spinner} />
+            <span className={styles.redirectingText}>
+              Redirecting to authentication…
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={styles.button}
+            onClick={handleSignIn}
+            disabled={isAuthenticated}
+          >
+            Sign In
+          </button>
+        )}
+
+        {/* Footer */}
+        <p className={styles.footer}>
+          Secured with OAuth 2.0 + PKCE
+        </p>
+      </div>
     </div>
   );
 }
