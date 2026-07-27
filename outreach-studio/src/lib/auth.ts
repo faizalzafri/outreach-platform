@@ -1,0 +1,425 @@
+/**
+ * OAuth2 Authorization Code + PKCE Authentication Module
+ *
+ * Implements the full Keycloak OIDC flow:
+ * - PKCE (S256) challenge generation
+ * - Login redirect with state parameter
+ * - Callback handling with token exchange
+ * - Silent refresh via hidden iframe
+ * - Logout with token revocation
+ * - JWT decoding for user profile extraction
+ * - Auto-refresh when token lifetime < 60s
+ *
+ * Access tokens are stored in memory only (never localStorage).
+ */
+
+import type {
+  AuthState,
+  AuthModule,
+  JwtClaims,
+  KeycloakConfig,
+  TokenResponse,
+  UserProfile,
+} from '@/types/auth';
+
+// --- Configuration ---
+
+function getKeycloakConfig(): KeycloakConfig {
+  return {
+    url: import.meta.env.VITE_KEYCLOAK_URL as string || 'http://localhost:8080',
+    realm: import.meta.env.VITE_KEYCLOAK_REALM as string || 'outreach',
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string || 'outreach-studio',
+  };
+}
+
+function getKeycloakEndpoints(config: KeycloakConfig) {
+  const base = `${config.url}/realms/${config.realm}/protocol/openid-connect`;
+  return {
+    authorization: `${base}/auth`,
+    token: `${base}/token`,
+    logout: `${base}/logout`,
+    revoke: `${base}/revoke`,
+  };
+}
+
+// --- PKCE Helpers ---
+
+/**
+ * Generates a cryptographically random code verifier (43-128 characters).
+ * Uses base64url-safe characters: [A-Z, a-z, 0-9, -, ., _, ~]
+ */
+export function generateCodeVerifier(): string {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array).slice(0, 128);
+}
+
+/**
+ * Generates a SHA-256 code challenge from the verifier (S256 method).
+ */
+export async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+/**
+ * Generates a cryptographically random state parameter using crypto.randomUUID().
+ */
+export function generateState(): string {
+  return crypto.randomUUID();
+}
+
+// --- Token Helpers ---
+
+/**
+ * Decodes a JWT payload (without verifying signature — verification is server-side).
+ */
+export function decodeJwtPayload(token: string): JwtClaims {
+  const parts = token.split('.');
+  const payload = parts[1];
+  if (!payload) {
+    throw new Error('Invalid JWT: missing payload segment');
+  }
+  const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+  return JSON.parse(decoded) as JwtClaims;
+}
+
+/**
+ * Extracts realm roles from JWT claims (from realm_access.roles).
+ */
+export function extractRoles(claims: JwtClaims): string[] {
+  return claims.realm_access?.roles ?? [];
+}
+
+/**
+ * Checks if a token's remaining lifetime is below the given threshold (in seconds).
+ */
+export function isTokenExpiringSoon(token: string, thresholdSeconds: number): boolean {
+  const claims = decodeJwtPayload(token);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const remainingSeconds = claims.exp - nowSeconds;
+  return remainingSeconds < thresholdSeconds;
+}
+
+// --- Base64url encoding ---
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  const binary = Array.from(bytes)
+    .map((b) => String.fromCharCode(b))
+    .join('');
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// --- Session storage for PKCE flow (temporary, cleared after callback) ---
+
+const PKCE_VERIFIER_KEY = 'outreach_pkce_verifier';
+const PKCE_STATE_KEY = 'outreach_pkce_state';
+
+function storePkceParams(verifier: string, state: string): void {
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+  sessionStorage.setItem(PKCE_STATE_KEY, state);
+}
+
+function retrievePkceParams(): { verifier: string | null; state: string | null } {
+  return {
+    verifier: sessionStorage.getItem(PKCE_VERIFIER_KEY),
+    state: sessionStorage.getItem(PKCE_STATE_KEY),
+  };
+}
+
+function clearPkceParams(): void {
+  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+  sessionStorage.removeItem(PKCE_STATE_KEY);
+}
+
+// --- Auth Module Factory ---
+
+export function createAuthModule(): AuthModule {
+  const config = getKeycloakConfig();
+  const endpoints = getKeycloakEndpoints(config);
+
+  // In-memory token storage (never in localStorage)
+  let state: AuthState = {
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+  };
+
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  const listeners: Set<(state: AuthState) => void> = new Set();
+
+  function setState(partial: Partial<AuthState>): void {
+    state = { ...state, ...partial };
+    listeners.forEach((listener) => listener(state));
+  }
+
+  function extractUserFromToken(accessToken: string): UserProfile {
+    const claims = decodeJwtPayload(accessToken);
+    return {
+      sub: claims.sub,
+      name: claims.name ?? claims.preferred_username ?? 'Unknown',
+      email: claims.email ?? '',
+      roles: extractRoles(claims),
+    };
+  }
+
+  function scheduleAutoRefresh(accessToken: string): void {
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+
+    const claims = decodeJwtPayload(accessToken);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const expiresInSeconds = claims.exp - nowSeconds;
+
+    // Refresh when lifetime falls below 60 seconds
+    const refreshInMs = Math.max((expiresInSeconds - 60) * 1000, 0);
+
+    refreshTimer = setTimeout(() => {
+      void silentRefresh();
+    }, refreshInMs);
+  }
+
+  function getRedirectUri(): string {
+    return `${window.location.origin}/callback`;
+  }
+
+  // --- Public API ---
+
+  function login(): void {
+    const verifier = generateCodeVerifier();
+    const stateParam = generateState();
+
+    storePkceParams(verifier, stateParam);
+
+    // Generate challenge and redirect (async, but login() is fire-and-forget)
+    void generateCodeChallenge(verifier).then((challenge) => {
+      const params = new URLSearchParams({
+        client_id: config.clientId,
+        response_type: 'code',
+        scope: 'openid profile email',
+        redirect_uri: getRedirectUri(),
+        state: stateParam,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+      });
+
+      window.location.href = `${endpoints.authorization}?${params.toString()}`;
+    });
+  }
+
+  async function handleCallback(code: string, callbackState: string): Promise<void> {
+    const { verifier, state: storedState } = retrievePkceParams();
+    clearPkceParams();
+
+    // Validate state parameter
+    if (!storedState || callbackState !== storedState) {
+      setState({
+        isLoading: false,
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+      });
+      throw new Error('Invalid state parameter: authentication failed');
+    }
+
+    if (!verifier) {
+      setState({
+        isLoading: false,
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+      });
+      throw new Error('Missing PKCE verifier: authentication failed');
+    }
+
+    // Exchange code for tokens (must complete within 10 seconds)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: config.clientId,
+        code,
+        redirect_uri: getRedirectUri(),
+        code_verifier: verifier,
+      });
+
+      const response = await fetch(endpoints.token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+      }
+
+      const tokens = (await response.json()) as TokenResponse;
+      const user = extractUserFromToken(tokens.access_token);
+
+      setState({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      scheduleAutoRefresh(tokens.access_token);
+    } catch (error) {
+      setState({
+        isLoading: false,
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+      });
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Token exchange timed out: authentication could not be completed');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function silentRefresh(): Promise<string | null> {
+    if (!state.refreshToken) {
+      clearSession();
+      return null;
+    }
+
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: config.clientId,
+        refresh_token: state.refreshToken,
+      });
+
+      const response = await fetch(endpoints.token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        // Refresh token expired or invalid — redirect to login
+        clearSession();
+        return null;
+      }
+
+      const tokens = (await response.json()) as TokenResponse;
+      const user = extractUserFromToken(tokens.access_token);
+
+      setState({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      scheduleAutoRefresh(tokens.access_token);
+      return tokens.access_token;
+    } catch {
+      // Network error — redirect to login
+      clearSession();
+      return null;
+    }
+  }
+
+  async function logout(): Promise<void> {
+    const currentRefreshToken = state.refreshToken;
+
+    // Attempt to revoke tokens at Keycloak
+    if (currentRefreshToken) {
+      try {
+        const body = new URLSearchParams({
+          client_id: config.clientId,
+          token: currentRefreshToken,
+          token_type_hint: 'refresh_token',
+        });
+
+        await fetch(endpoints.revoke, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+      } catch {
+        // Best-effort revocation — proceed with local cleanup regardless
+      }
+    }
+
+    clearSession();
+  }
+
+  function getAccessToken(): string | null {
+    return state.accessToken;
+  }
+
+  function getUser(): UserProfile | null {
+    return state.user;
+  }
+
+  function getState(): AuthState {
+    return state;
+  }
+
+  function onStateChange(listener: (state: AuthState) => void): () => void {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+
+  async function initialize(): Promise<void> {
+    // On app startup, try to detect if we're in a callback or have existing session
+    // If there's no refresh token in memory, we cannot restore session
+    // The app should redirect to login for unauthenticated users
+    setState({ isLoading: false });
+  }
+
+  function clearSession(): void {
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+
+    setState({
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  }
+
+  return {
+    login,
+    logout,
+    handleCallback,
+    getAccessToken,
+    silentRefresh,
+    getUser,
+    getState,
+    onStateChange,
+    initialize,
+  };
+}
+
+// Singleton auth module instance
+export const authModule = createAuthModule();

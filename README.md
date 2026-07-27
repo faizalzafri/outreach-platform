@@ -103,6 +103,21 @@ All APIs require JWT authentication via the gateway at `http://localhost:7093/ap
 curl -H "Authorization: Bearer <token>" http://localhost:7093/api/events
 ```
 
+## API Documentation (Swagger UI)
+
+Each service exposes OpenAPI 3.1 docs and Swagger UI (publicly accessible in non-production):
+
+| Service | Swagger UI | OpenAPI JSON |
+|---------|------------|--------------|
+| event-service | http://localhost:9004/swagger-ui.html | http://localhost:9004/v3/api-docs |
+| feedback-service | http://localhost:9001/swagger-ui.html | http://localhost:9001/v3/api-docs |
+| ingestion-service | http://localhost:9003/swagger-ui.html | http://localhost:9003/v3/api-docs |
+| notification-service | http://localhost:9002/swagger-ui.html | http://localhost:9002/v3/api-docs |
+| report-service | http://localhost:9005/swagger-ui.html | http://localhost:9005/v3/api-docs |
+| ai-service | http://localhost:9006/swagger-ui.html | http://localhost:9006/v3/api-docs |
+
+Swagger UI is disabled in the `production` profile.
+
 ## Environment Variables
 
 See `.env.example` in `outreach-platform-parent/` for all configurable values.

@@ -151,6 +151,8 @@ management:
   otlp:
     tracing:
       endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+      export:
+        enabled: ${OTLP_TRACING_ENABLED:false}
 
 
 # Identity Provider configuration (shared via common-lib)

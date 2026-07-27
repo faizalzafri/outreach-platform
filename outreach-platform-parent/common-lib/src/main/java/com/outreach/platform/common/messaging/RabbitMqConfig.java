@@ -2,80 +2,198 @@ package com.outreach.platform.common.messaging;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.retry.backoff.ExponentialBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
 /**
  * Shared RabbitMQ infrastructure configuration.
- * Declares the topic exchange, queues, and bindings used across services.
- * Only activates when spring-boot-starter-amqp is on the classpath.
+ * Declares exchanges, queues (with DLQ), bindings, retry policy, and message converter.
+ *
+ * <p>Topology:
+ * <pre>
+ *   outreach.events (topic)
+ *     ├── event.status-changed      → outreach.notification.queue
+ *     ├── event.volunteers-imported  → outreach.notification.queue
+ *     ├── event.send-feedback-emails → outreach.notification.queue
+ *     └── event.import-job-completed → outreach.report.queue
+ *
+ *   outreach.events.dlx (direct) — dead letter exchange
+ *     ├── dlq.notification → outreach.notification.dlq
+ *     └── dlq.report       → outreach.report.dlq
+ * </pre>
  */
 @Configuration
 @ConditionalOnClass(name = "org.springframework.amqp.rabbit.core.RabbitTemplate")
 @ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class RabbitMqConfig {
 
-    // --- Exchange ---
+    // ═══════════════════════════════════════════════════════════════
+    // Exchanges
+    // ═══════════════════════════════════════════════════════════════
 
     @Bean
     public TopicExchange outreachEventsExchange() {
         return new TopicExchange(RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS);
     }
 
-    // --- Queues ---
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(RabbitMqConstants.EXCHANGE_DEAD_LETTER);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Main Queues (with DLX arguments)
+    // ═══════════════════════════════════════════════════════════════
 
     @Bean
     public Queue notificationQueue() {
-        return new Queue(RabbitMqConstants.QUEUE_NOTIFICATION, true);
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_NOTIFICATION)
+                .withArgument("x-dead-letter-exchange", RabbitMqConstants.EXCHANGE_DEAD_LETTER)
+                .withArgument("x-dead-letter-routing-key", RabbitMqConstants.ROUTING_KEY_NOTIFICATION_DLQ)
+                .build();
     }
 
     @Bean
     public Queue reportQueue() {
-        return new Queue(RabbitMqConstants.QUEUE_REPORT, true);
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_REPORT)
+                .withArgument("x-dead-letter-exchange", RabbitMqConstants.EXCHANGE_DEAD_LETTER)
+                .withArgument("x-dead-letter-routing-key", RabbitMqConstants.ROUTING_KEY_REPORT_DLQ)
+                .build();
     }
 
-    // --- Bindings: Notification Queue ---
+    // ═══════════════════════════════════════════════════════════════
+    // Dead Letter Queues
+    // ═══════════════════════════════════════════════════════════════
 
     @Bean
-    public Binding notificationBindingStatusChanged(Queue notificationQueue, TopicExchange outreachEventsExchange) {
-        return BindingBuilder.bind(notificationQueue)
-                .to(outreachEventsExchange)
+    public Queue notificationDeadLetterQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_NOTIFICATION_DLQ).build();
+    }
+
+    @Bean
+    public Queue reportDeadLetterQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_REPORT_DLQ).build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Bindings: Main queues → Topic exchange
+    // ═══════════════════════════════════════════════════════════════
+
+    @Bean
+    public Binding notificationBindingStatusChanged() {
+        return BindingBuilder.bind(notificationQueue())
+                .to(outreachEventsExchange())
                 .with(RabbitMqConstants.ROUTING_KEY_EVENT_STATUS_CHANGED);
     }
 
     @Bean
-    public Binding notificationBindingVolunteersImported(Queue notificationQueue, TopicExchange outreachEventsExchange) {
-        return BindingBuilder.bind(notificationQueue)
-                .to(outreachEventsExchange)
+    public Binding notificationBindingVolunteersImported() {
+        return BindingBuilder.bind(notificationQueue())
+                .to(outreachEventsExchange())
                 .with(RabbitMqConstants.ROUTING_KEY_VOLUNTEERS_IMPORTED);
     }
 
     @Bean
-    public Binding notificationBindingSendFeedbackEmails(Queue notificationQueue, TopicExchange outreachEventsExchange) {
-        return BindingBuilder.bind(notificationQueue)
-                .to(outreachEventsExchange)
+    public Binding notificationBindingSendFeedbackEmails() {
+        return BindingBuilder.bind(notificationQueue())
+                .to(outreachEventsExchange())
                 .with(RabbitMqConstants.ROUTING_KEY_SEND_FEEDBACK_EMAILS);
     }
 
-    // --- Bindings: Report Queue ---
-
     @Bean
-    public Binding reportBindingImportJobCompleted(Queue reportQueue, TopicExchange outreachEventsExchange) {
-        return BindingBuilder.bind(reportQueue)
-                .to(outreachEventsExchange)
+    public Binding reportBindingImportJobCompleted() {
+        return BindingBuilder.bind(reportQueue())
+                .to(outreachEventsExchange())
                 .with(RabbitMqConstants.ROUTING_KEY_IMPORT_JOB_COMPLETED);
     }
 
-    // --- Message Converter (JSON via Jackson) ---
+    // ═══════════════════════════════════════════════════════════════
+    // Bindings: Dead letter queues → DLX
+    // ═══════════════════════════════════════════════════════════════
+
+    @Bean
+    public Binding notificationDlqBinding() {
+        return BindingBuilder.bind(notificationDeadLetterQueue())
+                .to(deadLetterExchange())
+                .with(RabbitMqConstants.ROUTING_KEY_NOTIFICATION_DLQ);
+    }
+
+    @Bean
+    public Binding reportDlqBinding() {
+        return BindingBuilder.bind(reportDeadLetterQueue())
+                .to(deadLetterExchange())
+                .with(RabbitMqConstants.ROUTING_KEY_REPORT_DLQ);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Message Converter (JSON via Jackson)
+    // ═══════════════════════════════════════════════════════════════
 
     @Bean
     public MessageConverter jackson2JsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RabbitTemplate with retry
+    // ═══════════════════════════════════════════════════════════════
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                        MessageConverter jackson2JsonMessageConverter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jackson2JsonMessageConverter);
+        template.setRetryTemplate(retryTemplate());
+        return template;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Listener container factory with retry (consumer-side)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory,
+            MessageConverter jackson2JsonMessageConverter) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jackson2JsonMessageConverter);
+        factory.setDefaultRequeueRejected(false); // rejected messages go to DLQ, not requeued
+        factory.setPrefetchCount(10);
+        return factory;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Retry Template (exponential backoff)
+    // ═══════════════════════════════════════════════════════════════
+
+    private RetryTemplate retryTemplate() {
+        RetryTemplate retryTemplate = new RetryTemplate();
+
+        ExponentialBackOffPolicy backOff = new ExponentialBackOffPolicy();
+        backOff.setInitialInterval(RabbitMqConstants.RETRY_INITIAL_INTERVAL_MS);
+        backOff.setMultiplier(RabbitMqConstants.RETRY_MULTIPLIER);
+        backOff.setMaxInterval(RabbitMqConstants.RETRY_MAX_INTERVAL_MS);
+        retryTemplate.setBackOffPolicy(backOff);
+
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
+        retryPolicy.setMaxAttempts(RabbitMqConstants.MAX_RETRY_ATTEMPTS);
+        retryTemplate.setRetryPolicy(retryPolicy);
+
+        return retryTemplate;
     }
 }
