@@ -7,13 +7,14 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
+import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import type { Volunteer, VolunteerAvailability } from '@/types/domain';
-import type { NormalizedError, PageResponse } from '@/types/api';
+import type { PageResponse } from '@/types/api';
 
 import { Route } from '../$employeeId';
 import styles from './VolunteerDetailContent.module.css';
@@ -95,12 +96,8 @@ export function VolunteerDetailContent() {
     enabled: !!volunteer,
   });
 
-  // Availability mutation with optimistic update
-  const availabilityMutation = useMutation<
-    Volunteer,
-    NormalizedError,
-    VolunteerAvailability
-  >({
+  // Availability mutation with optimistic update and rollback on server rejection
+  const availabilityMutation = useOptimisticMutation<Volunteer, VolunteerAvailability>({
     mutationFn: async (newAvailability) => {
       const response = await httpClient.put<Volunteer>(
         `/events/volunteers/${employeeId}/availability`,
@@ -108,19 +105,23 @@ export function VolunteerDetailContent() {
       );
       return response.data;
     },
-    onMutate: (newAvailability) => {
+    queryKey: queryKeys.volunteers.detail(employeeId),
+    optimisticUpdate: (cached, newAvailability) => {
+      if (!cached) return cached;
       setOptimisticAvailability(newAvailability);
       setAvailabilityError(null);
+      return { ...cached, availability: newAvailability };
     },
-    onSuccess: (updatedVolunteer) => {
-      queryClient.setQueryData(queryKeys.volunteers.detail(employeeId), updatedVolunteer);
+    rollbackTimeout: 1000,
+    onSuccess: () => {
       setOptimisticAvailability(null);
       void queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.lists() });
     },
-    onError: (err) => {
+    onError: (message) => {
       setOptimisticAvailability(null);
-      setAvailabilityError(err.message || 'Failed to update availability');
+      setAvailabilityError(message);
     },
+    invalidateKeys: [queryKeys.volunteers.lists()],
   });
 
   const handleAvailabilityChange = useCallback(

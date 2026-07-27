@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
+import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import type { Event, EventStatus, Volunteer, FeedbackSubmission } from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
@@ -284,8 +285,8 @@ export function EventDetailContent() {
     },
   });
 
-  // Status transition mutation with optimistic update
-  const transitionMutation = useMutation<Event, NormalizedError, EventStatus>({
+  // Status transition mutation with optimistic update and 1s rollback timeout
+  const transitionMutation = useOptimisticMutation<Event, EventStatus>({
     mutationFn: async (targetStatus) => {
       const response = await httpClient.patch<Event>(
         `/events/${eventId}/status`,
@@ -293,22 +294,23 @@ export function EventDetailContent() {
       );
       return response.data;
     },
-    onMutate: (targetStatus) => {
-      // Optimistic: update badge immediately
+    queryKey: queryKeys.events.detail(eventId),
+    optimisticUpdate: (cached, targetStatus) => {
+      if (!cached) return cached;
       setOptimisticStatus(targetStatus);
       setTransitionError(null);
+      return { ...cached, status: targetStatus };
     },
-    onSuccess: (updatedEvent) => {
-      // Replace cached event with server response
-      queryClient.setQueryData(queryKeys.events.detail(eventId), updatedEvent);
+    rollbackTimeout: 1000,
+    onSuccess: () => {
       setOptimisticStatus(null);
       void queryClient.invalidateQueries({ queryKey: queryKeys.events.lists() });
     },
-    onError: (err) => {
-      // Roll back optimistic status
+    onError: (message) => {
       setOptimisticStatus(null);
-      setTransitionError(err.message || 'Status transition failed');
+      setTransitionError(message);
     },
+    invalidateKeys: [queryKeys.events.lists()],
   });
 
   const handleTransition = useCallback(
@@ -384,6 +386,9 @@ export function EventDetailContent() {
               onClick={() => handleTransition(target)}
               disabled={transitionMutation.isPending}
             >
+              {transitionMutation.isPending && optimisticStatus === target && (
+                <span className={styles['transitionSpinner']} aria-hidden="true" />
+              )}
               {TRANSITION_LABELS[target] ?? target}
             </button>
           ))}
