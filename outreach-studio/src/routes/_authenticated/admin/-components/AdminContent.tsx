@@ -21,6 +21,7 @@ import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { userCreateSchema } from '@/lib/zod-schemas';
 import { useToast } from '@/hooks/useToast';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { NormalizedError } from '@/types/api';
 import type { User, UserRole, UserStatus } from '@/types/domain';
 
@@ -79,11 +80,14 @@ interface ConfirmDialogProps {
 }
 
 function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel }: ConfirmDialogProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>({ active: open, onEscape: onCancel });
+
   if (!open) return null;
 
   return (
     <div className={styles['dialogOverlay']} onClick={onCancel} role="presentation">
       <div
+        ref={dialogRef}
         className={styles['dialog']}
         role="alertdialog"
         aria-modal="true"

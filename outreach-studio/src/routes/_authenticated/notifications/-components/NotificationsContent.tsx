@@ -15,6 +15,7 @@ import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { useToast } from '@/hooks/useToast';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { NotificationTemplate, DeliveryRecord, NotificationType } from '@/types/domain';
 
 import styles from './NotificationsContent.module.css';
@@ -121,9 +122,11 @@ function TemplateEditor({
     }));
   };
 
+  const editorRef = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose });
+
   return (
     <div className={styles['editorOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Template editor">
-      <div className={styles['editorPanel']} onClick={(e) => e.stopPropagation()}>
+      <div ref={editorRef} className={styles['editorPanel']} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles['editorTitle']}>
           {template ? 'Edit Template' : 'Create Template'}
         </h2>
@@ -245,9 +248,11 @@ function PreviewModal({
   data: PreviewResponse;
   onClose: () => void;
 }) {
+  const previewRef = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose });
+
   return (
     <div className={styles['previewOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Template preview">
-      <div className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
+      <div ref={previewRef} className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles['previewTitle']}>Template Preview</h2>
         {data.renderedSubject && (
           <div style={{ marginBottom: '1rem' }}>
