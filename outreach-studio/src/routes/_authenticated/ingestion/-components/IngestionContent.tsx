@@ -17,6 +17,16 @@ import type { ImportJob } from '@/types/domain';
 import styles from './IngestionContent.module.css';
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface JobError {
+  rowNumber: number;
+  fieldName: string;
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
@@ -275,6 +285,73 @@ const jobColumns: ColumnDef<ImportJob, unknown>[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Job Error Details — expandable section
+// ---------------------------------------------------------------------------
+
+function JobErrorDetails({ jobId }: { jobId: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const { data: errors, isLoading, isError } = useQuery<JobError[]>({
+    queryKey: queryKeys.ingestion.jobErrors(jobId),
+    queryFn: async () => {
+      const response = await httpClient.get<JobError[]>(`/ingestion/jobs/${jobId}/errors`);
+      return response.data;
+    },
+    enabled: expanded,
+  });
+
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        style={{
+          padding: '0.375rem 0.75rem',
+          fontSize: '0.8125rem',
+          cursor: 'pointer',
+          border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-surface)',
+          color: 'var(--text-danger, #dc2626)',
+        }}
+      >
+        {expanded ? 'Hide Errors' : 'View Errors'}
+      </button>
+
+      {expanded && (
+        <div style={{ marginTop: '0.5rem' }}>
+          {isLoading && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Loading errors...</p>}
+          {isError && <p style={{ fontSize: '0.8125rem', color: 'var(--text-danger, #dc2626)' }}>Failed to load errors.</p>}
+          {errors && errors.length > 0 && (
+            <table className={styles['errorTable'] ?? ''} style={{ width: '100%', fontSize: '0.8125rem', borderCollapse: 'collapse', marginTop: '0.25rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  <th style={{ textAlign: 'left', padding: '0.375rem 0.5rem' }}>Row</th>
+                  <th style={{ textAlign: 'left', padding: '0.375rem 0.5rem' }}>Field</th>
+                  <th style={{ textAlign: 'left', padding: '0.375rem 0.5rem' }}>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errors.map((err, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle, #e5e7eb)' }}>
+                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.rowNumber}</td>
+                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.fieldName}</td>
+                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {errors && errors.length === 0 && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>No error details available.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
@@ -451,6 +528,11 @@ export function IngestionContent() {
               >
                 Upload another file
               </button>
+            )}
+
+            {/* View Errors button + expandable error details */}
+            {!state.uploading && !state.polling && state.job && TERMINAL_STATUSES.has(state.job.status) && state.job.errorCount > 0 && (
+              <JobErrorDetails jobId={state.job.id} />
             )}
           </div>
         )}

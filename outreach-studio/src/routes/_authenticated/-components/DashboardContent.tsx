@@ -50,6 +50,11 @@ interface StatusDistribution {
   count: number;
 }
 
+interface LifecycleStats {
+  status: string;
+  count: number;
+}
+
 interface ScoreDistribution {
   score: number;
   count: number;
@@ -417,6 +422,21 @@ export function DashboardContent() {
     },
   });
 
+  // Separate query for event lifecycle stats (accurate status counts)
+  const {
+    data: lifecycleData,
+    isLoading: lifecycleLoading,
+    isError: lifecycleError,
+    error: lifecycleErrorObj,
+    refetch: refetchLifecycle,
+  } = useQuery<LifecycleStats[]>({
+    queryKey: [...queryKeys.events.all, 'lifecycle-stats'],
+    queryFn: async () => {
+      const response = await httpClient.get<LifecycleStats[]>('/events/lifecycle-stats');
+      return response.data;
+    },
+  });
+
   return (
     <ProtectedRoute requiredRoles={REQUIRED_ROLES}>
       <div className={styles['container']}>
@@ -442,13 +462,13 @@ export function DashboardContent() {
             onGranularityChange={setGranularity}
           />
 
-          {/* Event Status Bar Chart */}
+          {/* Event Status Bar Chart — uses lifecycle-stats endpoint with fallback to trends */}
           <EventStatusChart
-            data={trendsData?.eventStatusDistribution}
-            isLoading={trendsLoading}
-            isError={trendsError}
-            error={trendsErrorObj}
-            onRetry={() => void refetchTrends()}
+            data={lifecycleData ?? trendsData?.eventStatusDistribution}
+            isLoading={lifecycleLoading && trendsLoading}
+            isError={lifecycleError && trendsError}
+            error={lifecycleErrorObj ?? trendsErrorObj}
+            onRetry={() => void refetchLifecycle()}
           />
 
           {/* Feedback Score Pie Chart */}
