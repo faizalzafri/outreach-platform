@@ -13,11 +13,12 @@
 
 import { useState, useCallback } from 'react';
 import { useForm } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
+import { queryKeys } from '@/lib/query-keys';
 import { feedbackFormSchema } from '@/lib/zod-schemas';
-import type { NormalizedError } from '@/types/api';
+import type { NormalizedError, PageResponse } from '@/types/api';
 import type { FeedbackSubmission } from '@/types/domain';
 
 import { Route } from '../index';
@@ -66,6 +67,7 @@ function validateCategory(value: string): string | undefined {
 
 export function FeedbackContent() {
   const search = Route.useSearch();
+  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldServerErrors, setFieldServerErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -85,13 +87,59 @@ export function FeedbackContent() {
       });
       return response.data;
     },
+    onMutate: async (values) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: queryKeys.feedback.all });
+
+      // Snapshot previous feedback list data for rollback
+      const previousData = queryClient.getQueriesData<PageResponse<FeedbackSubmission>>({
+        queryKey: queryKeys.feedback.all,
+      });
+
+      // Optimistically add new feedback to all matching list caches
+      const optimisticEntry: FeedbackSubmission = {
+        id: `temp-${Date.now()}`,
+        eventId: search.eventId ?? '',
+        employeeId: '',
+        emojiScore: values.emojiScore,
+        textAnswer1: values.textAnswer1,
+        textAnswer2: values.textAnswer2,
+        textAnswer3: values.textAnswer3,
+        category: values.category,
+        anonymous: values.anonymous,
+        submittedAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueriesData<PageResponse<FeedbackSubmission>>(
+        { queryKey: queryKeys.feedback.all },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            content: [optimisticEntry, ...old.content],
+            totalElements: old.totalElements + 1,
+          };
+        },
+      );
+
+      return { previousData };
+    },
     onSuccess: () => {
       setSuccessMessage('Feedback submitted successfully. Thank you!');
       setServerError(null);
       setFieldServerErrors({});
       form.reset();
+      // Invalidate to fetch real server data
+      void queryClient.invalidateQueries({ queryKey: queryKeys.feedback.all });
     },
-    onError: (error: NormalizedError) => {
+    onError: (error: NormalizedError, _variables, context) => {
+      // Rollback optimistic update
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+
       setSuccessMessage(null);
       if (error.fieldErrors && error.fieldErrors.length > 0) {
         const mapped: Record<string, string> = {};

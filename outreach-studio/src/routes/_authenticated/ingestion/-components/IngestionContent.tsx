@@ -282,6 +282,7 @@ export function IngestionContent() {
   const { state, upload, reset } = useFileUpload();
   const [dragActive, setDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isDisabled = state.uploading || state.polling;
@@ -293,8 +294,15 @@ export function IngestionContent() {
       setValidationError(result.error ?? 'Invalid file');
       return;
     }
+    setLastFile(file);
     upload(file);
   }, [upload]);
+
+  const handleRetry = useCallback(() => {
+    if (lastFile) {
+      upload(lastFile);
+    }
+  }, [lastFile, upload]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -447,10 +455,19 @@ export function IngestionContent() {
           </div>
         )}
 
-        {/* Upload error */}
+        {/* Upload error with retry */}
         {state.error && (
           <div className={styles['errorMessage']} role="alert">
-            {state.error}
+            <span>{state.error}</span>
+            {lastFile && (
+              <button
+                type="button"
+                className={styles['retryButton']}
+                onClick={handleRetry}
+              >
+                Retry Upload
+              </button>
+            )}
           </div>
         )}
 
