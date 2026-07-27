@@ -226,6 +226,7 @@ services:
       JWK_SET_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     networks:
       - outreach-net
     depends_on:
