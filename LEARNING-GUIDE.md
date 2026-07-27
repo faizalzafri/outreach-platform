@@ -951,3 +951,266 @@ This guide documents the framework features, design patterns, and engineering co
 1. **Docker Layer Caching and Build Optimization** — Each Dockerfile instruction creates a layer. Layers are cached if inputs haven't changed. Study: how to order instructions for maximum cache hits (dependencies before source code), multi-stage builds that share layers, and `.dockerignore` impact on build context size.
 2. **Container Orchestration Beyond Compose** — Docker Compose is for local dev. Production uses Kubernetes (Deployments, Services, ConfigMaps, Secrets, Ingress, HPA). Study: how Docker Compose concepts map to K8s resources, helm charts for templating, and the difference between Docker networking and K8s pod networking.
 3. **Container Security Hardening** — Non-root is the minimum. Study: distroless images (no shell at all), read-only filesystems (`--read-only`), seccomp profiles, capability dropping (`--cap-drop ALL`), and image vulnerability scanning (Trivy, Snyk).
+
+
+---
+
+# Learning Guide — Frontend Implementation
+
+This section documents the framework features, design patterns, and engineering concepts used in the React/TypeScript frontend (outreach-studio). It follows the same structure as the backend guide above.
+
+---
+
+## Task 4.1: Auth Module with OAuth2 PKCE Flow
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Web Crypto API (`crypto.subtle`)** | Browser-native cryptographic operations (SHA-256, random bytes). No external library needed. | PKCE code challenge generation uses SHA-256. Native crypto is fast, secure, and avoids bundling a crypto library. |
+| **`crypto.getRandomValues()`** | Fills a typed array with cryptographically secure random bytes. | Code verifier generation requires unpredictable randomness — `Math.random()` is NOT cryptographically secure. |
+| **`crypto.randomUUID()`** | Generates a RFC 4122 v4 UUID. | Used for the state parameter (CSRF protection) with guaranteed uniqueness. |
+| **ES Module Singleton** | `export const authModule = createAuthModule()` — a module-level constant. Imported by reference everywhere. | Ensures a single auth instance across the app. All components share the same token state. |
+| **`sessionStorage`** | Per-tab storage that survives page navigation but clears on tab close. | Stores PKCE verifier/state during the OAuth redirect — needed across the redirect boundary but not beyond. |
+| **`import.meta.env`** | Vite's mechanism for accessing environment variables at build time. | Keycloak URL, realm, and client ID are configurable per environment without code changes. |
+| **`AbortController` + `setTimeout`** | Combines fetch abort signals with timeouts to enforce maximum request duration. | Token exchange must complete within 10 seconds — prevents hung connections from blocking auth flow. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Factory Function (Module Pattern)** | `createAuthModule()` returns an object with methods. Local variables are private state (closures). No `this` binding issues. |
+| **Observer (Pub/Sub)** | `onStateChange(listener)` registers callbacks. `setState()` notifies all listeners. Bridges non-React code to React. |
+| **In-Memory Secret Storage** | Tokens stored only in closure variables — never persisted to localStorage/cookies. Secure against XSS. |
+| **Proactive Renewal** | Auto-refresh scheduled 60 seconds before token expiry. Users never experience an expired token. |
+| **State Machine** | `AuthState` transitions: Loading → Authenticated/Unauthenticated. Each state has well-defined transitions. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `crypto.subtle.digest('SHA-256', data)` | Computes SHA-256 hash for PKCE code challenge |
+| `crypto.getRandomValues(Uint8Array)` | Generates cryptographically secure random bytes |
+| `crypto.randomUUID()` | Generates UUID v4 for state parameter |
+| `atob()` / `btoa()` | Base64 decoding/encoding for JWT payload extraction |
+| `URLSearchParams` | Constructs form-urlencoded bodies for token endpoint |
+| `sessionStorage.setItem/getItem` | Temporary PKCE parameter storage across redirect |
+| `AbortController.abort()` | Cancels in-flight fetch requests on timeout |
+
+### Concepts to Study Further
+
+1. **OAuth 2.1 vs OAuth 2.0** — OAuth 2.1 mandates PKCE for ALL clients and deprecates the implicit flow. Study why implicit was insecure and how PKCE closes the authorization code interception attack.
+2. **Token Storage Strategies in SPAs** — In-memory (our choice), httpOnly cookies (requires BFF), Web Workers (isolates memory). Each has trade-offs between security, UX, and complexity.
+3. **JWT Structure and Claims** — The three parts (header.payload.signature), registered claims (sub, exp, iat, iss), and custom claims (realm_access). Study why client-side decoding is safe but verification must be server-side.
+
+---
+
+## Task 4.2: AuthProvider React Context
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **React Context API (`createContext`)** | Creates a typed context object that can pass values down the component tree without prop drilling. | Authentication state (user, isAuthenticated) is needed by many components at various depths — context avoids threading props manually. |
+| **`useContext` Hook** | Reads the nearest matching context value from the component tree above. | Components call `useAuth()` and get auth state — no import of the auth module, no manual subscription. |
+| **`useEffect` Hook** | Performs side effects after render (subscriptions, initialization, cleanup). | Subscribes to auth module state changes on mount; cleans up the subscription on unmount. |
+| **`useCallback` Hook** | Returns a memoized function that only changes if dependencies change. | `login` and `logout` functions maintain stable references — prevents unnecessary re-renders in child components. |
+| **`useState` Hook** | Declares reactive state within a function component. Changes trigger re-render. | Mirrors the auth module's state into React's reactivity system. |
+| **Conditional Rendering** | Different JSX returned based on `isLoading` flag. | Shows a loading indicator while auth initializes; prevents flash of unauthenticated content. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Provider Pattern** | `AuthProvider` wraps the app root, supplying auth values to all descendants via context. |
+| **Custom Hook with Guard** | `useAuth()` throws a clear error if used outside the provider — fail-fast with a helpful message. |
+| **Bridge Pattern** | AuthProvider bridges non-React auth module state into React's rendering lifecycle via subscribe + setState. |
+| **Loading Gate** | Renders a loading indicator until auth resolves, preventing premature routing decisions. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `createContext<T \| undefined>(undefined)` | Creates typed context with undefined default |
+| `useContext(AuthContext)` | Consumes the nearest provider's value |
+| `useEffect(() => { ... return cleanup }, [])` | Mount-once side effect with cleanup |
+| `useCallback(fn, [deps])` | Memoizes function reference |
+| `useState<AuthState>(initializer)` | Lazy-initialized reactive state |
+
+### Concepts to Study Further
+
+1. **Context Performance Characteristics** — Context re-renders ALL consumers when the value changes. Study `useMemo` for context values, context splitting (separate contexts for different data), and when to use Zustand/Jotai instead.
+2. **React Rendering Model** — Understand reconciliation, virtual DOM diffing, and why stable references (useCallback) matter for `React.memo` optimizations.
+3. **Error Boundaries** — React's mechanism for catching render-time errors. Study how they complement the guard-clause pattern in `useAuth()`.
+
+---
+
+
+## Task 4.3: HTTP Client with Axios Interceptors
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Axios Instance (`axios.create`)** | Creates a pre-configured HTTP client with base URL, timeout, and shared settings. | All API calls share configuration (base URL `/api`, 30s timeout) without repetition. |
+| **Request Interceptors** | Functions that modify every outgoing request before it's sent. | Attaches Bearer token and correlation ID to every request — zero boilerplate in calling code. |
+| **Response Interceptors** | Functions that process every response (or error) before it reaches the caller. | Centralizes error normalization, 401 handling, and 429 toast display. |
+| **`uuid` Library (`v4`)** | Generates RFC 4122 UUID v4 strings. | Each request gets a unique correlation ID for distributed tracing across frontend and backend. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Chain of Responsibility** | Request flows through interceptors sequentially: auth attachment → correlation ID → send. Response error flows through: 401 check → 429 check → normalize → throw. |
+| **Decorator** | Interceptors decorate the base HTTP behavior with cross-cutting concerns without modifying Axios internals. |
+| **Normalizer (Adapter)** | `normalizeError()` adapts diverse error shapes (network, timeout, backend, unknown) into one `NormalizedError` interface. |
+| **Single-Flight Refresh** | `isRefreshing` flag prevents concurrent token refreshes. Only one refresh attempt per 401 cycle. |
+| **Dependency Inversion** | `setToastHandler()` inverts the dependency — HTTP client depends on an interface, not a concrete toast implementation. |
+| **Retry with Backoff (Single Attempt)** | 401 triggers one silent refresh + retry. No infinite loops, no exponential backoff needed for auth. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `axios.create({ baseURL, timeout })` | Creates configured HTTP client instance |
+| `instance.interceptors.request.use(fn)` | Registers request interceptor |
+| `instance.interceptors.response.use(onSuccess, onError)` | Registers response interceptor |
+| `uuid.v4()` | Generates unique correlation IDs |
+| `AxiosError.response?.status` | Accesses HTTP status from error |
+| `AxiosError.code === 'ECONNABORTED'` | Detects timeout errors |
+| `InternalAxiosRequestConfig` | Type for interceptor config with headers access |
+
+### Concepts to Study Further
+
+1. **Axios vs Fetch API** — Axios provides interceptors, automatic JSON parsing, timeout support, and request cancellation. Native `fetch` requires manual implementation of all these. Study when each is appropriate.
+2. **Distributed Tracing Standards** — W3C Trace Context (`traceparent` header) vs custom `X-Correlation-ID`. Study OpenTelemetry's browser instrumentation for automatic trace propagation.
+3. **Token Refresh Strategies** — Single retry (our approach), queue-based (queue all 401s, resolve when refresh completes), and proactive (refresh before expiry). Each has different complexity/UX trade-offs.
+
+---
+
+## Task 5.1: Zustand UI Store with Persistence
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Zustand `create`** | Creates a reactive store with state and actions in a single function call. No boilerplate. | ~1KB bundle. No Provider needed. Components subscribe via hook with selector. |
+| **`persist` Middleware** | Automatically serializes/deserializes selected state to/from storage on every change. | User preferences (sidebar, theme) survive page refreshes without manual save/load code. |
+| **`createJSONStorage`** | Adapter that wraps any `Storage`-compatible object for Zustand's persist middleware. | Allows plugging custom storage implementations (our safe wrapper) instead of raw localStorage. |
+| **`partialize` Option** | Selects which state fields are persisted. Returns a subset of the state object. | Ephemeral state (toasts, offline flag) stays in memory only — no localStorage bloat or stale data. |
+| **`merge` Option** | Custom deserialization merge strategy when rehydrating persisted state. | Validates and sanitizes persisted data. Handles schema migrations and corrupted storage gracefully. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Selector Pattern** | Components subscribe to minimal state slices via `useUIStore((s) => s.field)`. Only re-render when that field changes. |
+| **Graceful Degradation** | `safeStorage` wraps localStorage in try/catch. If storage is unavailable, the app works — just without persistence. |
+| **Bounded Queue** | Toast array capped at 50 entries. Oldest dropped when limit reached. Prevents memory leaks from error loops. |
+| **Middleware Composition** | `persist(create(...))` wraps the store with persistence behavior. Middleware is composable (could add `devtools`, `immer`, etc.). |
+| **Defensive Deserialization** | `merge` function validates types and ranges of persisted values before trusting them. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `create<T>()(fn)` | Creates a Zustand store with TypeScript inference |
+| `persist(fn, options)` | Middleware for automatic state persistence |
+| `createJSONStorage(() => storage)` | Adapts a storage backend for Zustand |
+| `set((state) => newState)` | Updates store state (triggers re-renders for subscribers) |
+| `useUIStore((s) => s.field)` | Subscribes to a single field with referential equality check |
+| `crypto.randomUUID()` | Generates unique toast IDs |
+
+### Concepts to Study Further
+
+1. **Zustand vs Redux vs Jotai vs Recoil** — Each has different mental models (flux, atoms, proxies). Study when each is appropriate: Zustand for simple shared state, Redux for complex state machines with dev tools, Jotai/Recoil for derived atomic state.
+2. **React Concurrent Features and External Stores** — React 18's concurrent mode can tear (show inconsistent state) with external stores. Study `useSyncExternalStore` and why Zustand handles this correctly.
+3. **State Persistence Schema Migrations** — When stored state shape changes between versions, old data becomes invalid. Study versioning strategies (version field + migration functions) used by libraries like Zustand's `version` + `migrate` persist options.
+
+---
+
+
+## Task 5.2: Toast Notification System
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Custom React Hook (`useToast`)** | Wraps store actions with convenience methods (`success()`, `error()`, `warning()`, `info()`). | Clean API for toast producers. Components don't import the store directly — they use semantic methods. |
+| **`useCallback` Hook** | Memoizes toast helper functions to maintain stable references across renders. | Prevents unnecessary re-renders in components that receive these functions as props. |
+| **`useEffect` with Cleanup** | Sets auto-dismiss timers and cleans them up on unmount or early dismissal. | Prevents memory leaks and stale timer callbacks when toasts are removed before timeout. |
+| **`useRef` Hook** | Stores the timer ID across renders without triggering re-renders on assignment. | Timer references need to persist but don't affect UI — `useRef` is the correct tool (not `useState`). |
+| **CSS Modules** | `import styles from './ToastContainer.module.css'` — scoped class names per component. | Prevents global CSS collisions. Each component's styles are isolated by unique generated class names. |
+| **ARIA Live Regions** | `aria-live="polite"`, `role="alert"`, `aria-atomic="true"` — accessibility attributes for dynamic content. | Screen readers announce toast notifications without interrupting current reading. Essential for accessibility compliance. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Component Composition** | `ToastContainer` manages the list; `ToastItem` renders a single toast with its own timer. Each has a single responsibility. |
+| **Custom Hook as Service Layer** | `useToast()` abstracts store interactions behind a domain-specific API. Calling code doesn't know about Zustand. |
+| **Self-Dismissing Timer** | Non-error toasts auto-dismiss after 5 seconds. Error toasts persist for user acknowledgment (correlation IDs may need copying). |
+| **Dependency Wiring on Mount** | `useEffect` in ToastContainer calls `setToastHandler()` — fulfills the dependency inversion declared in the HTTP client. |
+| **Bounded Rendering** | Only the 5 most recent toasts are rendered (`slice(-MAX_VISIBLE)`). Older toasts exist in the store but aren't in the DOM. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `useCallback(fn, [deps])` | Memoizes toast helper functions |
+| `useEffect(() => { ... return cleanup }, [deps])` | Timer setup with cleanup |
+| `useRef<T>(null)` | Stores mutable timer ID across renders |
+| `setTimeout` / `clearTimeout` | Auto-dismiss timing |
+| `CSS Modules (*.module.css)` | Scoped component styling |
+| `role="alert"` | ARIA role for toast announcements |
+| `aria-live="polite"` | Non-interrupting screen reader announcements |
+| `setToastHandler(fn)` | Wires HTTP client to toast system |
+
+### Concepts to Study Further
+
+1. **WCAG 2.1 Notification Requirements** — Study SC 4.1.3 (Status Messages) — how `role="status"` vs `role="alert"` differ, when to use `aria-live="assertive"` vs `"polite"`, and how to test with screen readers (NVDA, VoiceOver).
+2. **Animation and Toast Transitions** — Our implementation has no entry/exit animations. Study CSS transitions, `@keyframes`, and libraries like `framer-motion` for toast enter/exit animations that respect `prefers-reduced-motion`.
+3. **Timer Management in React** — `useRef` for timer IDs, cleanup in `useEffect`, and the pitfall of stale closures. Study how `useEffect` dependencies interact with `setTimeout` callbacks.
+
+---
+
+## Task 6.1: TanStack Query Client and Key Factory
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`QueryClient` Configuration** | Central object defining default caching behavior: stale time, GC time, retry count, refetch triggers. | One configuration controls all query caching behavior. Consistent UX across all data fetching. |
+| **`staleTime: 30_000`** | Data is considered fresh for 30 seconds. During this window, re-renders use cached data without any network request. | Prevents redundant API calls when navigating between pages quickly. Users see instant page loads for recently-viewed data. |
+| **`gcTime: 5 * 60 * 1000`** | Unused cached data is garbage-collected after 5 minutes of no active subscribers. | Memory management. Long-unused data is freed, but data viewed recently stays available for instant display. |
+| **`refetchOnWindowFocus: true`** | When the browser tab regains focus, stale queries automatically refetch in the background. | Users who switch tabs and return see fresh data without manual refresh. Catches changes made by other users/tabs. |
+| **`retry: 3`** | Failed queries retry up to 3 times with exponential backoff before reporting failure. | Transient network glitches resolve automatically. Users don't see errors for momentary connectivity issues. |
+| **Query Key Arrays** | Arrays like `['events', 'list', {page: 1}]` uniquely identify cached queries. Matching is prefix-based for invalidation. | Hierarchical keys enable granular invalidation — invalidate all event lists without touching event details. |
+| **`as const` Assertion** | Narrows array types to readonly tuples with literal types. | TypeScript catches key typos at compile time. Autocomplete works on key structures. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Query Key Factory** | `queryKeys.events.list(params)` generates consistent, hierarchical cache keys. Prevents key typos and enables prefix invalidation. |
+| **Hierarchical Cache Keys** | Keys are nested arrays: `['events']` → `['events', 'list']` → `['events', 'list', params]`. Invalidating a prefix invalidates all descendants. |
+| **Stale-While-Revalidate** | Serve cached (possibly stale) data immediately while fetching fresh data in background. Users perceive instant loads. |
+| **Separation of Server State vs UI State** | TanStack Query owns server data (fetched, cached, synchronized). Zustand owns UI data (sidebar, theme, toasts). Clear ownership boundaries. |
+| **Configuration Object Pattern** | `defaultOptions.queries` provides sensible defaults that can be overridden per-query when needed. |
+
+### Key APIs & Libraries
+
+| API / Library | Purpose |
+|--------------|---------|
+| `new QueryClient({ defaultOptions })` | Creates configured query client |
+| `queryKeys.domain.list(params)` | Generates hierarchical query key |
+| `queryClient.invalidateQueries({ queryKey })` | Marks cached data as stale, triggering refetch |
+| `['domain', 'scope', params] as const` | Type-safe readonly tuple key |
+| `useQuery({ queryKey, queryFn })` | (Consumer) Fetches and caches data in components |
+| `QueryClientProvider` | (Consumer) Provides query client to the React tree |
+
+### Concepts to Study Further
+
+1. **TanStack Query Mutations and Optimistic Updates** — `useMutation` for create/update/delete operations. Study optimistic updates (update cache before server confirms), rollback on failure, and `onMutate`/`onError`/`onSettled` lifecycle.
+2. **Query Invalidation Strategies** — When to invalidate (after mutation), what to invalidate (broad vs narrow), and alternatives like `setQueryData` for instant cache updates without refetch.
+3. **Infinite Queries and Pagination** — `useInfiniteQuery` for cursor-based pagination, `getNextPageParam`, and how it integrates with the query key factory pattern for cache management.

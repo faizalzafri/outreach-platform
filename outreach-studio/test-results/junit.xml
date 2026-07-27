@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="2" failures="0" errors="0" time="0.1334725">
+    <testsuite name="src/test/utils.test.tsx" timestamp="2026-07-27T06:28:57.351Z" hostname="ConveraGXLFY74" tests="2" failures="0" errors="0" skipped="0" time="0.1334725">
+        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; renders a component within providers" time="0.1069241">
+        </testcase>
+        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; returns a queryClient instance" time="0.0126097">
+        </testcase>
+    </testsuite>
+</testsuites>
