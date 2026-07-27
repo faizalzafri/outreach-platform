@@ -211,6 +211,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
   return (
     <div className={styles.layout}>
+      {/* Skip navigation — first focusable element */}
+      <a href="#main-content" className="skip-nav">
+        Skip to main content
+      </a>
+
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={toggleSidebar}
@@ -223,7 +228,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
       <div className={mainClasses}>
         <Header onToggleSidebar={toggleSidebar} />
 
-        <main className={styles.main} id="main-content">
+        <main className={styles.main} id="main-content" role="main">
           {children}
         </main>
       </div>

@@ -94,8 +94,10 @@
   --header-border: var(--color-neutral-200);
   --header-hover: var(--color-neutral-100);
 
-  /* Focus ring */
-  --focus-ring: var(--color-primary-400);
+  /* Focus ring — visible indicator with 3:1+ contrast */
+  --focus-ring: var(--color-primary-600);
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 2px;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -146,6 +148,11 @@
     --header-border: var(--color-neutral-700);
     --header-hover: var(--color-neutral-700);
 
+    /* Focus ring — high contrast against dark backgrounds */
+    --focus-ring: var(--color-primary-300);
+    --focus-ring-offset: 2px;
+    --focus-ring-width: 2px;
+
     /* Shadows get stronger in dark mode */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -185,6 +192,11 @@
   --header-muted: var(--color-neutral-400);
   --header-border: var(--color-neutral-700);
   --header-hover: var(--color-neutral-700);
+
+  /* Focus ring — high contrast against dark backgrounds */
+  --focus-ring: var(--color-primary-300);
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 2px;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
