@@ -3,6 +3,15 @@
  *
  * Displays reports with filter controls, line chart visualization,
  * supporting data table, tab-based aggregation views, and async export.
+ *
+ * Features:
+ * - Date range filter (default last 30 days)
+ * - Multi-select filters: events, cities, beneficiaries, POCs (max 20 per filter)
+ * - Refetch on any filter change with loading skeleton
+ * - Chart + data table (submission count, avg score, score distribution per dimension)
+ * - Tab navigation: by event, by beneficiary, by city, by POC
+ * - Time-series charts with granularity selector (day/week/month/quarter)
+ * - ROLE_POC: pre-filter to assigned events, disable POC filter
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -16,10 +25,13 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  BarChart,
+  Bar,
 } from 'recharts';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import type { TrendParams } from '@/types/api';
 
@@ -38,11 +50,15 @@ interface ReportDataPoint {
   avgScore?: number;
 }
 
+interface ScoreDistribution {
+  [score: string]: number;
+}
+
 interface AggregationRow {
   dimension: string;
   submissionCount: number;
   avgScore: number;
-  scoreDistribution?: Record<string, number>;
+  scoreDistribution?: ScoreDistribution;
 }
 
 interface ReportResponse {
@@ -50,9 +66,23 @@ interface ReportResponse {
   aggregations: AggregationRow[];
 }
 
+interface FilterOption {
+  id: string;
+  name: string;
+}
+
+interface FilterOptionsResponse {
+  events: FilterOption[];
+  cities: string[];
+  beneficiaries: FilterOption[];
+  pocs: FilterOption[];
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+
+const MAX_FILTER_SELECTIONS = 20;
 
 const GRANULARITY_OPTIONS = [
   { value: 'DAY', label: 'Day' },
@@ -108,12 +138,33 @@ function formatDateForChart(iso: string): string {
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Enforce max selections on a multi-select change */
+function handleMultiSelectChange(
+  e: React.ChangeEvent<HTMLSelectElement>,
+  setter: (values: string[]) => void,
+) {
+  const values = Array.from(e.target.selectedOptions, (opt) => opt.value);
+  setter(values.slice(0, MAX_FILTER_SELECTIONS));
+}
+
+/** Check if the user only has ROLE_POC (and not ADMIN/PMO) */
+function isOnlyPoc(roles: string[]): boolean {
+  return (
+    roles.includes('ROLE_POC') &&
+    !roles.includes('ROLE_ADMIN') &&
+    !roles.includes('ROLE_PMO')
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
 export function ReportsContent() {
   const search = Route.useSearch();
+  const { user } = useAuth();
+  const userRoles = user?.roles ?? [];
+  const isPocOnly = isOnlyPoc(userRoles);
 
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
 
@@ -123,17 +174,21 @@ export function ReportsContent() {
   const [granularity, setGranularity] = useState<'DAY' | 'WEEK' | 'MONTH' | 'QUARTER'>(search.granularity);
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
+  const [selectedPocs, setSelectedPocs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<AggregationTab>(search.tab as AggregationTab);
 
-  // Build query params
+  // Build query params — ROLE_POC gets pre-filtered
   const queryParams = useMemo(() => ({
     startDate,
     endDate,
     granularity,
     eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
     cities: selectedCities.length > 0 ? selectedCities : undefined,
+    beneficiaryIds: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
+    pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
     groupBy: activeTab,
-  }), [startDate, endDate, granularity, selectedEvents, selectedCities, activeTab]);
+  }), [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, activeTab, isPocOnly, user?.sub]);
 
   const trendParams: TrendParams = useMemo(() => ({
     startDate,
@@ -151,7 +206,7 @@ export function ReportsContent() {
     error,
     refetch,
   } = useQuery<ReportResponse>({
-    queryKey: [...queryKeys.reports.trends(trendParams), activeTab],
+    queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.sub : null],
     queryFn: async () => {
       const response = await httpClient.get<ReportResponse>('/reports/feedback', {
         params: queryParams,
@@ -160,27 +215,19 @@ export function ReportsContent() {
     },
   });
 
-  // Fetch available events and cities for filter options
-  const { data: filterOptions } = useQuery<{ events: Array<{ id: string; name: string }>; cities: string[] }>({
-    queryKey: ['reports', 'filter-options'],
+  // Fetch available filter options
+  const { data: filterOptions } = useQuery<FilterOptionsResponse>({
+    queryKey: ['reports', 'filter-options', isPocOnly ? user?.sub : null],
     queryFn: async () => {
-      const response = await httpClient.get<{ events: Array<{ id: string; name: string }>; cities: string[] }>(
-        '/reports/filter-options'
+      const params = isPocOnly ? { pocId: user?.sub } : undefined;
+      const response = await httpClient.get<FilterOptionsResponse>(
+        '/reports/filter-options',
+        { params }
       );
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // cache 5 min
   });
-
-  const handleEventsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions, (opt) => opt.value);
-    setSelectedEvents(values);
-  };
-
-  const handleCitiesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions, (opt) => opt.value);
-    setSelectedCities(values);
-  };
 
   // --- Export state ---
   const [exportStatus, setExportStatus] = useState<'idle' | 'polling' | 'completed' | 'failed' | 'timeout'>('idle');
@@ -214,6 +261,8 @@ export function ReportsContent() {
           granularity,
           eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
           cities: selectedCities.length > 0 ? selectedCities : undefined,
+          beneficiaries: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
+          pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
         },
       });
 
@@ -257,7 +306,7 @@ export function ReportsContent() {
       setExportStatus('failed');
       toastError('Failed to start export.');
     }
-  }, [startDate, endDate, granularity, selectedEvents, selectedCities, toastSuccess, toastError]);
+  }, [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user?.sub, toastSuccess, toastError]);
 
   return (
     <div className={styles['container']}>
@@ -266,8 +315,9 @@ export function ReportsContent() {
       {/* Filter Controls */}
       <div className={styles['filterBar']}>
         <div className={styles['filterGroup']}>
-          <span className={styles['filterLabel']}>Start Date</span>
+          <label className={styles['filterLabel']} htmlFor="report-start-date">Start Date</label>
           <input
+            id="report-start-date"
             type="date"
             className={styles['filterInput']}
             value={startDate}
@@ -277,8 +327,9 @@ export function ReportsContent() {
         </div>
 
         <div className={styles['filterGroup']}>
-          <span className={styles['filterLabel']}>End Date</span>
+          <label className={styles['filterLabel']} htmlFor="report-end-date">End Date</label>
           <input
+            id="report-end-date"
             type="date"
             className={styles['filterInput']}
             value={endDate}
@@ -288,8 +339,9 @@ export function ReportsContent() {
         </div>
 
         <div className={styles['filterGroup']}>
-          <span className={styles['filterLabel']}>Granularity</span>
+          <label className={styles['filterLabel']} htmlFor="report-granularity">Granularity</label>
           <select
+            id="report-granularity"
             className={styles['filterSelect']}
             value={granularity}
             onChange={(e) => setGranularity(e.target.value as typeof granularity)}
@@ -302,12 +354,13 @@ export function ReportsContent() {
         </div>
 
         <div className={styles['filterGroup']}>
-          <span className={styles['filterLabel']}>Events</span>
+          <label className={styles['filterLabel']} htmlFor="report-events">Events</label>
           <select
+            id="report-events"
             className={styles['multiSelect']}
             multiple
             value={selectedEvents}
-            onChange={handleEventsChange}
+            onChange={(e) => handleMultiSelectChange(e, setSelectedEvents)}
             aria-label="Filter by events"
           >
             {filterOptions?.events?.map((evt) => (
@@ -317,16 +370,52 @@ export function ReportsContent() {
         </div>
 
         <div className={styles['filterGroup']}>
-          <span className={styles['filterLabel']}>Cities</span>
+          <label className={styles['filterLabel']} htmlFor="report-cities">Cities</label>
           <select
+            id="report-cities"
             className={styles['multiSelect']}
             multiple
             value={selectedCities}
-            onChange={handleCitiesChange}
+            onChange={(e) => handleMultiSelectChange(e, setSelectedCities)}
             aria-label="Filter by cities"
           >
             {filterOptions?.cities?.map((city) => (
               <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles['filterGroup']}>
+          <label className={styles['filterLabel']} htmlFor="report-beneficiaries">Beneficiaries</label>
+          <select
+            id="report-beneficiaries"
+            className={styles['multiSelect']}
+            multiple
+            value={selectedBeneficiaries}
+            onChange={(e) => handleMultiSelectChange(e, setSelectedBeneficiaries)}
+            aria-label="Filter by beneficiaries"
+          >
+            {filterOptions?.beneficiaries?.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles['filterGroup']}>
+          <label className={styles['filterLabel']} htmlFor="report-pocs">POCs</label>
+          <select
+            id="report-pocs"
+            className={styles['multiSelect']}
+            multiple
+            value={isPocOnly ? [user?.sub ?? ''] : selectedPocs}
+            onChange={(e) => handleMultiSelectChange(e, setSelectedPocs)}
+            disabled={isPocOnly}
+            aria-label="Filter by POCs"
+            aria-disabled={isPocOnly}
+            title={isPocOnly ? 'POC filter is restricted to your assigned events' : undefined}
+          >
+            {filterOptions?.pocs?.map((poc) => (
+              <option key={poc.id} value={poc.id}>{poc.name}</option>
             ))}
           </select>
         </div>
@@ -423,9 +512,10 @@ export function ReportsContent() {
         </div>
       )}
 
-      {/* Chart */}
+      {/* Chart + Data Table */}
       {!isLoading && !isError && data && (
         <>
+          {/* Time-Series Line Chart */}
           <section className={styles['chartSection']}>
             <h2 className={styles['chartTitle']}>Feedback Trends</h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -460,7 +550,34 @@ export function ReportsContent() {
             </ResponsiveContainer>
           </section>
 
-          {/* Data Table */}
+          {/* Score Distribution Bar Chart */}
+          {data.aggregations && data.aggregations.length > 0 && data.aggregations.some((row) => row.scoreDistribution) && (
+            <section className={styles['chartSection']}>
+              <h2 className={styles['chartTitle']}>Score Distribution</h2>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart
+                  data={data.aggregations.map((row) => ({
+                    name: row.dimension.length > 20 ? `${row.dimension.substring(0, 20)}…` : row.dimension,
+                    ...row.scoreDistribution,
+                  }))}
+                  margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="var(--text-muted)" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="1" fill="#ef4444" name="Score 1" stackId="a" />
+                  <Bar dataKey="2" fill="#f97316" name="Score 2" stackId="a" />
+                  <Bar dataKey="3" fill="#eab308" name="Score 3" stackId="a" />
+                  <Bar dataKey="4" fill="#22c55e" name="Score 4" stackId="a" />
+                  <Bar dataKey="5" fill="#3b82f6" name="Score 5" stackId="a" />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
+
+          {/* Aggregated Data Table */}
           <section className={styles['tableSection']}>
             <h2 className={styles['sectionTitle']}>
               Aggregated Data — {TAB_LABELS[activeTab]}
@@ -472,6 +589,11 @@ export function ReportsContent() {
                     <th>{TAB_LABELS[activeTab].replace('By ', '')}</th>
                     <th>Submissions</th>
                     <th>Avg Score</th>
+                    <th>Score 1</th>
+                    <th>Score 2</th>
+                    <th>Score 3</th>
+                    <th>Score 4</th>
+                    <th>Score 5</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -480,6 +602,11 @@ export function ReportsContent() {
                       <td>{row.dimension}</td>
                       <td>{row.submissionCount}</td>
                       <td>{row.avgScore.toFixed(1)}</td>
+                      <td>{row.scoreDistribution?.['1'] ?? 0}</td>
+                      <td>{row.scoreDistribution?.['2'] ?? 0}</td>
+                      <td>{row.scoreDistribution?.['3'] ?? 0}</td>
+                      <td>{row.scoreDistribution?.['4'] ?? 0}</td>
+                      <td>{row.scoreDistribution?.['5'] ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>
