@@ -4,9 +4,13 @@
  *
  * Accepts column definitions, a query key, and an API endpoint,
  * making it reusable across all list views in the application.
+ *
+ * When a dataset exceeds 100 visible rows, the table switches to
+ * virtualized rendering via @tanstack/react-virtual to maintain
+ * >30fps scroll performance with large datasets.
  */
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, memo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -16,8 +20,11 @@ import {
   type ColumnFiltersState,
   type VisibilityState,
   type PaginationState,
+  type Row,
+  type Cell,
 } from '@tanstack/react-table';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { httpClient } from '@/lib/http-client';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -37,13 +44,49 @@ export interface DataTableProps<TData> {
   searchPlaceholder?: string;
   enableColumnVisibility?: boolean;
   emptyMessage?: string;
+  /** Accessible caption describing the table contents */
+  caption?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Page size options
+// Constants
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+/**
+ * Row count threshold above which virtualization is enabled.
+ * Below this count the table renders normally without virtualization overhead.
+ */
+const VIRTUALIZATION_THRESHOLD = 100;
+
+/** Estimated height of each table row in pixels (used by the virtualizer). */
+const ROW_HEIGHT_ESTIMATE = 44;
+
+// ---------------------------------------------------------------------------
+// Memoized row component — applied when processing >100 items to reduce
+// re-renders during scroll. Only re-renders when its own row data changes.
+// ---------------------------------------------------------------------------
+
+interface VirtualRowProps<TData> {
+  row: Row<TData>;
+  cells: Cell<TData, unknown>[];
+}
+
+const VirtualRowInner = memo(function VirtualRowInner<TData>({
+  row: _row,
+  cells,
+}: VirtualRowProps<TData>) {
+  return (
+    <>
+      {cells.map((cell) => (
+        <td key={cell.id} className={styles['td']}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </td>
+      ))}
+    </>
+  );
+}) as <TData>(props: VirtualRowProps<TData>) => React.JSX.Element;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -57,6 +100,7 @@ export function DataTable<TData>({
   searchPlaceholder: _searchPlaceholder,
   enableColumnVisibility = true,
   emptyMessage = 'No records found.',
+  caption,
 }: DataTableProps<TData>) {
   // --- Table state ---
   const [pagination, setPagination] = useState<PaginationState>({
@@ -126,6 +170,20 @@ export function DataTable<TData>({
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
+  });
+
+  // --- Virtualization: only engage when row count exceeds threshold ---
+  const rows = table.getRowModel().rows;
+  const shouldVirtualize = rows.length > VIRTUALIZATION_THRESHOLD;
+
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    overscan: 10,
+    enabled: shouldVirtualize,
   });
 
   // --- Column visibility: ensure at least one column always visible ---
@@ -280,9 +338,13 @@ export function DataTable<TData>({
         </div>
       )}
 
-      {/* Table */}
-      <div className={styles['tableWrapper']}>
+      {/* Table — uses a scrollable container with virtualization for large datasets */}
+      <div
+        ref={tableContainerRef}
+        className={`${styles['tableWrapper']} ${shouldVirtualize ? styles['tableWrapperVirtual'] : ''}`}
+      >
         <table className={styles['table']}>
+          {caption && <caption className="sr-only">{caption}</caption>}
           <thead className={styles['thead']}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -393,10 +455,9 @@ export function DataTable<TData>({
               </tr>
             )}
 
-            {/* Data rows */}
-            {!isLoading &&
-              !isError &&
-              table.getRowModel().rows.map((row) => (
+            {/* Data rows — standard rendering for small datasets */}
+            {!isLoading && !isError && !shouldVirtualize &&
+              rows.map((row) => (
                 <tr key={row.id} className={styles['tr']}>
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className={styles['td']}>
@@ -405,6 +466,56 @@ export function DataTable<TData>({
                   ))}
                 </tr>
               ))}
+
+            {/* Virtualized rows — for datasets exceeding 100 rows */}
+            {!isLoading && !isError && shouldVirtualize && (() => {
+              const virtualItems = rowVirtualizer.getVirtualItems();
+              return (
+                <>
+                  {/* Top spacer to position visible rows correctly in the scroll area */}
+                  {virtualItems.length > 0 && (
+                    <tr
+                      className={styles['virtualSpacer']}
+                      aria-hidden="true"
+                    >
+                      <td
+                        colSpan={table.getVisibleFlatColumns().length}
+                        style={{ height: `${virtualItems[0]?.start ?? 0}px` }}
+                      />
+                    </tr>
+                  )}
+
+                  {virtualItems.map((virtualRow) => {
+                    const row = rows[virtualRow.index]!;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={styles['tr']}
+                        data-index={virtualRow.index}
+                        ref={rowVirtualizer.measureElement}
+                      >
+                        <VirtualRowInner row={row} cells={row.getVisibleCells()} />
+                      </tr>
+                    );
+                  })}
+
+                  {/* Bottom spacer */}
+                  {virtualItems.length > 0 && (
+                    <tr
+                      className={styles['virtualSpacer']}
+                      aria-hidden="true"
+                    >
+                      <td
+                        colSpan={table.getVisibleFlatColumns().length}
+                        style={{
+                          height: `${rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)}px`,
+                        }}
+                      />
+                    </tr>
+                  )}
+                </>
+              );
+            })()}
           </tbody>
         </table>
       </div>

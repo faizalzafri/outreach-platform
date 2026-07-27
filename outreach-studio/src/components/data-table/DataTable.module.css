@@ -124,6 +124,24 @@
   border-radius: 0.5rem;
 }
 
+/* Virtualized table wrapper — constrain height for scroll viewport */
+.tableWrapperVirtual {
+  max-height: 600px;
+  overflow-y: auto;
+  will-change: transform;
+  contain: layout paint;
+}
+
+/* Spacer rows used by virtualizer positioning */
+.virtualSpacer {
+  border: none;
+}
+
+.virtualSpacer td {
+  padding: 0;
+  border: none;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
