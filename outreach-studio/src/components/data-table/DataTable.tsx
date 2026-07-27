@@ -74,7 +74,7 @@ export function DataTable<TData>({
   // --- Build query params ---
   const queryParams = useMemo(() => {
     const params: Record<string, string | number> = {
-      page: pagination.pageIndex + 1, // 1-based for Spring Boot
+      page: pagination.pageIndex, // 0-based for Spring Boot Pageable
       size: pagination.pageSize,
     };
 
