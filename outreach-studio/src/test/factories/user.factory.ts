@@ -9,8 +9,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     username: `testuser${counter}`,
     email: `testuser${counter}@example.com`,
     role: 'ROLE_PMO',
-    status: 'ENABLED',
-    lastLogin: '2025-03-01T09:00:00Z',
+    enabled: true,
     ...overrides,
   };
 }

@@ -135,19 +135,18 @@ export type IngestionSearch = z.infer<typeof ingestionSearchSchema>;
  */
 export const eventCreateSchema = z
   .object({
-    name: z.string().min(1).max(100),
-    code: z.string().min(1).max(20).regex(/^[a-zA-Z0-9]+$/),
+    eventName: z.string().min(1).max(255),
     description: z.string().min(1).max(2000),
-    startDate: z.string().datetime(),
-    endDate: z.string().datetime(),
-    city: z.string().min(1),
-    venue: z.string().min(1),
-    category: z.string().min(1),
+    eventDate: z.string().min(1),
+    eventEndDate: z.string().min(1),
+    city: z.string().min(1).max(100),
+    venue: z.string().min(1).max(255),
+    category: z.string().min(1).max(50),
     maxVolunteers: z.number().int().min(1).max(10000),
   })
-  .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
+  .refine((data) => new Date(data.eventEndDate) >= new Date(data.eventDate), {
     message: 'End date must be on or after start date',
-    path: ['endDate'],
+    path: ['eventEndDate'],
   });
 
 export type EventCreateForm = z.infer<typeof eventCreateSchema>;

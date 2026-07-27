@@ -360,8 +360,8 @@ export function EventDetailContent() {
       {/* Header */}
       <div className={styles['header']}>
         <div>
-          <h1 className={styles['pageTitle']}>{event.name}</h1>
-          <p className={styles['eventCode']}>{event.code}</p>
+          <h1 className={styles['pageTitle']}>{event.eventName}</h1>
+          <p className={styles['eventCode']}>{event.eventCode}</p>
         </div>
         <StatusBadge status={displayStatus} pending={optimisticStatus !== null} />
       </div>
@@ -412,21 +412,15 @@ export function EventDetailContent() {
         <dl className={styles['detailGrid']}>
           <DetailField label="Description" value={event.description} />
           <DetailField label="Status" value={displayStatus} />
-          <DetailField label="Start Date" value={new Date(event.startDate).toLocaleString()} />
-          <DetailField label="End Date" value={new Date(event.endDate).toLocaleString()} />
+          <DetailField label="Event Date" value={new Date(event.eventDate + 'T00:00:00').toLocaleDateString()} />
+          <DetailField label="End Date" value={new Date(event.eventEndDate + 'T00:00:00').toLocaleDateString()} />
           <DetailField label="City" value={event.city} />
           <DetailField label="Venue" value={event.venue} />
           <DetailField label="Category" value={event.category} />
           <DetailField label="Max Volunteers" value={event.maxVolunteers} />
-          <DetailField label="Primary POC" value={event.primaryPoc} />
-          <DetailField label="Secondary POC" value={event.secondaryPoc} />
-          <DetailField label="Volunteer Count" value={event.volunteerCount} />
+          <DetailField label="Created By" value={event.createdBy} />
+          <DetailField label="Registered" value={event.registeredCount} />
           <DetailField label="Attended" value={event.attendedCount} />
-          <DetailField label="Not Attended" value={event.notAttendedCount} />
-          <DetailField
-            label="Avg Feedback Score"
-            value={event.averageFeedbackScore !== null ? event.averageFeedbackScore.toFixed(1) : '—'}
-          />
         </dl>
       )}
 

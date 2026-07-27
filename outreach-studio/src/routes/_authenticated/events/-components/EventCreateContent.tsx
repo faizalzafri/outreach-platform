@@ -48,11 +48,10 @@ function validateEndDate(endDate: string, startDate: string): string | undefined
  * Used to determine if the submit button should be enabled.
  */
 function isFormValid(values: {
-  name: string;
-  code: string;
+  eventName: string;
   description: string;
-  startDate: string;
-  endDate: string;
+  eventDate: string;
+  eventEndDate: string;
   city: string;
   venue: string;
   category: string;
@@ -96,11 +95,10 @@ export function EventCreateContent() {
 
   const form = useForm({
     defaultValues: {
-      name: '',
-      code: '',
+      eventName: '',
       description: '',
-      startDate: '',
-      endDate: '',
+      eventDate: '',
+      eventEndDate: '',
       city: '',
       venue: '',
       category: '',
@@ -133,70 +131,33 @@ export function EventCreateContent() {
       >
         {/* Name */}
         <form.Field
-          name="name"
+          name="eventName"
           validators={{
-            onBlur: ({ value }) => validateField('name', value),
+            onBlur: ({ value }) => validateField('eventName', value),
           }}
         >
           {(field) => {
             const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.name;
+            const hasError = errors.length > 0 || !!fieldServerErrors.eventName;
             return (
               <div className={styles['fieldGroup']}>
-                <label htmlFor="name" className={styles['label']}>
+                <label htmlFor="eventName" className={styles['label']}>
                   Name
                 </label>
                 <input
-                  id="name"
+                  id="eventName"
                   type="text"
                   className={styles['input']}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
-                  maxLength={100}
-                  aria-describedby={hasError ? 'name-error' : undefined}
+                  maxLength={255}
+                  aria-describedby={hasError ? 'eventName-error' : undefined}
                   aria-invalid={hasError}
                 />
                 {hasError && (
-                  <p id="name-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.name)}
-                  </p>
-                )}
-              </div>
-            );
-          }}
-        </form.Field>
-
-        {/* Code */}
-        <form.Field
-          name="code"
-          validators={{
-            onBlur: ({ value }) => validateField('code', value),
-          }}
-        >
-          {(field) => {
-            const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.code;
-            return (
-              <div className={styles['fieldGroup']}>
-                <label htmlFor="code" className={styles['label']}>
-                  Code
-                </label>
-                <input
-                  id="code"
-                  type="text"
-                  className={styles['input']}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  maxLength={20}
-                  aria-describedby={hasError ? 'code-error' : undefined}
-                  aria-invalid={hasError}
-                />
-                <span className={styles['fieldHint']}>Max 20 alphanumeric characters</span>
-                {hasError && (
-                  <p id="code-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.code)}
+                  <p id="eventName-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    {String(errors[0] ?? fieldServerErrors.eventName)}
                   </p>
                 )}
               </div>
@@ -243,10 +204,10 @@ export function EventCreateContent() {
         {/* Date Range */}
         <div className={styles['fieldRow']}>
           <form.Field
-            name="startDate"
+            name="eventDate"
             validators={{
               onBlur: ({ value }) => {
-                if (!value) return 'Start date is required';
+                if (!value) return 'Event date is required';
                 return undefined;
               },
             }}
@@ -256,24 +217,21 @@ export function EventCreateContent() {
               const hasError = errors.length > 0;
               return (
                 <div className={styles['fieldGroup']}>
-                  <label htmlFor="startDate" className={styles['label']}>
-                    Start Date
+                  <label htmlFor="eventDate" className={styles['label']}>
+                    Event Date
                   </label>
                   <input
-                    id="startDate"
-                    type="datetime-local"
+                    id="eventDate"
+                    type="date"
                     className={styles['input']}
-                    value={field.state.value ? field.state.value.slice(0, 16) : ''}
-                    onChange={(e) => {
-                      const val = e.target.value ? `${e.target.value}:00.000Z` : '';
-                      field.handleChange(val);
-                    }}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    aria-describedby={hasError ? 'startDate-error' : undefined}
+                    aria-describedby={hasError ? 'eventDate-error' : undefined}
                     aria-invalid={hasError}
                   />
                   {hasError && (
-                    <p id="startDate-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    <p id="eventDate-error" className={styles['fieldError']} role="alert" aria-live="assertive">
                       {String(errors[0])}
                     </p>
                   )}
@@ -283,38 +241,35 @@ export function EventCreateContent() {
           </form.Field>
 
           <form.Field
-            name="endDate"
+            name="eventEndDate"
             validators={{
               onBlur: ({ value, fieldApi }) => {
-                const startDate = fieldApi.form.getFieldValue('startDate');
-                return validateEndDate(value, startDate);
+                const eventDate = fieldApi.form.getFieldValue('eventDate');
+                return validateEndDate(value, eventDate);
               },
             }}
           >
             {(field) => {
               const errors = field.state.meta.errors;
-              const hasError = errors.length > 0 || !!fieldServerErrors.endDate;
+              const hasError = errors.length > 0 || !!fieldServerErrors.eventEndDate;
               return (
                 <div className={styles['fieldGroup']}>
-                  <label htmlFor="endDate" className={styles['label']}>
+                  <label htmlFor="eventEndDate" className={styles['label']}>
                     End Date
                   </label>
                   <input
-                    id="endDate"
-                    type="datetime-local"
+                    id="eventEndDate"
+                    type="date"
                     className={styles['input']}
-                    value={field.state.value ? field.state.value.slice(0, 16) : ''}
-                    onChange={(e) => {
-                      const val = e.target.value ? `${e.target.value}:00.000Z` : '';
-                      field.handleChange(val);
-                    }}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    aria-describedby={hasError ? 'endDate-error' : undefined}
+                    aria-describedby={hasError ? 'eventEndDate-error' : undefined}
                     aria-invalid={hasError}
                   />
                   {hasError && (
-                    <p id="endDate-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                      {String(errors[0] ?? fieldServerErrors.endDate)}
+                    <p id="eventEndDate-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                      {String(errors[0] ?? fieldServerErrors.eventEndDate)}
                     </p>
                   )}
                 </div>
