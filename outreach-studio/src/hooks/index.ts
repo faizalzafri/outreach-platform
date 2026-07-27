@@ -7,3 +7,6 @@ export type { ToastOptions, UseToastReturn } from './useToast';
 
 export { usePermission } from './usePermission';
 export type { UsePermissionResult } from './usePermission';
+
+export { useConnectivity } from './useConnectivity';
+export type { ConnectivityState } from './useConnectivity';
