@@ -158,12 +158,12 @@ function KpiCards() {
   }
 
   const kpis: KpiItem[] = [
-    { label: 'Total Events', value: String(data.totalEvents) },
-    { label: 'Active Events', value: String(data.activeEvents) },
-    { label: 'Total Volunteers', value: String(data.totalVolunteers) },
-    { label: 'Avg Feedback Score', value: data.averageFeedbackScore.toFixed(1) },
-    { label: 'Pending Feedback', value: String(data.pendingFeedback) },
-    { label: 'Notification Delivery Rate', value: `${data.notificationDeliveryRate.toFixed(1)}%` },
+    { label: 'Total Events', value: String(data.totalEvents ?? 0) },
+    { label: 'Active Events', value: String(data.activeEvents ?? 0) },
+    { label: 'Total Volunteers', value: String(data.totalVolunteers ?? 0) },
+    { label: 'Avg Feedback Score', value: (data.averageFeedbackScore ?? 0).toFixed(1) },
+    { label: 'Pending Feedback', value: String(data.pendingFeedback ?? 0) },
+    { label: 'Notification Delivery Rate', value: `${(data.notificationDeliveryRate ?? 0).toFixed(1)}%` },
   ];
 
   return (
