@@ -2,87 +2,102 @@
  * Header Component
  *
  * Displays the top header bar with:
- * - Hamburger toggle button for mobile sidebar
- * - Authenticated user's name and role
- * - Logout button
+ * - Search bar (cosmetic, no functionality yet)
+ * - Theme toggle button (light/dark/system)
+ * - "+ Create Event" quick-action button
  */
 
-import type { UserProfile } from '@/types/auth';
+import { useUIStore } from '@/stores/ui-store';
+import { useEffect } from 'react';
 import styles from './Header.module.css';
 
 export interface HeaderProps {
-  user: UserProfile;
-  onLogout: () => void;
-  onToggleSidebar: () => void;
+  onCreateEvent?: () => void;
+  onToggleSidebar?: () => void;
 }
 
-/**
- * Formats a role string for display (e.g., "ROLE_ADMIN" → "Admin")
- */
-function formatRole(role: string): string {
-  return role
-    .replace(/^ROLE_/, '')
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
+export function Header({ onCreateEvent, onToggleSidebar }: HeaderProps) {
+  const theme = useUIStore((s) => s.theme);
+  const setTheme = useUIStore((s) => s.setTheme);
 
-export function Header({ user, onLogout, onToggleSidebar }: HeaderProps) {
-  const firstRole = user.roles[0];
-  const primaryRole = firstRole ? formatRole(firstRole) : 'User';
+  // Apply data-theme attribute to <html> for CSS variable switching
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'system') {
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+  }, [theme]);
+
+  const cycleTheme = () => {
+    const order: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+    const currentIndex = order.indexOf(theme);
+    const next = order[(currentIndex + 1) % order.length]!;
+    setTheme(next);
+  };
+
+  const themeIcon = theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🖥️';
+  const themeLabel = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System';
 
   return (
     <header className={styles.header} role="banner">
       <div className={styles.headerLeft}>
-        <button
-          className={styles.hamburgerBtn}
-          onClick={onToggleSidebar}
-          aria-label="Toggle navigation menu"
-          type="button"
-        >
+        {/* Mobile hamburger — visible only on small screens */}
+        {onToggleSidebar && (
+          <button
+            className={styles.mobileMenuBtn}
+            onClick={onToggleSidebar}
+            type="button"
+            aria-label="Open menu"
+          >
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        )}
+
+        {/* Search bar (cosmetic) */}
+        <div className={styles.searchBar}>
           <svg
-            className={styles.hamburgerIcon}
+            className={styles.searchIcon}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
             aria-hidden="true"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
+            <circle cx="11" cy="11" r="8" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
           </svg>
-        </button>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search..."
+            aria-label="Search"
+            readOnly
+          />
+        </div>
       </div>
 
       <div className={styles.headerRight}>
-        <div className={styles.userInfo}>
-          <span className={styles.userName}>{user.name}</span>
-          <span className={styles.userRole}>{primaryRole}</span>
-        </div>
+        <button
+          className={styles.themeBtn}
+          onClick={cycleTheme}
+          type="button"
+          aria-label={`Theme: ${themeLabel}. Click to change.`}
+          title={`Theme: ${themeLabel}`}
+        >
+          <span aria-hidden="true">{themeIcon}</span>
+        </button>
 
         <button
-          className={styles.logoutBtn}
-          onClick={onLogout}
+          className={styles.createBtn}
+          onClick={onCreateEvent}
           type="button"
-          aria-label="Log out"
+          aria-label="Create Event"
         >
-          <svg
-            className={styles.logoutIcon}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
-          Logout
+          + Create Event
         </button>
       </div>
     </header>

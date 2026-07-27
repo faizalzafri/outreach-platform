@@ -1,6 +1,7 @@
 .layout {
   display: flex;
   min-height: 100vh;
+  background: var(--bg-page);
 }
 
 .mainWrapper {
@@ -12,13 +13,12 @@
 }
 
 .mainWrapper.sidebarCollapsed {
-  margin-left: 0;
+  margin-left: 64px;
 }
 
 .main {
   flex: 1;
   padding: 1.5rem;
-  background-color: var(--main-bg, #f8fafc);
 }
 
 @media (max-width: 767px) {

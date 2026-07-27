@@ -112,7 +112,7 @@ function AuditLogIcon() {
 }
 
 /**
- * Default navigation groups for the Outreach FMS sidebar.
+ * Default navigation groups for the Outreach Studio sidebar.
  *
  * Role-based visibility rules:
  * - ROLE_ADMIN: all sections
@@ -216,14 +216,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
         onToggle={toggleSidebar}
         navigationGroups={filteredNavigationGroups}
         activeRoute={activeRoute}
+        user={displayUser}
+        onLogout={handleLogout}
       />
 
       <div className={mainClasses}>
-        <Header
-          user={displayUser}
-          onLogout={handleLogout}
-          onToggleSidebar={toggleSidebar}
-        />
+        <Header onToggleSidebar={toggleSidebar} />
 
         <main className={styles.main} id="main-content">
           {children}
