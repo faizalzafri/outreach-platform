@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
@@ -16,6 +17,7 @@ import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
 
 import { Route } from '../$eventId';
+import type { EventDetailSearch } from '../$eventId';
 import styles from './EventDetailContent.module.css';
 
 // ---------------------------------------------------------------------------
@@ -199,10 +201,18 @@ function VolunteersTab({ eventId }: { eventId: string }) {
 export function EventDetailContent() {
   const { eventId } = Route.useParams();
   const { tab } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
 
   const [optimisticStatus, setOptimisticStatus] = useState<EventStatus | null>(null);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+
+  const handleTabChange = useCallback(
+    (newTab: EventDetailSearch['tab']) => {
+      void navigate({ search: { tab: newTab } });
+    },
+    [navigate],
+  );
 
   // Fetch event detail
   const { data: event, isLoading, isError, error, refetch } = useQuery<Event>({
@@ -328,6 +338,7 @@ export function EventDetailContent() {
               type="button"
               className={`${styles['tab']} ${tab === tabName ? styles['tab--active'] : ''}`}
               aria-current={tab === tabName ? 'page' : undefined}
+              onClick={() => handleTabChange(tabName)}
             >
               {tabName.charAt(0).toUpperCase() + tabName.slice(1)}
             </button>

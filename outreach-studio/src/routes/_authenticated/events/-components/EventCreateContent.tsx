@@ -4,6 +4,7 @@
  * Form for creating a new event using TanStack Form + Zod validation.
  * Validates on blur with inline error messages, maps server field-level
  * validation errors to form fields on submission failure.
+ * Submit button is disabled until all required fields pass validation.
  */
 
 import { useState } from 'react';
@@ -40,6 +41,25 @@ function validateEndDate(endDate: string, startDate: string): string | undefined
     return 'End date must be on or after start date';
   }
   return undefined;
+}
+
+/**
+ * Checks whether the full form values pass the Zod schema.
+ * Used to determine if the submit button should be enabled.
+ */
+function isFormValid(values: {
+  name: string;
+  code: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  city: string;
+  venue: string;
+  category: string;
+  maxVolunteers: number;
+}): boolean {
+  const result = eventCreateSchema.safeParse(values);
+  return result.success;
 }
 
 // ---------------------------------------------------------------------------
@@ -447,22 +467,33 @@ export function EventCreateContent() {
         </form.Field>
 
         {/* Submit */}
-        <div className={styles['formActions']}>
-          <button
-            type="submit"
-            className={styles['submitBtn']}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? 'Creating...' : 'Create Event'}
-          </button>
-          <button
-            type="button"
-            className={styles['cancelBtn']}
-            onClick={() => void navigate({ to: '/events', search: { page: 1, size: 10 } })}
-          >
-            Cancel
-          </button>
-        </div>
+        <form.Subscribe selector={(state) => state.values}>
+          {(values) => {
+            const formValid = isFormValid(values);
+            return (
+              <div className={styles['formActions']}>
+                <button
+                  type="submit"
+                  className={styles['submitBtn']}
+                  disabled={!formValid || createMutation.isPending}
+                  aria-busy={createMutation.isPending}
+                >
+                  {createMutation.isPending && (
+                    <span className={styles['spinner']} aria-hidden="true" />
+                  )}
+                  {createMutation.isPending ? 'Creating...' : 'Create Event'}
+                </button>
+                <button
+                  type="button"
+                  className={styles['cancelBtn']}
+                  onClick={() => void navigate({ to: '/events', search: { page: 1, size: 10 } })}
+                >
+                  Cancel
+                </button>
+              </div>
+            );
+          }}
+        </form.Subscribe>
       </form>
     </div>
   );
