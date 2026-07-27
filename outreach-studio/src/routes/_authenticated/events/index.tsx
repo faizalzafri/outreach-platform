@@ -2,49 +2,47 @@
  * Event List Route
  *
  * Displays paginated, filterable list of events.
- * Validates search params with Zod schema, discarding invalid params and applying defaults.
+ * Validates search params with Zod schema using .catch() to discard invalid params
+ * and apply defaults gracefully.
+ * Uses React.lazy + Suspense for code splitting.
  *
  * Requirements: 3.2, 3.4, 3.5
  */
 
 import { createFileRoute } from '@tanstack/react-router';
+import { lazy, Suspense } from 'react';
 import { z } from 'zod';
+import { PageSkeleton } from '@/components/feedback/PageSkeleton';
+
+const EventListContent = lazy(() =>
+  import('./-components/EventListContent').then((mod) => ({
+    default: mod.EventListContent,
+  }))
+);
 
 const eventListSearchSchema = z.object({
-  page: z.number().int().positive().default(1),
-  size: z.number().int().positive().default(10),
-  sort: z.string().optional(),
+  page: z.number().int().positive().default(1).catch(1),
+  size: z.number().int().positive().default(10).catch(10),
+  sort: z.string().optional().catch(undefined),
   status: z
     .enum(['DRAFT', 'PUBLISHED', 'ACTIVE', 'COMPLETED', 'ARCHIVED', 'CANCELLED'])
-    .optional(),
-  search: z.string().optional(),
+    .optional()
+    .catch(undefined),
+  search: z.string().optional().catch(undefined),
 });
 
-type EventListSearch = z.infer<typeof eventListSearchSchema>;
+export type EventListSearch = z.infer<typeof eventListSearchSchema>;
 
 export const Route = createFileRoute('/_authenticated/events/')({
-  validateSearch: (search: Record<string, unknown>): EventListSearch => {
-    const result = eventListSearchSchema.safeParse(search);
-    if (result.success) {
-      return result.data;
-    }
-    // Discard invalid params, apply defaults
-    return eventListSearchSchema.parse({});
-  },
+  validateSearch: (search: Record<string, unknown>): EventListSearch =>
+    eventListSearchSchema.parse(search),
   component: EventListPage,
 });
 
 function EventListPage() {
-  const search = Route.useSearch();
-
   return (
-    <div>
-      <h1>Events</h1>
-      <p>
-        Page {search.page}, Size {search.size}
-        {search.status && `, Status: ${search.status}`}
-        {search.search && `, Search: ${search.search}`}
-      </p>
-    </div>
+    <Suspense fallback={<PageSkeleton title="Events" />}>
+      <EventListContent />
+    </Suspense>
   );
 }

@@ -2,13 +2,15 @@
  * Sidebar Navigation Component
  *
  * Renders a collapsible sidebar with navigation links grouped by domain.
- * Highlights the currently active route. Supports responsive collapse
- * to overlay on mobile (< 768px) with outside click and Escape dismissal.
+ * Highlights the currently active route using TanStack Router's Link component.
+ * Supports responsive collapse to overlay on mobile (< 768px) with
+ * outside click and Escape dismissal.
  *
  * Requirements: 2.1, 2.2, 2.4, 2.5
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import styles from './Sidebar.module.css';
 
 export interface NavigationItem {
@@ -62,7 +64,7 @@ export function Sidebar({
   };
 
   const isActive = (href: string): boolean => {
-    if (href === '/') {
+    if (href === '/dashboard') {
       return activeRoute === '/' || activeRoute === '/dashboard';
     }
     return activeRoute.startsWith(href);
@@ -110,22 +112,23 @@ export function Sidebar({
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
-                  <a
+                  <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`${styles.navItem} ${active ? styles.active : ''}`}
                     aria-current={active ? 'page' : undefined}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // Navigate using window.location for now (TanStack Router will replace this)
-                      window.location.pathname = item.href;
+                    onClick={() => {
+                      // Collapse sidebar on navigation in mobile view
+                      if (isMobile && !collapsed) {
+                        onToggle();
+                      }
                     }}
                   >
                     <span className={styles.navItemIcon} aria-hidden="true">
                       <Icon />
                     </span>
                     <span className={styles.navItemLabel}>{item.label}</span>
-                  </a>
+                  </Link>
                 );
               })}
             </div>

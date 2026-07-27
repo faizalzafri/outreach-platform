@@ -9,6 +9,7 @@
  */
 
 import { useMemo } from 'react';
+import { useRouterState } from '@tanstack/react-router';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { filterNavigationByRoles } from '@/lib/navigation-filter';
@@ -165,8 +166,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const { user, logout, isLoading } = useAuth();
 
-  // Get active route from window.location (will be replaced by TanStack Router's useLocation)
-  const activeRoute = typeof window !== 'undefined' ? window.location.pathname : '/';
+  // Get active route from TanStack Router's state
+  const routerState = useRouterState();
+  const activeRoute = routerState.location.pathname;
 
   const handleLogout = () => {
     void logout();

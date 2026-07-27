@@ -10,10 +10,13 @@
 
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
+import { LayoutShell } from '@/components/layout';
+import { PageSkeleton } from '@/components/feedback/PageSkeleton';
 import { useEffect } from 'react';
 
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
+  pendingComponent: PageSkeleton,
 });
 
 function AuthenticatedLayout() {
@@ -53,5 +56,9 @@ function AuthenticatedLayout() {
     return null;
   }
 
-  return <Outlet />;
+  return (
+    <LayoutShell>
+      <Outlet />
+    </LayoutShell>
+  );
 }
