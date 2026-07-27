@@ -1,3 +1,14 @@
 // Infrastructure utilities barrel file
-// HTTP client, auth module, query client, query keys, and Zod schemas will be exported from here
-export {};
+export {
+  authModule,
+  createAuthModule,
+  generateCodeVerifier,
+  generateCodeChallenge,
+  generateState,
+  decodeJwtPayload,
+  extractRoles,
+  isTokenExpiringSoon,
+} from './auth';
+
+export { queryClient } from './query-client';
+export { queryKeys } from './query-keys';

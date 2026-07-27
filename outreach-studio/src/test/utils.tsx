@@ -2,14 +2,7 @@ import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { RenderOptions } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
-
-/**
- * Placeholder AuthProvider for tests.
- * Will be replaced with the real AuthProvider once the Auth module is implemented.
- */
-function AuthProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>
-}
+import { AuthProvider } from '@/hooks/useAuth'
 
 /**
  * Placeholder Router wrapper for tests.
