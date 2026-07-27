@@ -52,6 +52,22 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks(id: string) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'vendor-react';
+          }
+          if (
+            id.includes('node_modules/@tanstack/react-router') ||
+            id.includes('node_modules/@tanstack/react-query') ||
+            id.includes('node_modules/@tanstack/react-table') ||
+            id.includes('node_modules/@tanstack/react-form')
+          ) {
+            return 'vendor-tanstack';
+          }
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
+            return 'vendor-charts';
+          }
+        },
       },
     },
   },
