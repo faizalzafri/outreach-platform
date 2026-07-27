@@ -1554,3 +1554,286 @@ list: (params: EventListParams) => [...queryKeys.events.lists(), params] as cons
 | **Background Refetch** | Fetching fresh data without showing a loading spinner (user sees stale data until fresh arrives) |
 
 ---
+
+
+## Task 8.4: Implement RBAC Components and Route Guards
+
+### Task Summary
+
+We implemented Role-Based Access Control (RBAC) for the frontend — the mechanism that restricts what users can see and do based on their assigned roles. This includes a `usePermission` hook, a `ProtectedRoute` component (renders children or a 403 page), a `RequireRole` component (renders children or nothing), and sidebar navigation filtering. It's analogous to Spring Security's `@PreAuthorize` and `hasRole()` annotations, but applied to UI rendering rather than HTTP endpoint access.
+
+**Key files:** `src/hooks/usePermission.ts`, `src/components/layout/ProtectedRoute.tsx`, `src/components/layout/RequireRole.tsx`, `src/components/layout/ForbiddenPage.tsx`, `src/lib/navigation-filter.ts`
+
+---
+
+### What Is RBAC in a Frontend Context?
+
+**Backend RBAC** (what you're used to in Spring Security): The server checks roles and rejects unauthorized requests with a 403 status code. This is the source of truth — even if the frontend is bypassed, the backend enforces access rules.
+
+**Frontend RBAC**: The UI hides or disables elements the user isn't allowed to interact with. This is a UX optimization — you don't show a button the user can't click, and you don't navigate them to a page they'll be rejected from.
+
+**Critical principle:** Frontend RBAC is cosmetic, NOT security. It improves user experience but NEVER replaces backend authorization. An attacker can always modify JavaScript, skip route guards, or call APIs directly. The backend must always be the final gatekeeper.
+
+**Analogy:** Think of frontend RBAC like hiding the "Delete Database" button from non-admin users in a management console. Even if someone hacks the UI to show the button, the backend would reject the API call. The frontend hiding is just good UX.
+
+---
+
+### React Concepts Used
+
+#### 1. Custom Hooks for Cross-Cutting Logic (`usePermission`)
+
+**What it is:** A custom hook that encapsulates the role-checking logic in one place, so any component can ask "does the current user have permission?" without duplicating the check.
+
+**Analogy:** Like a Spring utility class (`SecurityUtils.hasRole("ADMIN")`) that any service can call, except hooks are aware of React state and trigger re-renders when auth state changes.
+
+```typescript
+export function usePermission(requiredRoles: string[]): UsePermissionResult {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return { hasPermission: false, isLoading: true };
+  }
+
+  if (requiredRoles.length === 0) {
+    return { hasPermission: true, isLoading: false };
+  }
+
+  if (!user || !user.roles || user.roles.length === 0) {
+    return { hasPermission: false, isLoading: false };
+  }
+
+  const hasPermission = requiredRoles.some((role) => user.roles.includes(role));
+  return { hasPermission, isLoading: false };
+}
+```
+
+**Key behaviors:**
+- Empty `requiredRoles` → always granted (public route/element)
+- Multi-role users → union of permissions (if you have ROLE_ADMIN AND ROLE_PMO, you see everything either role grants)
+- Loading state → returns `false` for permission with `isLoading: true` (prevents flash of wrong content)
+
+#### 2. Guard Components (Higher-Order Pattern)
+
+**What it is:** Components that wrap other components and conditionally render them based on authorization state. This is a declarative pattern — you describe WHAT access is required, not HOW to check it.
+
+**Analogy:** Like Spring Security's `<sec:authorize>` tag in Thymeleaf templates:
+```html
+<!-- Thymeleaf equivalent -->
+<div sec:authorize="hasRole('ADMIN')">Admin-only content</div>
+```
+
+In React:
+```tsx
+<RequireRole roles={['ROLE_ADMIN']}>
+  <AdminPanel />
+</RequireRole>
+```
+
+---
+
+### Code Patterns Explained
+
+#### Pattern 1: ProtectedRoute — Page-Level Authorization
+
+`ProtectedRoute` is used to guard entire routes/pages. It has three possible outcomes:
+
+| State | Rendered Output |
+|-------|----------------|
+| Loading (token not decoded yet) | Loading spinner |
+| Authorized (user has required role) | Children (the page content) |
+| Unauthorized (user lacks required role) | 403 Forbidden page with link to dashboard |
+
+```tsx
+export function ProtectedRoute({ requiredRoles, children }: ProtectedRouteProps) {
+  const { hasPermission, isLoading } = usePermission(requiredRoles);
+
+  if (isLoading) {
+    return <div role="status" aria-label="Verifying permissions">Verifying access...</div>;
+  }
+
+  if (!hasPermission) {
+    return <ForbiddenPage />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage:**
+```tsx
+// In a route definition:
+<ProtectedRoute requiredRoles={['ROLE_ADMIN']}>
+  <AdminDashboard />
+</ProtectedRoute>
+```
+
+**Why show a 403 page instead of redirecting?** The user IS authenticated (they're logged in). They just don't have the RIGHT role. Redirecting to login would be confusing — they'd log in again and still be denied. A clear "Access Denied" message with a way back to the dashboard is better UX.
+
+#### Pattern 2: RequireRole — Element-Level Authorization
+
+`RequireRole` is lighter — it renders children or `null`. No error page, no loading indicator. Use it for conditionally showing/hiding buttons, menu items, or sections within a page.
+
+```tsx
+export function RequireRole({ roles, children }: RequireRoleProps): ReactNode {
+  const { hasPermission, isLoading } = usePermission(roles);
+
+  if (isLoading || !hasPermission) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage:**
+```tsx
+<RequireRole roles={['ROLE_ADMIN']}>
+  <button onClick={deleteUser}>Delete User</button>
+</RequireRole>
+```
+
+**Why render null during loading?** To prevent a "flash of content" — briefly showing the Delete button, then hiding it once roles resolve. It's better to show nothing until we know for sure.
+
+#### Pattern 3: How ProtectedRoute and RequireRole Differ
+
+| Concern | ProtectedRoute | RequireRole |
+|---------|---------------|-------------|
+| **Scope** | Entire page/route | Individual UI elements |
+| **On unauthorized** | Shows 403 page with message and link | Renders nothing (null) |
+| **On loading** | Shows "Verifying access..." spinner | Renders nothing (null) |
+| **Typical usage** | Wrapping route components | Wrapping buttons, menu items, sections |
+| **User sees** | A clear error message explaining denial | The element simply doesn't exist |
+
+**When to use which:**
+- User would be confused to land on a blank page → use `ProtectedRoute` (shows explanation)
+- Element should just disappear for unauthorized users → use `RequireRole` (silent hide)
+
+#### Pattern 4: Sidebar Navigation Filtering
+
+Rather than checking roles on every individual sidebar link in JSX, we filter the navigation data BEFORE rendering. This is a data-first approach — transform the data, then render it.
+
+```typescript
+export function filterNavigationByRoles(
+  groups: NavigationGroup[],
+  userRoles: string[]
+): NavigationGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.requiredRoles.length === 0) return true;
+        return item.requiredRoles.some((role) => userRoles.includes(role));
+      }),
+    }))
+    .filter((group) => group.items.length > 0); // Remove empty groups
+}
+```
+
+**How roles map to navigation visibility:**
+
+| Role | Sees |
+|------|------|
+| ROLE_ADMIN | All navigation items (Dashboard, Events, Volunteers, Feedback, Ingestion, Notifications, Reports, Administration, Audit Log) |
+| ROLE_PMO | Dashboard, Events, Volunteers, Feedback, Reports |
+| ROLE_POC | Dashboard, Events, Volunteers, Feedback |
+
+**Key detail:** Items with `requiredRoles: []` (empty array) are visible to ALL authenticated users. This is used for Dashboard, which everyone can access.
+
+**Multi-role users:** A user with `['ROLE_PMO', 'ROLE_POC']` gets the union — they see everything either role grants. The `some()` check ensures ANY matching role is sufficient.
+
+**Why filter in LayoutShell with `useMemo`?** The filtering result is memoized — it only recomputes when `userRoles` changes (which is rare, typically only on login). This prevents unnecessary re-renders of the entire sidebar on every parent render.
+
+```tsx
+const filteredNavigationGroups = useMemo(
+  () => filterNavigationByRoles(navigationGroups, userRoles),
+  [userRoles]
+);
+```
+
+#### Pattern 5: Loading State While Roles Resolve
+
+When the page first loads, the JWT hasn't been decoded yet. During this brief window, we don't know the user's roles. The `LayoutShell` handles this by showing a full-screen loading indicator:
+
+```tsx
+if (isLoading) {
+  return (
+    <div role="status" aria-label="Loading navigation">
+      <span>Loading...</span>
+    </div>
+  );
+}
+```
+
+**Why this matters:** Without it, you'd see a flash of either "all nav items" (security issue) or "no nav items" (confusing UX) before the correct filtered set appears. The loading state prevents both problems.
+
+**Analogy:** Like a Spring Security filter chain that hasn't resolved the `Authentication` object yet. You don't serve ANY page until you know who the user is — you either redirect to login or proceed with the authenticated principal.
+
+---
+
+### The RBAC Architecture at a Glance
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LayoutShell                                     │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │  isLoading?  →  Full-screen loading indicator             │  │
+│   └──────────────────────────────────────────────────────────┘  │
+│                          │                                        │
+│                          ▼                                        │
+│   ┌───────────────┐  ┌──────────────────────────────────────┐  │
+│   │   Sidebar      │  │  Main Content Area                    │  │
+│   │                │  │                                        │  │
+│   │  Filtered by   │  │  ProtectedRoute (page-level guard)    │  │
+│   │  user roles    │  │    ├─ Loading → spinner               │  │
+│   │  (navigation-  │  │    ├─ Unauthorized → ForbiddenPage    │  │
+│   │   filter.ts)   │  │    └─ Authorized → children           │  │
+│   │                │  │                                        │  │
+│   │  Empty roles   │  │  RequireRole (element-level guard)    │  │
+│   │  = show item   │  │    ├─ Loading → null                  │  │
+│   │                │  │    ├─ Unauthorized → null              │  │
+│   │  Multi-role    │  │    └─ Authorized → children           │  │
+│   │  = union       │  │                                        │  │
+│   └───────────────┘  └──────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+              ┌─────────────────────┐
+              │    usePermission     │
+              │  (single source of   │
+              │   role-check logic)  │
+              │                     │
+              │  Uses useAuth() to   │
+              │  get user.roles     │
+              └─────────────────────┘
+```
+
+---
+
+### Key Takeaways
+
+- **Frontend RBAC is for UX, not security.** Always enforce authorization on the backend. Frontend controls prevent confusion, not attacks.
+- **`usePermission` centralizes all role-checking logic.** One hook, used by both guard components and anywhere else you need a role check.
+- **`ProtectedRoute` is for pages** — shows a 403 when unauthorized. `RequireRole` is for elements — renders nothing when unauthorized.
+- **Navigation filtering is data-driven** — transform the data structure before rendering, rather than conditionally rendering in JSX.
+- **Loading states prevent security flashes** — never show authorized-only content before you know the user's roles.
+- **Multi-role is additive** (union, not intersection) — having multiple roles expands access, never restricts it.
+- **`useMemo` for derived data** — recompute filtered navigation only when roles change, not on every render.
+
+---
+
+### Glossary
+
+| Term | Definition |
+|------|-----------|
+| **RBAC** | Role-Based Access Control — restricting access based on user roles rather than individual permissions |
+| **Route Guard** | A component or logic that prevents navigation to a route unless conditions are met |
+| **403 Forbidden** | HTTP status indicating the user is authenticated but not authorized for the resource |
+| **Union of Permissions** | Multi-role users get all permissions from ALL their roles combined |
+| **Conditional Rendering** | Rendering different output based on conditions (if/else in JSX via ternaries or early returns) |
+| **useMemo** | React hook that caches a computed value, recomputing only when dependencies change |
+| **Flash of Content** | Brief unwanted appearance of content before the correct state is determined |
+| **Guard Component** | A wrapper component that conditionally renders children based on access rules |
+| **Navigation Filter** | Logic that removes menu items the user isn't authorized to see |
+| **Empty Required Roles** | Convention: an empty roles array means the item is accessible to any authenticated user |
+
+---
