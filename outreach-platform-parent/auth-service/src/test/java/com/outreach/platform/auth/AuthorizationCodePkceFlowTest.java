@@ -54,7 +54,7 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
         String authorizeUrl = baseUrl() + "/oauth2/authorize"
                 + "?response_type=code"
                 + "&client_id=outreach-dashboard"
-                + "&redirect_uri=http://localhost:4200/*"
+                + "&redirect_uri=http://localhost:5173/callback"
                 + "&scope=openid profile email roles"
                 + "&code_challenge=" + codeChallenge
                 + "&code_challenge_method=S256"
@@ -124,7 +124,7 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
             tokenRequest.add("grant_type", "authorization_code");
             tokenRequest.add("client_id", "outreach-dashboard");
             tokenRequest.add("code", authCode);
-            tokenRequest.add("redirect_uri", "http://localhost:4200/*");
+            tokenRequest.add("redirect_uri", "http://localhost:5173/callback");
             tokenRequest.add("code_verifier", codeVerifier);
 
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -160,7 +160,7 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
         String authorizeUrl = baseUrl() + "/oauth2/authorize"
                 + "?response_type=code"
                 + "&client_id=outreach-dashboard"
-                + "&redirect_uri=http://localhost:4200/*"
+                + "&redirect_uri=http://localhost:5173/callback"
                 + "&scope=openid"
                 + "&state=test-state";
         // Without PKCE, the server should reject or not issue a code
