@@ -121,3 +121,7 @@ Swagger UI is disabled in the `production` profile.
 ## Environment Variables
 
 See `.env.example` in `outreach-platform-parent/` for all configurable values.
+
+## License
+
+Internal project — not for public distribution.
