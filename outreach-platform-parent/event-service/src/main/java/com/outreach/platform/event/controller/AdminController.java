@@ -57,10 +57,13 @@ public class AdminController {
 
     // ─── User Management ────────────────────────────────────────────────────────
 
-    @Operation(summary = "List users", description = "Lists all platform users with pagination")
+    @Operation(summary = "List users", description = "Lists all platform users with pagination, optionally filtered by role")
     @GetMapping("/users")
-    public ResponseEntity<Page<UserDto>> listUsers(Pageable pageable) {
-        Page<UserDto> users = adminService.listUsers(pageable);
+    public ResponseEntity<Page<UserDto>> listUsers(
+            Pageable pageable,
+            @Parameter(description = "Filter by role (e.g. ADMIN, PMO, POC)")
+            @RequestParam(required = false) String role) {
+        Page<UserDto> users = adminService.listUsers(pageable, role);
         return ResponseEntity.ok(users);
     }
 

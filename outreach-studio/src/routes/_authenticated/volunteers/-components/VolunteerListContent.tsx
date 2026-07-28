@@ -1,9 +1,8 @@
 /**
  * Volunteer List Content (lazy-loaded)
  *
- * Displays platform users (filtered by ROLE_POC) from the /admin/users endpoint.
- * The backend has no standalone /events/volunteers list — volunteers are only
- * accessible per-event via /events/{eventId}/volunteers.
+ * Displays registered volunteers (users with POC role) from the /admin/users endpoint
+ * filtered by role=POC. These are platform users who serve as Points of Contact for events.
  *
  * Includes a full-text search bar with 300ms debounce.
  */
@@ -41,7 +40,7 @@ function StatusBadge({ enabled }: { enabled: boolean }) {
 const columns: ColumnDef<User, unknown>[] = [
   {
     accessorKey: 'username',
-    header: 'Username',
+    header: 'Name',
     enableSorting: true,
     enableColumnFilter: false,
   },
@@ -50,16 +49,6 @@ const columns: ColumnDef<User, unknown>[] = [
     header: 'Email',
     enableSorting: true,
     enableColumnFilter: false,
-  },
-  {
-    accessorKey: 'role',
-    header: 'Role',
-    enableSorting: true,
-    enableColumnFilter: false,
-    cell: ({ getValue }) => {
-      const role = getValue() as string;
-      return role?.replace('ROLE_', '') ?? '—';
-    },
   },
   {
     accessorKey: 'enabled',
@@ -123,7 +112,7 @@ export function VolunteerListContent() {
 
       {/* Info note about volunteer context */}
       <p className={styles['infoNote'] ?? ''} style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-        Select an event to view its enrolled volunteers, or browse all platform users below.
+        Registered volunteers (POC users) who serve as Points of Contact for events.
       </p>
 
       {/* Full-text search bar */}
@@ -131,19 +120,19 @@ export function VolunteerListContent() {
         <input
           type="text"
           className={styles['searchInput']}
-          placeholder="Search by username or email..."
+          placeholder="Search by name or email..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          aria-label="Search users"
+          aria-label="Search volunteers"
         />
       </div>
 
       <DataTable<User>
         columns={columns}
         queryKey={queryKey}
-        endpoint="/admin/users"
+        endpoint="/admin/users?role=POC"
         defaultPageSize={search.size}
-        emptyMessage="No users found."
+        emptyMessage="No volunteers found."
       />
     </div>
   );

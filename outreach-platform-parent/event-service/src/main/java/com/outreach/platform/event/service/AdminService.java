@@ -2,6 +2,7 @@ package com.outreach.platform.event.service;
 
 import com.outreach.platform.event.entity.UserEntity;
 import com.outreach.platform.event.mapper.UserMapper;
+import com.outreach.platform.event.model.UserRole;
 import com.outreach.platform.event.model.dto.AdminDashboardStats;
 import com.outreach.platform.event.model.dto.UserCreateRequest;
 import com.outreach.platform.event.model.dto.UserDto;
@@ -51,6 +52,19 @@ public class AdminService {
     @Transactional(readOnly = true)
     public Page<UserDto> listUsers(Pageable pageable) {
         return userRepository.findAll(pageable).map(userMapper::toDto);
+    }
+
+    /**
+     * Lists users filtered by role with pagination.
+     * If role is null, returns all users.
+     */
+    @Transactional(readOnly = true)
+    public Page<UserDto> listUsers(Pageable pageable, String role) {
+        if (role == null || role.isBlank()) {
+            return listUsers(pageable);
+        }
+        UserRole userRole = UserRole.valueOf(role.toUpperCase());
+        return userRepository.findByRole(userRole, pageable).map(userMapper::toDto);
     }
 
     /**
