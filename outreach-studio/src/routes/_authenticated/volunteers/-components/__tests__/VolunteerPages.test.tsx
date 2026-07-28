@@ -94,7 +94,7 @@ function createUserPage(users: Array<Record<string, unknown>>, page = 0, size = 
   };
 }
 
-function createVolunteerPage(volunteers: Volunteer[], page = 0, size = 10): PageResponse<Volunteer> {
+function _createVolunteerPage(volunteers: Volunteer[], page = 0, size = 10): PageResponse<Volunteer> {
   return {
     content: volunteers,
     totalElements: volunteers.length,

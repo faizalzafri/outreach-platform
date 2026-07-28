@@ -303,7 +303,7 @@ export function createAuthModule(): AuthModule {
       });
 
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new Error('Token exchange timed out: authentication could not be completed');
+        throw new Error('Token exchange timed out: authentication could not be completed', { cause: error });
       }
       throw error;
     } finally {
