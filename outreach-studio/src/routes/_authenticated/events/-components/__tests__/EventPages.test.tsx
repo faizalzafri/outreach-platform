@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/server';
 import { buildEvent } from '@/test/factories/event.factory';
-import type { Event, EventStatus } from '@/types/domain';
+import type { Event } from '@/types/domain';
 import type { PageResponse } from '@/types/api';
 
 // ---------------------------------------------------------------------------

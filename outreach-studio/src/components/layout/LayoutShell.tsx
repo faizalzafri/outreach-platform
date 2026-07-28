@@ -175,10 +175,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const displayUser = user ?? { sub: '', name: 'User', email: '', roles: [] };
 
   // Filter navigation by user roles (multi-role users get union of permissions)
-  const userRoles = user?.roles ?? [];
   const filteredNavigationGroups = useMemo(
-    () => filterNavigationByRoles(navigationGroups, userRoles),
-    [userRoles]
+    () => filterNavigationByRoles(navigationGroups, user?.roles ?? []),
+    [user?.roles]
   );
 
   const mainClasses = [

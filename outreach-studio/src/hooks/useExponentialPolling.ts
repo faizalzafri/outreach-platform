@@ -75,6 +75,7 @@ export function useExponentialPolling<T>({
   const isActiveRef = useRef(false);
   const attemptRef = useRef(0);
   const intervalRef = useRef(baseInterval);
+  const pollRef = useRef<() => Promise<void>>();
 
   const cleanup = useCallback(() => {
     if (timeoutRef.current) {
@@ -118,7 +119,7 @@ export function useExponentialPolling<T>({
       intervalRef.current = nextInterval;
       setCurrentInterval(nextInterval);
 
-      timeoutRef.current = setTimeout(() => void poll(), intervalRef.current);
+      timeoutRef.current = setTimeout(() => void pollRef.current?.(), intervalRef.current);
     } catch (err) {
       if (!isActiveRef.current) return;
       setError(err);
@@ -129,9 +130,14 @@ export function useExponentialPolling<T>({
       intervalRef.current = nextInterval;
       setCurrentInterval(nextInterval);
 
-      timeoutRef.current = setTimeout(() => void poll(), intervalRef.current);
+      timeoutRef.current = setTimeout(() => void pollRef.current?.(), intervalRef.current);
     }
   }, [queryFn, isTerminal, maxAttempts, maxInterval, cleanup, onData, onComplete, onError, onTimeout]);
+
+  // Keep pollRef in sync with the latest poll callback
+  useEffect(() => {
+    pollRef.current = poll;
+  });
 
   const start = useCallback(() => {
     cleanup();
@@ -145,7 +151,7 @@ export function useExponentialPolling<T>({
     setError(null);
 
     // First poll at the base interval
-    timeoutRef.current = setTimeout(() => void poll(), baseInterval);
+    timeoutRef.current = setTimeout(() => void pollRef.current?.(), baseInterval);
   }, [cleanup, baseInterval, poll]);
 
   const stop = useCallback(() => {

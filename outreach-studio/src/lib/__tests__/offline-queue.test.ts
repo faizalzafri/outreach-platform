@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OfflineRequestQueue } from '../offline-queue';
-import type { QueuedRequest } from '../offline-queue';
 import type { NormalizedError } from '@/types/api';
 
 function createQueue(overrides: Partial<Parameters<typeof OfflineRequestQueue.prototype.configure>[0]> = {}) {

@@ -311,7 +311,7 @@ export function ReportsContent() {
       setExportStatus('failed');
       toastError('Failed to start export.');
     }
-  }, [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user?.sub, toastSuccess, toastError]);
+  }, [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user, toastSuccess, toastError]);
 
   return (
     <div className={styles['container']}>

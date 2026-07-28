@@ -10,7 +10,7 @@
  * shows confirmation toast.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 import { useUIStore } from '@/stores/ui-store';
 import { offlineQueue } from '@/lib/offline-queue';
@@ -55,7 +55,7 @@ export function useConnectivity(): ConnectivityState {
   const isOffline = useUIStore((s) => s.isOffline);
   const addToast = useUIStore((s) => s.addToast);
 
-  const isSystemUnavailableRef = useRef(false);
+  const [isSystemUnavailable, setIsSystemUnavailable] = useState(false);
   const unavailableSinceRef = useRef<number | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const healthCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -67,7 +67,7 @@ export function useConnectivity(): ConnectivityState {
       // Delay banner dismissal by up to 3s for visual confirmation
       reconnectTimerRef.current = setTimeout(() => {
         setOffline(false);
-        isSystemUnavailableRef.current = false;
+        setIsSystemUnavailable(false);
         unavailableSinceRef.current = null;
 
         // Flush queued requests
@@ -95,7 +95,7 @@ export function useConnectivity(): ConnectivityState {
 
       const elapsed = Date.now() - unavailableSinceRef.current;
       if (elapsed >= SYSTEM_UNAVAILABLE_THRESHOLD) {
-        isSystemUnavailableRef.current = true;
+        setIsSystemUnavailable(true);
         setOffline(true);
       }
     } else {
@@ -104,7 +104,7 @@ export function useConnectivity(): ConnectivityState {
         void handleOnline();
       }
       unavailableSinceRef.current = null;
-      isSystemUnavailableRef.current = false;
+      setIsSystemUnavailable(false);
     }
   }, [isOffline, setOffline, handleOnline]);
 
@@ -139,6 +139,6 @@ export function useConnectivity(): ConnectivityState {
 
   return {
     isOffline,
-    isSystemUnavailable: isSystemUnavailableRef.current,
+    isSystemUnavailable,
   };
 }

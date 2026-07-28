@@ -210,7 +210,7 @@ describe('IngestionContent', () => {
   describe('Polling lifecycle', () => {
     it('starts polling after successful upload and shows completion', async () => {
       // First upload returns 202 with jobId, then polling returns COMPLETED
-      let pollCount = 0;
+      let _pollCount = 0;
       server.use(
         http.post('/api/ingestion/upload', () => {
           return HttpResponse.json(
@@ -219,7 +219,7 @@ describe('IngestionContent', () => {
           );
         }),
         http.get('/api/ingestion/jobs/:jobId', () => {
-          pollCount++;
+          _pollCount++;
           return HttpResponse.json({
             id: 'test-job-123',
             status: 'COMPLETED',
