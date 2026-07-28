@@ -1,9 +1,559 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="2" failures="0" errors="0" time="0.1307243">
-    <testsuite name="src/test/utils.test.tsx" timestamp="2026-07-27T20:19:32.392Z" hostname="ConveraGXLFY74" tests="2" failures="0" errors="0" skipped="0" time="0.1307243">
-        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; renders a component within providers" time="0.1029369">
+<testsuites name="vitest tests" tests="12" failures="1" errors="0" time="2.0277159">
+    <testsuite name="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" timestamp="2026-07-28T03:20:31.567Z" hostname="ConveraGXLFY74" tests="12" failures="1" errors="0" skipped="11" time="2.0277159">
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Form validation on blur (valid and invalid inputs) &gt; shows validation error for textAnswer1 when left empty after blur" time="0">
+            <skipped/>
         </testcase>
-        <testcase classname="src/test/utils.test.tsx" name="renderWithProviders &gt; returns a queryClient instance" time="0.011025">
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Form validation on blur (valid and invalid inputs) &gt; shows validation error for textAnswer2 when left empty after blur" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Form validation on blur (valid and invalid inputs) &gt; shows validation error for category when left unselected after blur" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Form validation on blur (valid and invalid inputs) &gt; clears textAnswer1 validation error after typing valid input" time="2.0229862">
+            <failure message="[2mexpect([22m[31melement[39m[2m).not.toBeInTheDocument()[22m
+
+[31mexpected document not to contain element, found &lt;p
+  aria-live=&quot;assertive&quot;
+  class=&quot;_fieldError_c9c7d7&quot;
+  id=&quot;textAnswer2-error&quot;
+  role=&quot;alert&quot;
+&gt;
+  String must contain at least 1 character(s)
+&lt;/p&gt; instead[39m
+
+Ignored nodes: comments, script, style
+[36m&lt;html&gt;[39m
+  [36m&lt;head /&gt;[39m
+  [36m&lt;body&gt;[39m
+    [36m&lt;div&gt;[39m
+      [36m&lt;div&gt;[39m
+        [36m&lt;div[39m
+          [33mclass[39m=[32m&quot;_container_c9c7d7&quot;[39m
+        [36m&gt;[39m
+          [36m&lt;h1[39m
+            [33mclass[39m=[32m&quot;_pageTitle_c9c7d7&quot;[39m
+          [36m&gt;[39m
+            [0mSubmit Feedback[0m
+          [36m&lt;/h1&gt;[39m
+          [36m&lt;form[39m
+            [33mclass[39m=[32m&quot;_form_c9c7d7&quot;[39m
+          [36m&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_field_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;span[39m
+                [33mclass[39m=[32m&quot;_label_c9c7d7&quot;[39m
+              [36m&gt;[39m
+                [0mScore[0m
+                [36m&lt;span[39m
+                  [33mclass[39m=[32m&quot;_required_c9c7d7&quot;[39m
+                [36m&gt;[39m
+                  [0m*[0m
+                [36m&lt;/span&gt;[39m
+              [36m&lt;/span&gt;[39m
+              [36m&lt;div[39m
+                [33maria-label[39m=[32m&quot;Feedback score&quot;[39m
+                [33mclass[39m=[32m&quot;_emojiGroup_c9c7d7&quot;[39m
+                [33mrole[39m=[32m&quot;radiogroup&quot;[39m
+              [36m&gt;[39m
+                [36m&lt;button[39m
+                  [33maria-label[39m=[32m&quot;Score 1&quot;[39m
+                  [33maria-pressed[39m=[32m&quot;false&quot;[39m
+                  [33mclass[39m=[32m&quot;_emojiBtn_c9c7d7 &quot;[39m
+                  [33mtype[39m=[32m&quot;button&quot;[39m
+                [36m&gt;[39m
+                  [0m😞[0m
+                [36m&lt;/button&gt;[39m
+                [36m&lt;button[39m
+                  [33maria-label[39m=[32m&quot;Score 2&quot;[39m
+                  [33maria-pressed[39m=[32m&quot;false&quot;[39m
+                  [33mclass[39m=[32m&quot;_emojiBtn_c9c7d7 &quot;[39m
+                  [33mtype[39m=[32m&quot;button&quot;[39m
+                [36m&gt;[39m
+                  [0m😕[0m
+                [36m&lt;/button&gt;[39m
+                [36m&lt;button[39m
+                  [33maria-label[39m=[32m&quot;Score 3&quot;[39m
+                  [33maria-pressed[39m=[32m&quot;false&quot;[39m
+                  [33mclass[39m=[32m&quot;_emojiBtn_c9c7d7 &quot;[39m
+                  [33mtype[39m=[32m&quot;button&quot;[39m
+                [36m&gt;[39m
+                  [0m😐[0m
+                [36m&lt;/button&gt;[39m
+                [36m&lt;button[39m
+                  [33maria-label[39m=[32m&quot;Score 4&quot;[39m
+                  [33maria-pressed[39m=[32m&quot;false&quot;[39m
+                  [33mclass[39m=[32m&quot;_emojiBtn_c9c7d7 &quot;[39m
+                  [33mtype[39m=[32m&quot;button&quot;[39m
+                [36m&gt;[39m
+                  [0m🙂[0m
+                [36m&lt;/button&gt;[39m
+                [36m&lt;button[39m
+                  [33maria-label[39m=[32m&quot;Score 5&quot;[39m
+                  [33maria-pressed[39m=[32m&quot;false&quot;[39m
+                  [33mclass[39m=[32m&quot;_emojiBtn_c9c7d7 &quot;[39m
+                  [33mtype[39m=[32m&quot;button&quot;[39m
+                [36m&gt;[39m
+                  [0m😄[0m
+                [36m&lt;/button&gt;[39m
+              [36m&lt;/div&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_field_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;label[39m
+                [33mclass[39m=[32m&quot;_label_c9c7d7&quot;[39m
+                [33mfor[39m=[32m&quot;textAnswer1&quot;[39m
+              [36m&gt;[39m
+                [0mWhat went well?[0m
+                [36m&lt;span[39m
+                  [33mclass[39m=[32m&quot;_required_c9c7d7&quot;[39m
+                [36m&gt;[39m
+                  [0m*[0m
+                [36m&lt;/span&gt;[39m
+              [36m&lt;/label&gt;[39m
+              [36m&lt;textarea[39m
+                [33maria-invalid[39m=[32m&quot;false&quot;[39m
+                [33mclass[39m=[32m&quot;_textarea_c9c7d7 &quot;[39m
+                [33mid[39m=[32m&quot;textAnswer1&quot;[39m
+                [33mmaxlength[39m=[32m&quot;500&quot;[39m
+                [33mrows[39m=[32m&quot;3&quot;[39m
+              [36m&gt;[39m
+                [0mGreat event[0m
+              [36m&lt;/textarea&gt;[39m
+              [36m&lt;span[39m
+                [33mclass[39m=[32m&quot;_charCount_c9c7d7&quot;[39m
+              [36m&gt;[39m
+                [0m11[0m
+                [0m/500[0m
+              [36m&lt;/span&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_field_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;label[39m
+                [33mclass[39m=[32m&quot;_label_c9c7d7&quot;[39m
+                [33mfor[39m=[32m&quot;textAnswer2&quot;[39m
+              [36m&gt;[39m
+                [0mWhat could be improved?[0m
+                [36m&lt;span[39m
+                  [33mclass[39m=[32m&quot;_required_c9c7d7&quot;[39m
+                [36m&gt;[39m
+                  [0m*[0m
+                [36m&lt;/span&gt;[39m
+              [36m&lt;/label&gt;[39m
+              [36m&lt;textarea[39m
+                [33maria-describedby[39m=[32m&quot;textAnswer2-error&quot;[39m
+                [33maria-invalid[39m=[32m&quot;true&quot;[39m
+                [33mclass[39m=[32m&quot;_textarea_c9c7d7 _textarea--error_c9c7d7&quot;[39m
+                [33mid[39m=[32m&quot;textAnswer2&quot;[39m
+                [33mmaxlength[39m=[32m&quot;500&quot;[39m
+                [33mrows[39m=[32m&quot;3&quot;[39m
+              [36m/&gt;[39m
+              [36m&lt;span[39m
+                [33mclass[39m=[32m&quot;_charCount_c9c7d7&quot;[39m
+              [36m&gt;[39m
+                [0m0[0m
+                [0m/500[0m
+              [36m&lt;/span&gt;[39m
+              [36m&lt;p[39m
+                [33maria-live[39m=[32m&quot;assertive&quot;[39m
+                [33mclass[39m=[32m&quot;_fieldError_c9c7d7&quot;[39m
+                [33mid[39m=[32m&quot;textAnswer2-error&quot;[39m
+                [33mrole[39m=[32m&quot;alert&quot;[39m
+              [36m&gt;[39m
+                [0mString must contain at least 1 character(s)[0m
+              [36m&lt;/p&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_field_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;label[39m
+                [33mclass[39m=[32m&quot;_label_c9c7d7&quot;[39m
+                [33mfor[39m=[32m&quot;textAnswer3&quot;[39m
+              [36m&gt;[39m
+                [0mAdditional comments (optional)[0m
+              [36m&lt;/label&gt;[39m
+              [36m&lt;textarea[39m
+                [33maria-invalid[39m=[32m&quot;false&quot;[39m
+                [33mclass[39m=[32m&quot;_textarea_c9c7d7 &quot;[39m
+                [33mid[39m=[32m&quot;textAnswer3&quot;[39m
+                [33mmaxlength[39m=[32m&quot;500&quot;[39m
+                [33mrows[39m=[32m&quot;3&quot;[39m
+              [36m/&gt;[39m
+              [36m&lt;span[39m
+                [33mclass[39m=[32m&quot;_charCount_c9c7d7&quot;[39m
+              [36m&gt;[39m
+                [0m0[0m
+                [0m/500[0m
+              [36m&lt;/span&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_field_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;label[39m
+                [33mclass[39m=[32m&quot;_label_c9c7d7&quot;[39m
+                [33mfor[39m=[32m&quot;category&quot;[39m
+              [36m&gt;[39m
+                [0mCategory[0m
+                [36m&lt;span[39m
+                  [33mclass[39m=[32m&quot;_required_c9c7d7&quot;[39m
+                [36m&gt;[39m
+                  [0m*[0m
+                [36m&lt;/span&gt;[39m
+              [36m&lt;/label&gt;[39m
+              [36m&lt;select[39m
+                [33maria-invalid[39m=[32m&quot;false&quot;[39m
+                [33mclass[39m=[32m&quot;_select_c9c7d7 &quot;[39m
+                [33mid[39m=[32m&quot;category&quot;[39m
+              [36m&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;&quot;[39m
+                [36m&gt;[39m
+                  [0mSelect a category...[0m
+                [36m&lt;/option&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;Communication&quot;[39m
+                [36m&gt;[39m
+                  [0mCommunication[0m
+                [36m&lt;/option&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;Organization&quot;[39m
+                [36m&gt;[39m
+                  [0mOrganization[0m
+                [36m&lt;/option&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;Content&quot;[39m
+                [36m&gt;[39m
+                  [0mContent[0m
+                [36m&lt;/option&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;Logistics&quot;[39m
+                [36m&gt;[39m
+                  [0mLogistics[0m
+                [36m&lt;/option&gt;[39m
+                [36m&lt;option[39m
+                  [33mvalue[39m=[32m&quot;Overall&quot;[39m
+                [36m&gt;[39m
+                  [0mOverall[0m
+                [36m&lt;/option&gt;[39m
+              [36m&lt;/select&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;div[39m
+              [33mclass[39m=[32m&quot;_toggleField_c9c7d7&quot;[39m
+            [36m&gt;[39m
+              [36m&lt;input[39m
+                [33mclass[39m=[32m&quot;_toggle_c9c7d7&quot;[39m
+                [33mid[39m=[32m&quot;anonymous&quot;[39m
+                [33mtype[39m=[32m&quot;checkbox&quot;[39m
+              [36m/&gt;[39m
+              [36m&lt;label[39m
+                [33mclass[39m=[32m&quot;_toggleLabel_c9c7d7&quot;[39m
+                [33mfor[39m=[32m&quot;anonymous&quot;[39m
+              [36m&gt;[39m
+                [0mSubmit anonymously[0m
+              [36m&lt;/label&gt;[39m
+            [36m&lt;/div&gt;[39m
+            [36m&lt;button[39m
+              [33mclass[39m=[32m&quot;_submitBtn_c9c7d7&quot;[39m
+              [33mdisabled[39m=[32m&quot;&quot;[39m
+              [33mtype[39m=[32m&quot;submit&quot;[39m
+            [36m&gt;[39m
+              [0mSubmit Feedback[0m
+            [36m&lt;/button&gt;[39m
+          [36m&lt;/form&gt;[39m
+        [36m&lt;/div&gt;[39m
+      [36m&lt;/div&gt;[39m
+    [36m&lt;/div&gt;[39m
+  [36m&lt;/body&gt;[39m
+[36m&lt;/html&gt;[39m" type="Error">
+Error: expect(element).not.toBeInTheDocument()
+
+expected document not to contain element, found &lt;p
+  aria-live=&quot;assertive&quot;
+  class=&quot;_fieldError_c9c7d7&quot;
+  id=&quot;textAnswer2-error&quot;
+  role=&quot;alert&quot;
+&gt;
+  String must contain at least 1 character(s)
+&lt;/p&gt; instead
+
+Ignored nodes: comments, script, style
+&lt;html&gt;
+  &lt;head /&gt;
+  &lt;body&gt;
+    &lt;div&gt;
+      &lt;div&gt;
+        &lt;div
+          class=&quot;_container_c9c7d7&quot;
+        &gt;
+          &lt;h1
+            class=&quot;_pageTitle_c9c7d7&quot;
+          &gt;
+            Submit Feedback
+          &lt;/h1&gt;
+          &lt;form
+            class=&quot;_form_c9c7d7&quot;
+          &gt;
+            &lt;div
+              class=&quot;_field_c9c7d7&quot;
+            &gt;
+              &lt;span
+                class=&quot;_label_c9c7d7&quot;
+              &gt;
+                Score
+                &lt;span
+                  class=&quot;_required_c9c7d7&quot;
+                &gt;
+                  *
+                &lt;/span&gt;
+              &lt;/span&gt;
+              &lt;div
+                aria-label=&quot;Feedback score&quot;
+                class=&quot;_emojiGroup_c9c7d7&quot;
+                role=&quot;radiogroup&quot;
+              &gt;
+                &lt;button
+                  aria-label=&quot;Score 1&quot;
+                  aria-pressed=&quot;false&quot;
+                  class=&quot;_emojiBtn_c9c7d7 &quot;
+                  type=&quot;button&quot;
+                &gt;
+                  😞
+                &lt;/button&gt;
+                &lt;button
+                  aria-label=&quot;Score 2&quot;
+                  aria-pressed=&quot;false&quot;
+                  class=&quot;_emojiBtn_c9c7d7 &quot;
+                  type=&quot;button&quot;
+                &gt;
+                  😕
+                &lt;/button&gt;
+                &lt;button
+                  aria-label=&quot;Score 3&quot;
+                  aria-pressed=&quot;false&quot;
+                  class=&quot;_emojiBtn_c9c7d7 &quot;
+                  type=&quot;button&quot;
+                &gt;
+                  😐
+                &lt;/button&gt;
+                &lt;button
+                  aria-label=&quot;Score 4&quot;
+                  aria-pressed=&quot;false&quot;
+                  class=&quot;_emojiBtn_c9c7d7 &quot;
+                  type=&quot;button&quot;
+                &gt;
+                  🙂
+                &lt;/button&gt;
+                &lt;button
+                  aria-label=&quot;Score 5&quot;
+                  aria-pressed=&quot;false&quot;
+                  class=&quot;_emojiBtn_c9c7d7 &quot;
+                  type=&quot;button&quot;
+                &gt;
+                  😄
+                &lt;/button&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div
+              class=&quot;_field_c9c7d7&quot;
+            &gt;
+              &lt;label
+                class=&quot;_label_c9c7d7&quot;
+                for=&quot;textAnswer1&quot;
+              &gt;
+                What went well?
+                &lt;span
+                  class=&quot;_required_c9c7d7&quot;
+                &gt;
+                  *
+                &lt;/span&gt;
+              &lt;/label&gt;
+              &lt;textarea
+                aria-invalid=&quot;false&quot;
+                class=&quot;_textarea_c9c7d7 &quot;
+                id=&quot;textAnswer1&quot;
+                maxlength=&quot;500&quot;
+                rows=&quot;3&quot;
+              &gt;
+                Great event
+              &lt;/textarea&gt;
+              &lt;span
+                class=&quot;_charCount_c9c7d7&quot;
+              &gt;
+                11
+                /500
+              &lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div
+              class=&quot;_field_c9c7d7&quot;
+            &gt;
+              &lt;label
+                class=&quot;_label_c9c7d7&quot;
+                for=&quot;textAnswer2&quot;
+              &gt;
+                What could be improved?
+                &lt;span
+                  class=&quot;_required_c9c7d7&quot;
+                &gt;
+                  *
+                &lt;/span&gt;
+              &lt;/label&gt;
+              &lt;textarea
+                aria-describedby=&quot;textAnswer2-error&quot;
+                aria-invalid=&quot;true&quot;
+                class=&quot;_textarea_c9c7d7 _textarea--error_c9c7d7&quot;
+                id=&quot;textAnswer2&quot;
+                maxlength=&quot;500&quot;
+                rows=&quot;3&quot;
+              /&gt;
+              &lt;span
+                class=&quot;_charCount_c9c7d7&quot;
+              &gt;
+                0
+                /500
+              &lt;/span&gt;
+              &lt;p
+                aria-live=&quot;assertive&quot;
+                class=&quot;_fieldError_c9c7d7&quot;
+                id=&quot;textAnswer2-error&quot;
+                role=&quot;alert&quot;
+              &gt;
+                String must contain at least 1 character(s)
+              &lt;/p&gt;
+            &lt;/div&gt;
+            &lt;div
+              class=&quot;_field_c9c7d7&quot;
+            &gt;
+              &lt;label
+                class=&quot;_label_c9c7d7&quot;
+                for=&quot;textAnswer3&quot;
+              &gt;
+                Additional comments (optional)
+              &lt;/label&gt;
+              &lt;textarea
+                aria-invalid=&quot;false&quot;
+                class=&quot;_textarea_c9c7d7 &quot;
+                id=&quot;textAnswer3&quot;
+                maxlength=&quot;500&quot;
+                rows=&quot;3&quot;
+              /&gt;
+              &lt;span
+                class=&quot;_charCount_c9c7d7&quot;
+              &gt;
+                0
+                /500
+              &lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div
+              class=&quot;_field_c9c7d7&quot;
+            &gt;
+              &lt;label
+                class=&quot;_label_c9c7d7&quot;
+                for=&quot;category&quot;
+              &gt;
+                Category
+                &lt;span
+                  class=&quot;_required_c9c7d7&quot;
+                &gt;
+                  *
+                &lt;/span&gt;
+              &lt;/label&gt;
+              &lt;select
+                aria-invalid=&quot;false&quot;
+                class=&quot;_select_c9c7d7 &quot;
+                id=&quot;category&quot;
+              &gt;
+                &lt;option
+                  value=&quot;&quot;
+                &gt;
+                  Select a category...
+                &lt;/option&gt;
+                &lt;option
+                  value=&quot;Communication&quot;
+                &gt;
+                  Communication
+                &lt;/option&gt;
+                &lt;option
+                  value=&quot;Organization&quot;
+                &gt;
+                  Organization
+                &lt;/option&gt;
+                &lt;option
+                  value=&quot;Content&quot;
+                &gt;
+                  Content
+                &lt;/option&gt;
+                &lt;option
+                  value=&quot;Logistics&quot;
+                &gt;
+                  Logistics
+                &lt;/option&gt;
+                &lt;option
+                  value=&quot;Overall&quot;
+                &gt;
+                  Overall
+                &lt;/option&gt;
+              &lt;/select&gt;
+            &lt;/div&gt;
+            &lt;div
+              class=&quot;_toggleField_c9c7d7&quot;
+            &gt;
+              &lt;input
+                class=&quot;_toggle_c9c7d7&quot;
+                id=&quot;anonymous&quot;
+                type=&quot;checkbox&quot;
+              /&gt;
+              &lt;label
+                class=&quot;_toggleLabel_c9c7d7&quot;
+                for=&quot;anonymous&quot;
+              &gt;
+                Submit anonymously
+              &lt;/label&gt;
+            &lt;/div&gt;
+            &lt;button
+              class=&quot;_submitBtn_c9c7d7&quot;
+              disabled=&quot;&quot;
+              type=&quot;submit&quot;
+            &gt;
+              Submit Feedback
+            &lt;/button&gt;
+          &lt;/form&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+ ❯ src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx:140:74
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+            </failure>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Submit disabled state logic &gt; disables submit button when form is initially empty" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Submit disabled state logic &gt; keeps submit disabled when only text fields are filled (no score)" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Submit disabled state logic &gt; keeps submit disabled when only partial fields are filled" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Successful submission flow &gt; posts to /api/feedback and shows success message" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Successful submission flow &gt; shows loading indicator and prevents double submission" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Server validation error mapping to fields &gt; maps server field errors to corresponding form fields" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Network error preserves form data &gt; preserves form inputs on server error" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/routes/_authenticated/feedback/-components/__tests__/FeedbackContent.test.tsx" name="FeedbackContent &gt; Network error preserves form data &gt; preserves form data on network error" time="0">
+            <skipped/>
         </testcase>
     </testsuite>
 </testsuites>
