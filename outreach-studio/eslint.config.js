@@ -23,6 +23,7 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      'react-hooks/incompatible-library': 'off',
     },
   },
   {

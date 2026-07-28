@@ -75,7 +75,7 @@ export function useExponentialPolling<T>({
   const isActiveRef = useRef(false);
   const attemptRef = useRef(0);
   const intervalRef = useRef(baseInterval);
-  const pollRef = useRef<() => Promise<void>>();
+  const pollRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   const cleanup = useCallback(() => {
     if (timeoutRef.current) {
@@ -152,7 +152,7 @@ export function useExponentialPolling<T>({
 
     // First poll at the base interval
     timeoutRef.current = setTimeout(() => void pollRef.current?.(), baseInterval);
-  }, [cleanup, baseInterval, poll]);
+  }, [cleanup, baseInterval]);
 
   const stop = useCallback(() => {
     cleanup();

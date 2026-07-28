@@ -106,10 +106,10 @@ describe('UI Store', () => {
 
       const toasts = useUIStore.getState().toasts;
       expect(toasts).toHaveLength(1);
-      expect(toasts[0].severity).toBe('success');
-      expect(toasts[0].message).toBe('Done!');
-      expect(toasts[0].id).toBeDefined();
-      expect(toasts[0].timestamp).toBeGreaterThan(0);
+      expect(toasts[0]!.severity).toBe('success');
+      expect(toasts[0]!.message).toBe('Done!');
+      expect(toasts[0]!.id).toBeDefined();
+      expect(toasts[0]!.timestamp).toBeGreaterThan(0);
     });
 
     it('adds multiple toasts preserving order', () => {
@@ -119,9 +119,9 @@ describe('UI Store', () => {
 
       const toasts = useUIStore.getState().toasts;
       expect(toasts).toHaveLength(3);
-      expect(toasts[0].message).toBe('First');
-      expect(toasts[1].message).toBe('Second');
-      expect(toasts[2].message).toBe('Third');
+      expect(toasts[0]!.message).toBe('First');
+      expect(toasts[1]!.message).toBe('Second');
+      expect(toasts[2]!.message).toBe('Third');
     });
 
     it('dismisses a toast by id', () => {
@@ -129,13 +129,13 @@ describe('UI Store', () => {
       useUIStore.getState().addToast({ severity: 'error', message: 'Remove' });
 
       const toasts = useUIStore.getState().toasts;
-      const removeId = toasts[1].id;
+      const removeId = toasts[1]!.id;
 
       useUIStore.getState().dismissToast(removeId);
 
       const remaining = useUIStore.getState().toasts;
       expect(remaining).toHaveLength(1);
-      expect(remaining[0].message).toBe('Keep');
+      expect(remaining[0]!.message).toBe('Keep');
     });
 
     it('does nothing when dismissing a non-existent id', () => {
@@ -154,8 +154,8 @@ describe('UI Store', () => {
       const toasts = useUIStore.getState().toasts;
       expect(toasts).toHaveLength(50);
       // The oldest 5 should have been dropped, so first remaining is Toast 5
-      expect(toasts[0].message).toBe('Toast 5');
-      expect(toasts[49].message).toBe('Toast 54');
+      expect(toasts[0]!.message).toBe('Toast 5');
+      expect(toasts[49]!.message).toBe('Toast 54');
     });
 
     it('includes correlationId on error toasts when provided', () => {
@@ -165,7 +165,7 @@ describe('UI Store', () => {
         correlationId: 'abc-123-def',
       });
 
-      const toast = useUIStore.getState().toasts[0];
+      const toast = useUIStore.getState().toasts[0]!;
       expect(toast.correlationId).toBe('abc-123-def');
     });
 
