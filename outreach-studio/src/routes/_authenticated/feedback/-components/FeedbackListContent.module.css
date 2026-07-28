@@ -1,0 +1,103 @@
+/**
+ * Feedback List Content Styles
+ */
+
+.container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.recordCount {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ----------- Score Badge ----------- */
+
+.scoreBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+}
+
+/* ----------- Sentiment Badge ----------- */
+
+.sentimentBadge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sentimentBadge--POSITIVE {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.sentimentBadge--NEUTRAL {
+  background: var(--color-warning-50);
+  color: var(--color-warning-700);
+}
+
+.sentimentBadge--NEGATIVE {
+  background: var(--color-red-100);
+  color: var(--color-red-700);
+}
+
+/* ----------- Status Badge ----------- */
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.statusBadge--SUBMITTED {
+  background: var(--color-blue-100);
+  color: var(--color-blue-700);
+}
+
+.statusBadge--REVIEWED {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.statusBadge--FLAGGED {
+  background: var(--color-red-100);
+  color: var(--color-red-700);
+}
+
+.statusBadge--ARCHIVED {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}

@@ -11,4 +11,7 @@
     <!-- Spring Security JDBC user details schema -->
     <include file="db/changelog/20240101-002-spring-security-users-schema.sql"/>
 
+    <!-- Seed data for development/testing (idempotent, skipped if data exists) -->
+    <include file="db/changelog/20240102-001-seed-users.sql"/>
+
 </databaseChangeLog>

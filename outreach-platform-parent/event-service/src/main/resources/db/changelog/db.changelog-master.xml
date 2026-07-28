@@ -31,4 +31,7 @@
     <!-- 4. Indexes and full-text search -->
     <include file="db/changelog/20240101-013-create-indexes-and-fulltext.sql"/>
 
+    <!-- 5. Seed data (idempotent, skipped if data exists) -->
+    <include file="db/changelog/20240102-001-seed-data.sql"/>
+
 </databaseChangeLog>

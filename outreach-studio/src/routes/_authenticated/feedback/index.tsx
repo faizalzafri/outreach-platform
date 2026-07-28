@@ -1,7 +1,10 @@
 /**
  * Feedback Route
  *
- * Displays feedback list and submission form.
+ * Role-based rendering:
+ * - ROLE_ADMIN / ROLE_PMO: Read-only feedback listing (DataTable)
+ * - ROLE_POC: Feedback submission form
+ *
  * Validates search params with Zod schema using .catch() to discard invalid params.
  * Uses React.lazy + Suspense for code splitting.
  */
@@ -10,10 +13,17 @@ import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { z } from 'zod';
 import { PageSkeleton } from '@/components/feedback/PageSkeleton';
+import { useAuth } from '@/hooks/useAuth';
 
 const FeedbackContent = lazy(() =>
   import('./-components/FeedbackContent').then((mod) => ({
     default: mod.FeedbackContent,
+  }))
+);
+
+const FeedbackListContent = lazy(() =>
+  import('./-components/FeedbackListContent').then((mod) => ({
+    default: mod.FeedbackListContent,
   }))
 );
 
@@ -32,9 +42,15 @@ export const Route = createFileRoute('/_authenticated/feedback/')({
 });
 
 function FeedbackPage() {
+  const { user } = useAuth();
+  const roles = user?.roles ?? [];
+
+  const isAdminOrPmo =
+    roles.includes('ROLE_ADMIN') || roles.includes('ROLE_PMO');
+
   return (
     <Suspense fallback={<PageSkeleton title="Feedback" />}>
-      <FeedbackContent />
+      {isAdminOrPmo ? <FeedbackListContent /> : <FeedbackContent />}
     </Suspense>
   );
 }

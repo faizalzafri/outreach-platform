@@ -1,6 +1,9 @@
 package com.outreach.platform.event.repo;
 
 import com.outreach.platform.event.entity.UserEntity;
+import com.outreach.platform.event.model.UserRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,4 +23,6 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     long countByEnabled(boolean enabled);
 
     long countByAccountLocked(boolean accountLocked);
+
+    Page<UserEntity> findByRole(UserRole role, Pageable pageable);
 }

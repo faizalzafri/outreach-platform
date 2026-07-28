@@ -69,12 +69,11 @@ const ROW_HEIGHT_ESTIMATE = 44;
 // ---------------------------------------------------------------------------
 
 interface VirtualRowProps<TData> {
-  row: Row<TData>;
+  row?: Row<TData>;
   cells: Cell<TData, unknown>[];
 }
 
 const VirtualRowInner = memo(function VirtualRowInner<TData>({
-  row: _row,
   cells,
 }: VirtualRowProps<TData>) {
   return (
