@@ -42,6 +42,9 @@ jobs:
       # --------------------------------------------------
       # 3. Maven verify (compile + test + JaCoCo coverage)
       # --------------------------------------------------
+      - name: Make Maven wrapper executable
+        run: chmod +x ./mvnw
+
       - name: Maven verify
         run: ./mvnw verify -B -Dmaven.test.failure.ignore=false
         env:
@@ -207,6 +210,9 @@ jobs:
           cache-dependency-path: outreach-platform-parent/pom.xml
 
       # Build the JAR for the specific service (skip tests - already passed)
+      - name: Make Maven wrapper executable
+        run: chmod +x ./mvnw
+
       - name: Build ${{ matrix.service }} JAR
         run: ./mvnw package -B -pl ${{ matrix.service }} -am -DskipTests
 
