@@ -87,11 +87,11 @@ public class AuthorizationServerConfig {
      */
     @Bean
     @Order(1)
+    @SuppressWarnings("removal")
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-                // Enable OpenID Connect 1.0
                 .oidc(Customizer.withDefaults());
 
         http
