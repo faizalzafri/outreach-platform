@@ -8,4 +8,7 @@
     <!-- Include changeset SQL files here as they are created -->
     <!-- Example: <include file="db/changelog/20240101-001-initial-schema.sql"/> -->
 
+    <!-- Multi-tenant SaaS: add tenant_id to feedback tables -->
+    <include file="db/changelog/20250120-002-add-tenant-id-to-feedback-tables.sql"/>
+
 </databaseChangeLog>

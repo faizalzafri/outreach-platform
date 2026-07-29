@@ -19,6 +19,13 @@
     </properties>
 
     <dependencies>
+        <!-- Platform Common Library (BaseEntity, shared infrastructure) -->
+        <dependency>
+            <groupId>com.outreach.platform</groupId>
+            <artifactId>common-lib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Spring Authorization Server (OAuth2/OIDC) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
