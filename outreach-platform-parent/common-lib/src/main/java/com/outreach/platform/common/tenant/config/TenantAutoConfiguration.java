@@ -7,8 +7,11 @@ import com.outreach.platform.common.tenant.TenantContextTaskDecorator;
 import com.outreach.platform.common.tenant.TenantFilterAspect;
 import com.outreach.platform.common.tenant.TenantMessageInterceptor;
 import com.outreach.platform.common.tenant.TenantMessagePostProcessor;
+import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManager;
 import org.aopalliance.aop.Advice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -48,6 +51,19 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @AutoConfiguration
 @ConditionalOnProperty(name = "tenant.enabled", havingValue = "true", matchIfMissing = true)
 public class TenantAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(TenantAutoConfiguration.class);
+
+    /**
+     * Lifecycle hook invoked during graceful shutdown.
+     * Logs an informational message indicating that active tenant contexts are being drained.
+     * This is non-blocking — it does not wait for contexts to clear, since the container's
+     * graceful shutdown mechanism handles in-flight request completion.
+     */
+    @PreDestroy
+    public void onShutdown() {
+        log.info("Graceful shutdown: draining active tenant contexts");
+    }
 
     /**
      * Registers {@link TenantContextFilter} as a servlet filter with high precedence.

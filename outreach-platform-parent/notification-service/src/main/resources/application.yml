@@ -2,6 +2,9 @@ spring:
   application:
     name: notification-service
 
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
   # PostgreSQL datasource
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}

@@ -15,10 +15,14 @@ idp:
 
 server:
   port: 8090
+  shutdown: graceful
 
 spring:
   application:
     name: auth-service
+
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
 
   # PostgreSQL datasource
   datasource:

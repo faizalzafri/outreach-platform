@@ -13,10 +13,14 @@ idp:
 
 server:
   port: 7093
+  shutdown: graceful
 
 spring:
   application:
     name: gateway-service
+
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
 
   # Redis configuration for rate limiting
   data:
