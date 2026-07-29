@@ -1,10 +1,15 @@
 package com.outreach.platform.event.service;
 
 import com.outreach.platform.event.entity.TenantEntity;
+import com.outreach.platform.event.entity.TenantMembershipEntity;
+import com.outreach.platform.event.model.TenantRole;
 import com.outreach.platform.event.model.TenantStatus;
 import com.outreach.platform.event.model.dto.CreateTenantRequest;
+import com.outreach.platform.event.model.dto.OnboardTenantRequest;
+import com.outreach.platform.event.model.dto.OnboardTenantResponse;
 import com.outreach.platform.event.model.dto.TenantResponse;
 import com.outreach.platform.event.model.dto.UpdateTenantRequest;
+import com.outreach.platform.event.repo.TenantMembershipRepository;
 import com.outreach.platform.event.repo.TenantRepository;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
@@ -25,10 +30,12 @@ public class TenantService {
     private static final Logger log = LoggerFactory.getLogger(TenantService.class);
 
     private final TenantRepository tenantRepository;
+    private final TenantMembershipRepository membershipRepository;
 
     @Inject
-    public TenantService(TenantRepository tenantRepository) {
+    public TenantService(TenantRepository tenantRepository, TenantMembershipRepository membershipRepository) {
         this.tenantRepository = tenantRepository;
+        this.membershipRepository = membershipRepository;
     }
 
     /**
@@ -153,6 +160,57 @@ public class TenantService {
         return toResponse(saved);
     }
 
+    /**
+     * Onboards a new tenant atomically: creates the tenant and assigns
+     * the first admin user membership in a single transaction.
+     * Full rollback on any failure.
+     *
+     * @param request the onboarding request with tenant details and admin user ID
+     * @return the onboarding response with created tenant and admin info
+     * @throws DuplicateTenantNameException if tenant name already exists
+     * @throws DuplicateTenantSlugException if tenant slug already exists
+     * @throws AdminUserAlreadyAssignedException if admin user already has a membership in any tenant
+     */
+    @Transactional
+    public OnboardTenantResponse onboardTenant(OnboardTenantRequest request) {
+        // Validate tenant name uniqueness
+        if (tenantRepository.existsByName(request.tenantName())) {
+            throw new DuplicateTenantNameException(request.tenantName());
+        }
+        // Validate tenant slug uniqueness
+        if (tenantRepository.existsBySlug(request.tenantSlug())) {
+            throw new DuplicateTenantSlugException(request.tenantSlug());
+        }
+        // Validate admin user is not already registered in any tenant
+        if (membershipRepository.existsByUserId(request.adminUserId())) {
+            throw new AdminUserAlreadyAssignedException(request.adminUserId());
+        }
+
+        // Create the tenant
+        TenantEntity tenant = new TenantEntity();
+        tenant.setName(request.tenantName());
+        tenant.setSlug(request.tenantSlug());
+        tenant.setStatus(TenantStatus.ACTIVE);
+        TenantEntity savedTenant = tenantRepository.save(tenant);
+
+        // Create the admin membership
+        TenantMembershipEntity membership = new TenantMembershipEntity();
+        membership.setTenantId(savedTenant.getId());
+        membership.setUserId(request.adminUserId());
+        membership.setRole(TenantRole.ADMIN);
+        membershipRepository.save(membership);
+
+        log.info("Onboarded tenant '{}' (slug='{}', id={}) with admin user {}",
+                savedTenant.getName(), savedTenant.getSlug(), savedTenant.getId(), request.adminUserId());
+
+        return new OnboardTenantResponse(
+                savedTenant.getId(),
+                savedTenant.getName(),
+                savedTenant.getSlug(),
+                request.adminUserId()
+        );
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
     private TenantEntity findTenantOrThrow(UUID id) {
@@ -187,6 +245,12 @@ public class TenantService {
     public static class DuplicateTenantSlugException extends RuntimeException {
         public DuplicateTenantSlugException(String slug) {
             super("Tenant with slug '" + slug + "' already exists");
+        }
+    }
+
+    public static class AdminUserAlreadyAssignedException extends RuntimeException {
+        public AdminUserAlreadyAssignedException(UUID userId) {
+            super("Admin user " + userId + " is already registered in another tenant");
         }
     }
 }

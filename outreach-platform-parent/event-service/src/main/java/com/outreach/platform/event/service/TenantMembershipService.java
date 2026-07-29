@@ -9,6 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,15 +36,24 @@ public class TenantMembershipService {
 
     /**
      * Adds a member to a tenant with the specified role.
+     * <p>
+     * If the role being assigned is PLATFORM_ADMIN, verifies that the currently
+     * authenticated user already has ROLE_PLATFORM_ADMIN authority. Non-platform-admins
+     * cannot grant the PLATFORM_ADMIN role (self-elevation prevention).
      *
      * @param tenantId the tenant UUID
      * @param userId   the user UUID to add
      * @param role     the role to assign
      * @return the created membership response
-     * @throws DuplicateMembershipException if the user already has this role in the tenant
+     * @throws DuplicateMembershipException      if the user already has this role in the tenant
+     * @throws SelfElevationForbiddenException   if a non-platform-admin attempts to assign PLATFORM_ADMIN
      */
     @Transactional
     public MemberResponse addMember(UUID tenantId, UUID userId, TenantRole role) {
+        if (role == TenantRole.PLATFORM_ADMIN) {
+            enforceCallerIsPlatformAdmin();
+        }
+
         if (membershipRepository.existsByTenantIdAndUserIdAndRole(tenantId, userId, role)) {
             throw new DuplicateMembershipException(tenantId, userId, role);
         }
@@ -54,6 +66,27 @@ public class TenantMembershipService {
         TenantMembershipEntity saved = membershipRepository.save(entity);
         log.info("Added user {} to tenant {} with role {}", userId, tenantId, role);
         return toResponse(saved);
+    }
+
+    /**
+     * Verifies the currently authenticated user holds ROLE_PLATFORM_ADMIN authority.
+     * Rejects with {@link SelfElevationForbiddenException} if not.
+     */
+    private void enforceCallerIsPlatformAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new SelfElevationForbiddenException();
+        }
+
+        boolean isPlatformAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_PLATFORM_ADMIN"::equals);
+
+        if (!isPlatformAdmin) {
+            log.warn("Self-elevation attempt: user '{}' tried to assign PLATFORM_ADMIN role without authority",
+                    authentication.getName());
+            throw new SelfElevationForbiddenException();
+        }
     }
 
     /**
@@ -120,6 +153,12 @@ public class TenantMembershipService {
     public static class MemberNotFoundException extends RuntimeException {
         public MemberNotFoundException(UUID tenantId, UUID userId) {
             super("User " + userId + " is not a member of tenant " + tenantId);
+        }
+    }
+
+    public static class SelfElevationForbiddenException extends RuntimeException {
+        public SelfElevationForbiddenException() {
+            super("PLATFORM_ADMIN role can only be assigned by existing Platform_Admins");
         }
     }
 }

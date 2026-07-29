@@ -1,5 +1,6 @@
 package com.outreach.platform.event.controller;
 
+import com.outreach.platform.event.service.TenantService.AdminUserAlreadyAssignedException;
 import com.outreach.platform.event.service.TenantService.DuplicateTenantNameException;
 import com.outreach.platform.event.service.TenantService.DuplicateTenantSlugException;
 import com.outreach.platform.event.service.TenantService.TenantNotFoundException;
@@ -43,6 +44,15 @@ public class TenantControllerAdvice {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problem.setTitle("Duplicate Tenant Slug");
         problem.setProperty("error", "DUPLICATE_TENANT_SLUG");
+        return problem;
+    }
+
+    @ExceptionHandler(AdminUserAlreadyAssignedException.class)
+    public ProblemDetail handleAdminUserAlreadyAssigned(AdminUserAlreadyAssignedException ex) {
+        log.warn("Admin user already assigned: {}", ex.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setTitle("Admin User Already Registered");
+        problem.setProperty("error", "ADMIN_USER_ALREADY_REGISTERED");
         return problem;
     }
 }

@@ -1,6 +1,8 @@
 package com.outreach.platform.event.controller;
 
 import com.outreach.platform.event.model.dto.CreateTenantRequest;
+import com.outreach.platform.event.model.dto.OnboardTenantRequest;
+import com.outreach.platform.event.model.dto.OnboardTenantResponse;
 import com.outreach.platform.event.model.dto.TenantResponse;
 import com.outreach.platform.event.model.dto.UpdateTenantRequest;
 import com.outreach.platform.event.service.TenantService;
@@ -104,5 +106,12 @@ public class TenantController {
             @Parameter(description = "Tenant UUID") @PathVariable UUID id) {
         TenantResponse activated = tenantService.activateTenant(id);
         return ResponseEntity.ok(activated);
+    }
+
+    @Operation(summary = "Onboard tenant", description = "Atomically creates a new tenant and assigns the first admin user membership")
+    @PostMapping("/onboard")
+    public ResponseEntity<OnboardTenantResponse> onboardTenant(@Valid @RequestBody OnboardTenantRequest request) {
+        OnboardTenantResponse response = tenantService.onboardTenant(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

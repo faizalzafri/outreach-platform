@@ -1,6 +1,7 @@
 package com.outreach.platform.event.service;
 
 import com.outreach.platform.event.model.AuditLogDocument;
+import com.outreach.platform.event.model.PlatformAdminAuditDocument;
 import com.outreach.platform.event.model.dto.AuditLogEntry;
 import com.outreach.platform.event.model.dto.AuditLogSearchCriteria;
 import jakarta.inject.Inject;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,12 +29,37 @@ public class AuditLogService {
 
     private static final Logger log = LoggerFactory.getLogger(AuditLogService.class);
     private static final String COLLECTION_AUDIT_LOGS = "audit_logs";
+    private static final String COLLECTION_PLATFORM_ADMIN_AUDIT = "platform_admin_audit_logs";
 
     private final MongoTemplate mongoTemplate;
 
     @Inject
     public AuditLogService(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
+    }
+
+    /**
+     * Logs a Platform_Admin cross-tenant access event asynchronously (fire-and-forget).
+     * <p>
+     * Records the admin user, target tenant, action performed, endpoint accessed,
+     * and any additional metadata to the {@code platform_admin_audit_logs} collection.
+     *
+     * @param adminUserId    the Platform_Admin user performing the cross-tenant access
+     * @param targetTenantId the tenant being accessed (null if accessing all tenants)
+     * @param action         the action performed (e.g., method name or operation type)
+     * @param endpoint       the REST endpoint accessed
+     * @param metadata       additional context (nullable)
+     */
+    @Async
+    public void logCrossTenantAccess(String adminUserId, String targetTenantId,
+                                     String action, String endpoint,
+                                     Map<String, Object> metadata) {
+        PlatformAdminAuditDocument doc = new PlatformAdminAuditDocument(
+                adminUserId, targetTenantId, action, endpoint, metadata
+        );
+        mongoTemplate.save(doc, COLLECTION_PLATFORM_ADMIN_AUDIT);
+        log.info("Platform_Admin cross-tenant access: admin={}, targetTenant={}, action={}, endpoint={}",
+                adminUserId, targetTenantId, action, endpoint);
     }
 
     /**

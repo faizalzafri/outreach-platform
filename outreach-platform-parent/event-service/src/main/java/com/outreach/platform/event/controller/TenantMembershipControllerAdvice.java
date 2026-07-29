@@ -3,6 +3,7 @@ package com.outreach.platform.event.controller;
 import com.outreach.platform.event.service.TenantMembershipService.DuplicateMembershipException;
 import com.outreach.platform.event.service.TenantMembershipService.LastAdminRemovalException;
 import com.outreach.platform.event.service.TenantMembershipService.MemberNotFoundException;
+import com.outreach.platform.event.service.TenantMembershipService.SelfElevationForbiddenException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -52,6 +53,15 @@ public class TenantMembershipControllerAdvice {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         problem.setTitle("Cross-Tenant Forbidden");
         problem.setProperty("error", "CROSS_TENANT_FORBIDDEN");
+        return problem;
+    }
+
+    @ExceptionHandler(SelfElevationForbiddenException.class)
+    public ProblemDetail handleSelfElevationForbidden(SelfElevationForbiddenException ex) {
+        log.warn("Self-elevation attempt blocked: {}", ex.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Self-Elevation Forbidden");
+        problem.setProperty("error", "SELF_ELEVATION_FORBIDDEN");
         return problem;
     }
 }
