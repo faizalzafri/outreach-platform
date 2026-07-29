@@ -186,7 +186,6 @@ jobs:
     strategy:
       matrix:
         service:
-          - config-server
           - discovery-service
           - gateway-service
           - auth-service
