@@ -1,5 +1,6 @@
 package com.outreach.platform.ingestion.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.model.DomainEventDocument;
 import com.outreach.platform.ingestion.model.EventStatus;
 import com.outreach.platform.ingestion.repo.DomainEventRepository;
@@ -33,6 +34,7 @@ public class DomainEventPublisher {
 
     /**
      * Publishes a domain event by writing it to the outbox collection.
+     * Sets the tenantId from the current TenantContext if present.
      *
      * @param eventType the event type constant
      * @param payload   event data as a key-value map
@@ -44,8 +46,14 @@ public class DomainEventPublisher {
         event.setStatus(EventStatus.PENDING);
         event.setCreatedAt(Instant.now());
 
+        if (TenantContext.isPresent()) {
+            event.setTenantId(TenantContext.getCurrentTenantId());
+        } else {
+            log.warn("Persisting domain event without tenantId: TenantContext is empty. eventType={}", eventType);
+        }
+
         domainEventRepository.save(event);
-        log.info("Published domain event: type={}, id={}", eventType, event.getId());
+        log.info("Published domain event: type={}, id={}, tenantId={}", eventType, event.getId(), event.getTenantId());
     }
 
     /**

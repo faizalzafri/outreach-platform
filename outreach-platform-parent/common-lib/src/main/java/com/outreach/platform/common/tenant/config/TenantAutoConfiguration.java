@@ -1,5 +1,6 @@
 package com.outreach.platform.common.tenant.config;
 
+import com.outreach.platform.common.tenant.TenantCacheInvalidationService;
 import com.outreach.platform.common.tenant.TenantCacheKeyGenerator;
 import com.outreach.platform.common.tenant.TenantContextFilter;
 import com.outreach.platform.common.tenant.TenantContextTaskDecorator;
@@ -11,6 +12,7 @@ import org.aopalliance.aop.Advice;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.task.ThreadPoolTaskExecutorCustomizer;
@@ -18,6 +20,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * Auto-configuration that registers tenant infrastructure components for downstream services.
@@ -35,6 +38,7 @@ import org.springframework.core.Ordered;
  *   <li>{@link TenantCacheKeyGenerator} — default {@link KeyGenerator} that prefixes cache keys with tenant ID (conditional on Spring Cache)</li>
  *   <li>{@link TenantMessagePostProcessor} — adds {@code x-tenant-id} header to outbound RabbitMQ messages (conditional on Spring AMQP)</li>
  *   <li>{@link TenantMessageInterceptor} — extracts {@code x-tenant-id} header from inbound RabbitMQ messages into tenant context (conditional on Spring AMQP)</li>
+ *   <li>{@link TenantCacheInvalidationService} — tracks and bulk-invalidates tenant-scoped cache entries using per-tenant Redis Sets (conditional on {@code StringRedisTemplate} bean)</li>
  * </ul>
  *
  * @see TenantContextFilter
@@ -133,5 +137,23 @@ public class TenantAutoConfiguration {
     @ConditionalOnClass(SimpleRabbitListenerContainerFactory.class)
     public Advice tenantMessageInterceptor() {
         return new TenantMessageInterceptor();
+    }
+
+    /**
+     * Registers {@link TenantCacheInvalidationService} for tracking and bulk-invalidating
+     * tenant-scoped cache entries in Redis.
+     * <p>
+     * Only activated when {@link StringRedisTemplate} is available in the application context
+     * (i.e., when {@code spring-boot-starter-data-redis} is on the classpath and Redis
+     * auto-configuration has created the template bean).
+     * <p>
+     * This service enables O(M) cache invalidation on tenant deactivation (where M is the
+     * number of that tenant's cache entries) by maintaining a Redis Set per tenant that
+     * tracks all associated cache keys.
+     */
+    @Bean
+    @ConditionalOnBean(StringRedisTemplate.class)
+    public TenantCacheInvalidationService tenantCacheInvalidationService(StringRedisTemplate redisTemplate) {
+        return new TenantCacheInvalidationService(redisTemplate);
     }
 }

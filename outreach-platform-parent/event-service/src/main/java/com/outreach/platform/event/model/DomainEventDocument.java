@@ -1,6 +1,7 @@
 package com.outreach.platform.event.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -18,6 +19,10 @@ public class DomainEventDocument {
     private String eventType;
     private String payload;
     private DomainEventStatus status;
+
+    @Indexed
+    private UUID tenantId;
+
     private Instant createdAt;
     private Instant publishedAt;
     private int retryCount;
@@ -80,6 +85,14 @@ public class DomainEventDocument {
 
     public void setPublishedAt(Instant publishedAt) {
         this.publishedAt = publishedAt;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public int getRetryCount() {
