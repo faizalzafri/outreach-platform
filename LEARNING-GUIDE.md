@@ -1311,3 +1311,403 @@ This section documents the framework features, design patterns, and engineering 
 3. **CSRF in OAuth2 Flows** — CSRF protection is essential for the login form but must be carefully managed in the OAuth2 authorization endpoint. Study why Spring Security's Authorization Server filter chain (Order 1) handles CSRF differently from the form login chain (Order 2).
 
 ---
+
+---
+
+## Task 0.1: Remove Config Server Dependency
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Maven Dependency Management** | POMs declare dependencies; removing `spring-cloud-config-server` eliminates the config server capability from the build. | Reduces classpath, eliminates unused auto-configuration, and removes a startup dependency. |
+| **`@EnableConfigServer` removal** | This annotation activates Spring Cloud Config Server REST endpoints. Removing it stops the application from acting as a configuration source for other services. | Without the annotation, the module is just a plain Spring Boot app (pending full removal in task 0.4). |
+| **Spring Boot Auto-Configuration** | Spring Boot scans the classpath for starters and auto-configures beans. Removing a starter prevents its auto-configuration from activating. | Removing `spring-cloud-starter-config` from client services means they no longer attempt to contact a Config Server on startup. No `bootstrap.yml` or `spring.config.import=configserver:` required. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Strangler Fig (Incremental Removal)** | Rather than deleting the entire config-server module in one shot, we remove the dependency and annotation first (task 0.1), inline config (0.2), update compose (0.3), then delete the module (0.4). Each step leaves the system deployable. |
+| **Convention over Configuration** | By removing the Config Server dependency, services fall back to Spring Boot's default behavior: reading `application.yml` from the classpath. No code changes needed in business services. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@EnableConfigServer` | Activates Config Server — now removed |
+| `spring-cloud-config-server` | Maven artifact providing the Config Server implementation |
+| `spring-cloud-starter-config` | Client-side dependency that enables `spring.config.import=configserver:` |
+
+### Concepts to Study Further
+
+1. **Spring Boot Externalized Configuration Hierarchy** — The 17+ property sources Spring Boot checks (env vars > system props > application.yml > defaults). Understanding this hierarchy is key to replacing Config Server with container-native config.
+2. **12-Factor App Configuration** — Factor III mandates configuration stored in the environment, not in code. Container-native config (env vars, mounted files) aligns more closely with 12-Factor than a centralized Config Server.
+3. **Spring Boot Profiles and Activation** — How `spring.profiles.active`, `SPRING_PROFILES_ACTIVE` env var, and profile-specific YAML files work together to provide environment-specific configuration without a Config Server.
+
+---
+
+## Task 0.2: Inline Externalized Config into Each Service's application.yml
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Property Placeholders (`${ENV_VAR:default}`)** | Spring resolves `${...}` placeholders from environment variables, system properties, or YAML at startup. The `:default` suffix provides a fallback. | Enables the same YAML file to work locally (using defaults) and in production (using injected env vars). No code changes per environment. |
+| **Profile-Specific Configuration (`application-production.yml`)** | Spring Boot merges `application.yml` with `application-{profile}.yml` when a profile is active. Profile-specific values override base values. | Production secrets use `${DATABASE_PASSWORD}` with no default (fails fast if missing). Dev uses safe defaults like `postgres`. |
+| **HikariCP Configuration Properties** | `spring.datasource.hikari.*` properties configure the connection pool: max pool size, min idle, connection timeout, leak detection. | Connection pool tuning is critical for multi-tenant workloads. Externalized via `${HIKARI_MAX_POOL_SIZE:20}` for container-level tuning without rebuild. |
+| **Spring Boot Actuator Health** | Services expose `/actuator/health/liveness` for container orchestration readiness/liveness probes. | Docker Compose and Kubernetes use these endpoints to determine if a service is ready to receive traffic. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Environment-Specific Override** | Base `application.yml` has sensible dev defaults. `application-production.yml` overrides with env var references that MUST be set in production (no fallback = fail-fast). |
+| **Fail-Fast Configuration** | Production configs reference `${DATABASE_PASSWORD}` without a default. If the env var is missing, Spring Boot refuses to start — catching misconfiguration immediately rather than at runtime. |
+| **Convention over Configuration** | By following Spring Boot's standard property names (`spring.datasource.url`, `spring.data.redis.host`), we get auto-configured DataSource, RedisTemplate, and RabbitTemplate beans with zero custom `@Configuration` code. |
+| **Separation of Secrets from Code** | No secret values exist in YAML files. Only placeholder references to environment variables. Secrets are injected at deployment time by the container runtime. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `${ENV_VAR:default}` | Spring property placeholder with fallback value |
+| `spring.datasource.*` | Auto-configures HikariCP DataSource |
+| `spring.data.redis.*` | Auto-configures Lettuce Redis connection |
+| `spring.rabbitmq.*` | Auto-configures RabbitMQ ConnectionFactory |
+| `spring.profiles.active` | Activates profile-specific YAML overrides |
+| `server.shutdown: graceful` | Enables graceful shutdown (drains in-flight requests) |
+
+### Concepts to Study Further
+
+1. **Spring Boot PropertySource Ordering** — Environment variables override YAML, which overrides defaults. Understanding the complete resolution order prevents surprises when the same key is defined in multiple places.
+2. **Container Secret Injection Patterns** — Docker Secrets, Kubernetes Secrets mounted as env vars or files, HashiCorp Vault Agent injection. Each has trade-offs around rotation, caching, and failure modes.
+3. **HikariCP Internals** — How `maximumPoolSize`, `minimumIdle`, `connectionTimeout`, and `leakDetectionThreshold` interact. Undersized pools cause request queuing; oversized pools waste database connections and memory.
+
+---
+
+## Task 0.3: Update docker-compose.yml to Remove Config Server Service
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Docker Compose `depends_on` with `condition: service_healthy`** | Defines startup ordering based on healthcheck status rather than just container creation. | Ensures a service doesn't receive traffic until its dependencies (Postgres, Redis, RabbitMQ) are actually ready, not just "container started." |
+| **Docker Compose Environment Variables** | `environment:` block injects key-value pairs as env vars into the container at runtime. | Spring Boot's `${ENV_VAR:default}` placeholders resolve from these values — no config files need to differ between local and production. |
+| **Container Health Checks** | `healthcheck.test` defines how Docker determines if a container is healthy (e.g., `wget --spider` against an actuator endpoint). | Orchestration tools (Compose, Kubernetes) use health status for startup ordering, rolling deploys, and traffic routing. |
+| **`stop_grace_period: 15s`** | Time Docker waits between SIGTERM and SIGKILL during container shutdown. | Gives the JVM time to drain in-flight requests gracefully before forced termination. Matches the `spring.lifecycle.timeout-per-shutdown-phase: 15s` setting. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Dependency Graph (DAG) for Startup** | Infrastructure (postgres, redis, rabbitmq) → Platform (discovery, gateway, auth) → Business services. Each layer waits for the previous to be healthy. |
+| **Strangler Fig (continued)** | Removing config-server from the dependency chain. Services that previously waited for config-server now start immediately after their real dependencies are healthy. |
+| **Environment Injection** | All service-specific connection details are injected via environment variables, matching the container-native configuration pattern established in task 0.2. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `depends_on.condition: service_healthy` | Startup waits for dependency healthcheck to pass |
+| `healthcheck.start_period` | Grace period before first health check (allows JVM startup) |
+| `networks: outreach-net` | Shared bridge network enabling DNS-based service discovery between containers |
+| `volumes: postgres-data` | Named volume for persistent data across container recreations |
+
+### Concepts to Study Further
+
+1. **Docker Networking and DNS Resolution** — How containers on the same bridge network resolve each other by service name. Why `postgres:5432` works inside the network but `localhost:5432` does not.
+2. **Container Orchestration Readiness vs. Liveness** — The difference between `/actuator/health/liveness` (is the process alive?) and `/actuator/health/readiness` (can it serve traffic?). When to use each in healthchecks.
+3. **12-Factor App: Backing Services** — Factor IV treats databases, message queues, and caches as attached resources. The environment variable pattern makes swapping providers (e.g., local Redis → AWS ElastiCache) a config change, not a code change.
+
+---
+
+## Task 0.4: Remove Config Server Module from Parent POM
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Maven Multi-Module `<modules>` Declaration** | The parent POM's `<modules>` section lists child modules. Maven builds them in reactor order (respecting inter-module dependencies). | Removing a module from this list excludes it from the build entirely. The reactor no longer resolves, compiles, or packages it. |
+| **Maven Reactor Order** | Maven determines build order by analyzing `<dependency>` declarations between modules. | After removal, remaining modules must not depend on the deleted module. `mvnw validate` confirms no broken references. |
+| **GitHub Actions Build Matrix** | CI workflows can define a matrix of services to build Docker images for. Removing config-server from the matrix stops wasted CI minutes. | Every CI run was building, testing, and pushing an image for a service that's no longer needed. Clean removal reduces pipeline time. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Strangler Fig (final step)** | Task 0.1 removed the capability, 0.2 inlined config, 0.3 removed from Compose, 0.4 removes the code. The old component is fully strangled out in 4 incremental steps. |
+| **Clean Deletion** | Rather than leaving dead code, the entire module directory is deleted. No ambiguity about whether it's still in use. Git history preserves the code if ever needed. |
+| **CI/CD Pipeline Hygiene** | Removing the module from the CI matrix prevents phantom builds. The pipeline only builds what's actually deployed. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `<module>config-server</module>` | Maven parent POM module declaration — now removed |
+| `mvnw validate` | Maven lifecycle phase that checks POM correctness without compiling |
+| GitHub Actions `matrix.service` | Defines parallel build targets for Docker image CI |
+
+### Concepts to Study Further
+
+1. **Maven Reactor and Module Dependencies** — How Maven resolves the build order when modules depend on each other. What happens if you remove a module that others transitively depend on (compilation failure vs. runtime ClassNotFoundException).
+2. **Git History Preservation** — Deleted files remain in git history. `git log --all -- config-server/` recovers the full history. Understanding this makes "delete and move on" less scary than keeping dead code "just in case."
+3. **Incremental Refactoring in Production Systems** — The 4-step removal pattern (disable → replace → decouple → delete) is applicable to any legacy component. Each step is independently deployable and reversible.
+
+---
+
+## Task 0.5: Verify All Services Start Independently Without Config Server
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Maven Reactor Build (`mvn compile -pl ...`)** | The `-pl` flag compiles specific modules (and their dependencies via `-am`) without building the entire project. | Fast feedback loop — verify compilation of affected services without waiting for unrelated modules. |
+| **Spring Boot Auto-Configuration Exclusion** | When `spring-cloud-starter-config` is absent from the classpath, Spring Boot simply doesn't activate `ConfigServicePropertySourceLocator`. No error, no startup delay. | Convention over configuration — removing a dependency is sufficient; no explicit "disable config server" flag is needed. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Verification Gate (Checkpoint)** | A non-coding task that validates the system is in a correct state before proceeding. Acts as a quality gate between destructive changes and constructive work. |
+| **Negative Testing** | Verifying the absence of something (no port 8888 references, no bootstrap.yml) is as important as verifying presence. Grep-based negative assertions prevent regression. |
+
+### Concepts to Study Further
+
+1. **Spring Boot Auto-Configuration Conditions** — How `@ConditionalOnClass`, `@ConditionalOnProperty`, and `@ConditionalOnMissingBean` control what gets activated. Removing a JAR from the classpath triggers `@ConditionalOnClass` to evaluate as false, disabling entire config trees.
+2. **Build Pipeline Checkpoints** — In production CI/CD, verification gates (compile, test, integration test, security scan) prevent broken code from progressing. This task is the manual equivalent of a pipeline stage gate.
+
+---
+
+## Task 1.1: Create TenantContext Thread-Local Holder and TenantConstants
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`ThreadLocal<T>`** | JVM construct that gives each thread its own independent copy of a variable. Other threads cannot read or modify it. | In a servlet container (Tomcat), each request runs on a separate thread. ThreadLocal provides request-scoped storage without passing the tenant ID through every method signature. |
+| **Final Utility Class Pattern** | A class declared `final` with a private constructor. Cannot be instantiated or subclassed. Only static methods exposed. | Communicates intent: this is a stateless utility, not a service. Prevents misuse (no one creates an instance and tries to inject it). |
+| **Defensive `null` Check** | `setCurrentTenantId()` throws `IllegalArgumentException` if null is passed. | Fails fast at the point of error rather than producing a `NullPointerException` deep in Hibernate filter enablement code. Debugging is dramatically easier. |
+| **`ThreadLocal.remove()` vs `set(null)`** | `remove()` cleans up the entry from the thread's internal map. `set(null)` leaves a dead entry that can cause memory leaks in thread pools. | In container thread pools (Tomcat's 200 threads), not calling `remove()` means the entry persists for the thread's lifetime — potentially leaking the previous request's tenant to the next request on that thread. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Thread-Local Storage (TLS)** | The fundamental pattern for request-scoped context in servlet applications. `TenantContext` is the tenant equivalent of `SecurityContextHolder` (which also uses ThreadLocal internally). |
+| **Static Accessor (Ambient Context)** | `TenantContext.getCurrentTenantId()` is accessible from anywhere without injection. Follows the same pattern as `RequestContextHolder.getRequestAttributes()` and `MDC.get()`. |
+| **Fail-Fast Validation** | Input validation at the boundary (setter) rather than at the consumer (filter aspect). Catches programming errors immediately. |
+| **Well-Known Identifier** | `DEFAULT_TENANT_ID` uses a deterministic UUID (`00000000-0000-0000-0000-000000000001`) that can be referenced in migrations, tests, and seed data without coordination. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `ThreadLocal<UUID>` | Per-thread isolated storage for the current tenant ID |
+| `ThreadLocal.remove()` | Cleans up the thread's entry — MUST be called in `finally` blocks |
+| `UUID.fromString(...)` | Parses a UUID from its canonical string representation |
+| `final class` + private constructor | Prevents instantiation and subclassing of utility classes |
+
+### Concepts to Study Further
+
+1. **ThreadLocal and Memory Leaks in Servlet Containers** — Tomcat reuses threads across requests. If ThreadLocal entries aren't cleaned up, they persist for the thread's lifetime (potentially hours/days). Study `ThreadLocal.remove()`, `SuppliedThreadLocal`, and Tomcat's `ThreadLocalLeakPreventionListener`.
+2. **InheritableThreadLocal vs TaskDecorator** — `InheritableThreadLocal` copies parent values to child threads at creation time, but thread pools reuse threads (the child was created long ago). `TaskDecorator` (used in Task 1.8) is the correct solution for propagating context to pooled threads.
+3. **Reactive Context vs ThreadLocal** — In reactive (WebFlux/Netty) applications, multiple requests share the same thread. ThreadLocal doesn't work. Study Project Reactor's `Context` and `Mono.deferContextual()` as the reactive equivalent. The gateway service will need this pattern.
+
+---
+
+## Task 1.3: Create TenantAwareBaseEntity Mapped Superclass
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`@MappedSuperclass`** | Declares a JPA base class whose fields are inherited by child entities but which itself has no table. | All tenant-scoped entities inherit the `tenant_id` column without needing their own declaration. One change in the superclass propagates to all entities. |
+| **Hibernate `@FilterDef`** | Defines a named parameterized filter at the entity metadata level. Declares what parameters the filter accepts and their types. | A single filter definition shared across all entities extending this class. The filter isn't active by default — it must be enabled per-session. |
+| **Hibernate `@Filter`** | Applies the defined filter to the entity's queries with a SQL `condition`. When enabled, Hibernate appends `AND tenant_id = :tenantId` to every generated query. | Framework-level query scoping. No developer can accidentally write an unfiltered query — Hibernate enforces isolation at the ORM layer. |
+| **`@Column(updatable = false)`** | JPA prevents the column from appearing in UPDATE statements. | Once a row belongs to a tenant, it can never be moved to another tenant. This is a schema-level immutability guarantee enforced by the ORM. |
+| **`@EntityListeners`** | Registers lifecycle callback classes that fire on entity state transitions (persist, update, remove). | Separates the tenant assignment logic from the entity class itself. The entity is clean; the listener handles the cross-cutting concern. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Template Method (via inheritance)** | `TenantAwareBaseEntity` defines the tenant infrastructure "template." Subclasses provide business-specific fields. The superclass handles the cross-cutting concern. |
+| **Open/Closed Principle** | Entities are open for extension (add new fields) but closed for modification of the tenancy mechanism (inherited, final, immutable). |
+| **Separation of Concerns** | The entity declares *what* (a tenant_id column exists). The listener defines *when* (populated at persist time). The aspect defines *how* (filter enabled per request). Three classes, three responsibilities. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@MappedSuperclass` (Jakarta Persistence) | Inheritable JPA base class without its own table |
+| `@FilterDef` (Hibernate) | Declares a named filter with typed parameters |
+| `@Filter` (Hibernate) | Applies filter condition to queries on this entity |
+| `@ParamDef(name, type)` | Defines a filter parameter's name and Java type |
+| `@Column(nullable = false, updatable = false)` | Non-null, immutable column |
+| `@EntityListeners(Class)` | Registers lifecycle callback handlers |
+
+### Concepts to Study Further
+
+1. **Hibernate Filter Internals** — Filters are session-scoped, not entity-scoped. `session.enableFilter("tenantFilter").setParameter("tenantId", uuid)` activates the filter for ALL entities that declare it. Study how this interacts with `@Inheritance` strategies and `@SecondaryTable`.
+2. **JPA Entity Lifecycle Events** — The full lifecycle: `@PrePersist` → `@PostPersist` → `@PreUpdate` → `@PostUpdate` → `@PreRemove` → `@PostRemove` → `@PostLoad`. Understanding ordering between multiple listeners is critical for audit + tenant assignment sequencing.
+3. **Why Not Row-Level Security (RLS)?** — PostgreSQL supports native RLS policies (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`). Compare application-level filtering (Hibernate `@Filter`) with database-level RLS. Trade-offs: RLS is bypass-proof but requires `SET ROLE` per connection; Hibernate filters are more flexible but can be accidentally disabled.
+
+---
+
+## Task 1.4: Create TenantEntityListener JPA Lifecycle Listener
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`@PrePersist` (Jakarta Persistence)** | A lifecycle callback that fires just before the JPA provider executes the INSERT statement. | The last chance to set field values before they hit the database. Perfect for auto-populating `tenant_id` from the request context. |
+| **JPA Entity Listener Class** | A POJO class (not an entity itself) whose methods are annotated with lifecycle annotations. Registered via `@EntityListeners`. | Decouples lifecycle logic from the entity. The entity stays clean; cross-cutting concerns live in dedicated listener classes. |
+| **Pattern Matching for `instanceof` (Java 21)** | `if (entity instanceof TenantAwareBaseEntity tenantEntity)` combines type check and cast in one expression. | Cleaner code, no explicit cast, and the compiler guarantees type safety within the block. |
+| **Package-Private Access (default visibility)** | `void setTenantId(UUID)` with no access modifier. Only classes in the same package can call it. | The listener (same package) can set the field, but service code in other packages cannot. Encapsulation without reflection. |
+| **Fail-Fast with `IllegalStateException`** | If `TenantContext.isPresent()` is false, throw immediately rather than inserting a row with null `tenant_id`. | The database would reject a null `tenant_id` anyway (NOT NULL constraint), but the exception message is more informative than a generic `ConstraintViolationException`. Debugging is faster. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Observer (Lifecycle Callback)** | The JPA provider "observes" entity state transitions and notifies registered listeners. `TenantEntityListener` is notified on every persist of a `TenantAwareBaseEntity`. |
+| **Fail-Fast Validation** | Check preconditions (tenant context must exist) before any mutation. If violated, abort immediately with a descriptive exception rather than allowing invalid state to propagate. |
+| **Encapsulation via Package-Private Access** | The `setTenantId()` method is invisible outside the `com.outreach.platform.common.tenant` package. This prevents accidental or malicious tenant reassignment from service code. |
+| **Single Responsibility** | The listener does exactly one thing: assign tenant_id from context. It doesn't validate the entity, compute audit fields, or trigger events. Each concern has its own listener. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@PrePersist` (Jakarta Persistence) | Fires before INSERT — last chance to set fields |
+| `entity instanceof TenantAwareBaseEntity tenantEntity` | Java 21 pattern matching with type cast |
+| `TenantContext.getCurrentTenantId()` | Reads the thread-local tenant UUID |
+| `TenantContext.isPresent()` | Checks if a tenant context exists on this thread |
+| Package-private `setTenantId(UUID)` | Controlled access for listener-only field mutation |
+
+### Concepts to Study Further
+
+1. **JPA Listener Ordering Guarantees** — When multiple `@EntityListeners` are declared (from subclass and superclass), JPA processes them in a specific order. Study the JPA 3.2 spec section on "Lifecycle Callback Methods" and how `@EntityListeners` on `TenantAwareBaseEntity` vs. `BaseEntity` interact.
+2. **Why Not `@PrePersist` on the Entity Itself?** — You can put `@PrePersist` directly on an entity method. The listener class approach is preferred because: (a) it's reusable across all entities, (b) it can be unit-tested independently, (c) it keeps the entity focused on data rather than behavior.
+3. **Hibernate Interceptor vs. JPA Listener** — Hibernate offers `Interceptor` and `StatementInspector` as alternatives to JPA listeners. Interceptors can modify SQL, access dirty fields, and integrate with the Session lifecycle. Study when each approach is appropriate.
+
+---
+
+## Task 1.6: Create TenantContextFilter Servlet Filter
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`OncePerRequestFilter`** | Spring's base class ensuring a filter executes exactly once per request, even with forwarded/included requests. | Prevents double-processing of tenant context. In Servlet spec, filters can fire multiple times for forwards/includes — `OncePerRequestFilter` guards against this. |
+| **`HttpServletRequest.getHeader()`** | Reads a named HTTP header from the incoming request. | The gateway injects `X-Tenant-ID` after JWT validation. Downstream services read it here — simple, fast, no JWT re-parsing needed. |
+| **`FilterChain.doFilter()`** | Passes control to the next filter in the chain (or the servlet). | The try/finally pattern around `doFilter()` ensures cleanup happens regardless of what downstream filters or controllers do. |
+| **Standardized Error Response (JSON)** | Writing a JSON body directly to `HttpServletResponse` when validation fails. | Maintains the platform's consistent error format even at the filter layer (before controllers are reached). |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Filter Chain (Chain of Responsibility)** | `TenantContextFilter` sits in the Servlet filter chain. It adds behavior (set context) before and after (clear context) the downstream chain. |
+| **Template Method** | `OncePerRequestFilter` is the template — `doFilterInternal()` is the hook method subclasses override. The base class handles the "once per request" guarantee. |
+| **Fail-Fast on Invalid Input** | Malformed UUID headers are rejected immediately (HTTP 400) rather than propagating bad data into business logic. |
+| **Resource Cleanup (try/finally)** | `TenantContext.clear()` in a `finally` block guarantees cleanup even if the downstream chain throws. This is the critical pattern for ThreadLocal in thread pools. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `OncePerRequestFilter` | Base class ensuring one execution per request |
+| `doFilterInternal()` | The hook method to implement filter logic |
+| `UUID.fromString()` | Parses and validates UUID format |
+| `HttpServletResponse.setStatus()` + `.getWriter()` | Low-level response writing for pre-controller error responses |
+| `TenantContext.clear()` | ThreadLocal cleanup — MUST be in `finally` |
+
+### Concepts to Study Further
+
+1. **Servlet Filter Order and Registration** — Spring Boot registers filters via `FilterRegistrationBean` with explicit order. Lower order = earlier in chain. `TenantContextFilter` should run AFTER Spring Security (so JWT is already validated) but BEFORE business logic.
+2. **Error Handling at the Filter Layer** — Exceptions thrown in filters bypass `@ControllerAdvice`. You must write error responses directly to `HttpServletResponse`. Study how Spring Security's `AuthenticationEntryPoint` and `AccessDeniedHandler` solve this problem.
+3. **`shouldNotFilter()` Override** — `OncePerRequestFilter` allows overriding `shouldNotFilter(HttpServletRequest)` to skip certain paths (actuator, static resources). Consider which endpoints should bypass tenant context extraction.
+
+---
+
+## Task 1.7: Create TenantFilterAspect for Automatic Hibernate Filter Enablement
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **Spring AOP (`@Aspect`)** | Declares a class as an aspect containing cross-cutting advice. Spring creates a proxy that intercepts targeted method calls. | Applies tenant filtering to ALL repository methods without modifying any repository code. One class, universal enforcement. |
+| **`@Before` Advice** | Executes logic before the target method runs. | Enables the Hibernate filter before any query executes — the filter is active by the time the SQL is generated. |
+| **Pointcut Expression** | `execution(* org.springframework.data.jpa.repository.JpaRepository+.*(..))` targets all methods on all interfaces extending JpaRepository. | The `+` means "this type and all subtypes." Every custom repository method is automatically covered. |
+| **Hibernate `Session.enableFilter()`** | Activates a named filter on the current Hibernate Session with a specific parameter value. | Once enabled, Hibernate appends the filter's SQL condition to EVERY query generated for that session. This is the mechanism that enforces tenant isolation. |
+| **`EntityManager.unwrap(Session.class)`** | Obtains the underlying Hibernate Session from the JPA EntityManager. | JPA doesn't expose Hibernate-specific filter functionality. Unwrapping gives access to `enableFilter()` while keeping the EntityManager injectable via standard JPA. |
+| **`SecurityContextHolder`** | Spring Security's static accessor for the current authentication context. | Checking for `ROLE_PLATFORM_ADMIN` allows bypassing the tenant filter for cross-tenant administrative access. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Aspect-Oriented Programming (Cross-Cutting Concern)** | Tenant filter enablement applies to every data access operation. Rather than adding it to each repository, an aspect centralizes the concern. |
+| **Strategy (Role-Based Bypass)** | Two strategies: (1) enable filter for regular users, (2) skip filter for platform admins. The aspect selects the strategy based on authentication state. |
+| **Fail-Fast (Empty Context Guard)** | If neither a tenant context nor a platform admin role exists, the aspect throws immediately rather than executing an unfiltered query that might expose cross-tenant data. |
+| **Single Responsibility** | The aspect does one thing: manage the Hibernate filter lifecycle. It doesn't validate the tenant ID format, populate the context, or handle caching. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `@Aspect` | Declares a Spring AOP aspect |
+| `@Before("pointcut")` | Advice that runs before matched methods |
+| `@Pointcut("execution(...)")` | Defines which methods to intercept |
+| `Session.enableFilter(name).setParameter(key, value)` | Activates Hibernate filter with a parameter |
+| `EntityManager.unwrap(Session.class)` | Gets Hibernate Session from JPA EntityManager |
+| `SecurityContextHolder.getContext().getAuthentication()` | Reads current Spring Security authentication |
+| `@Named` (JSR 330) | Bean naming for DI container |
+| `@Inject` (JSR 330) | Constructor-based dependency injection |
+
+### Concepts to Study Further
+
+1. **Hibernate Filter Scope and Lifecycle** — Filters are session-scoped. They persist for the entire Hibernate Session (which in a web request is typically one session per transaction). If a request makes multiple repository calls, the filter remains active across all of them — it doesn't need re-enabling per call. Study when this aspect fires redundantly vs. when it's necessary.
+2. **AOP Proxy Limitations** — Spring AOP uses JDK dynamic proxies (for interfaces) or CGLIB proxies (for classes). Self-invocation (a method calling another method on `this`) bypasses the proxy — the aspect won't fire. Study when this matters for repositories.
+3. **Alternative: Hibernate Interceptor or StatementInspector** — Instead of AOP, you could enable the filter at session creation time via a `SessionEventListener` or `StatementInspector`. This fires once per session (O(1)) instead of once per repository call (O(N)). Study the trade-offs: AOP is more explicit and testable; interceptors are more efficient for high-QPS scenarios.
+
+---
+
+## Task 1.8: Create TenantContextTaskDecorator for Async Context Propagation
+
+### Framework Features Used
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| **`TaskDecorator`** | Spring interface for wrapping `Runnable` tasks submitted to `ThreadPoolTaskExecutor`. The decorator adds behavior around task execution. | Thread pools reuse threads — the child thread has NO access to the parent thread's ThreadLocal. The decorator bridges this gap by capturing and restoring context. |
+| **`ThreadPoolTaskExecutor`** | Spring's managed thread pool for `@Async` methods and explicit `executor.submit()` calls. Supports `TaskDecorator` injection. | All async work in the platform goes through this executor. Setting the decorator once ensures ALL async tasks inherit tenant context. |
+| **`MDC.getCopyOfContextMap()`** | Captures the current thread's entire MDC (diagnostic) context as an immutable map. | MDC holds structured logging context (tenant_id, correlation_id). Without propagation, async task logs would lack these fields, making debugging impossible. |
+| **`MDC.setContextMap(map)`** | Restores a previously captured MDC context onto the current thread. | The child thread gets the exact same logging context the parent had — log entries from async tasks are correlated correctly. |
+
+### Design Patterns Applied
+
+| Pattern | How It's Used |
+|---------|--------------|
+| **Decorator** | `TenantContextTaskDecorator` wraps the original `Runnable` with context setup/teardown logic. The original task is unchanged — the decorator adds behavior around it. |
+| **Capture and Restore** | Context is captured at submission time (on the calling thread) and restored at execution time (on the pool thread). This two-phase approach handles the temporal gap between submission and execution. |
+| **Null-Safe Short-Circuit** | If no tenant context exists on the calling thread, the original runnable is returned unmodified. No unnecessary wrapping, no null-pointer risk in the child thread. |
+| **Resource Cleanup (try/finally)** | Both `TenantContext.clear()` and `MDC.clear()` in the `finally` block ensure the pool thread is clean for its next task. Without this, the next unrelated task on this thread would inherit stale context. |
+
+### Key Annotations & APIs
+
+| Annotation / API | Purpose |
+|-----------------|---------|
+| `TaskDecorator` | Spring interface for wrapping executored Runnables |
+| `MDC.getCopyOfContextMap()` | Snapshots the current thread's logging context |
+| `MDC.setContextMap(map)` | Restores a logging context on a different thread |
+| `MDC.clear()` | Removes all MDC entries from the current thread |
+| `TenantContext.setCurrentTenantId()` | Restores tenant context on the child thread |
+| `TenantContext.clear()` | Cleans up after the task completes |
+
+### Concepts to Study Further
+
+1. **Virtual Threads (Project Loom) and Context Propagation** — Java 21 introduces virtual threads. Unlike platform threads, virtual threads are NOT pooled — they're created per task. This changes the context propagation story. Study `ScopedValue` (JEP 429) as the successor to ThreadLocal for structured concurrency.
+2. **Micrometer Context Propagation** — Micrometer provides `ContextSnapshotFactory` and `ContextSnapshot` for propagating arbitrary context (traces, baggage, custom values) across async boundaries. Study how this complements or replaces manual `TaskDecorator` approaches.
+3. **SecurityContext Propagation** — Spring Security has `DelegatingSecurityContextRunnable` and `SecurityContextTaskDecorator` for propagating authentication. Consider whether your decorator should also propagate SecurityContext, or whether Spring Security's built-in support handles that separately.

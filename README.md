@@ -1,6 +1,14 @@
 # Outreach Platform
 
-Corporate volunteer outreach management system. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights.
+Multi-tenant SaaS platform for corporate volunteer outreach management. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights — with complete data isolation between tenant organizations.
+
+## Multi-Tenancy
+
+The platform supports multiple organizations (NGOs, corporates, schools) on a shared deployment. Tenant isolation is enforced at every layer:
+- **Database:** Shared schema with `tenant_id` column on all tables; Hibernate filters scope all queries
+- **Gateway:** Extracts tenant from JWT, forwards `X-Tenant-ID` header to downstream services
+- **Caching:** Redis keys prefixed with tenant ID
+- **Messaging:** RabbitMQ messages carry `x-tenant-id` header
 
 ## Functional Overview
 
@@ -90,9 +98,11 @@ Services start in dependency order (infra → platform → business). Full stack
 
 | Role | Access |
 |------|--------|
-| Admin | Full access — users, events, reports, AI, audit |
-| PMO | Events, reports, feedback, volunteers |
-| POC | Assigned events, enrolled volunteers, attendance |
+| Platform Admin | Cross-tenant operations, tenant lifecycle, support access to all data |
+| Tenant Admin | Manage users and roles within their tenant |
+| Admin | Full access within tenant — events, reports, AI, audit |
+| PMO | Events, reports, feedback, volunteers within tenant |
+| POC | Assigned events, enrolled volunteers, attendance within tenant |
 
 ## API Access
 
