@@ -20,4 +20,7 @@
     <!-- Add PLATFORM_ADMIN to membership role CHECK constraint -->
     <include file="db/changelog/20250121-001-add-platform-admin-role.sql"/>
 
+    <!-- Seed tenant_memberships for existing users → Default_Tenant -->
+    <include file="db/changelog/20250121-002-seed-default-tenant-memberships.sql"/>
+
 </databaseChangeLog>

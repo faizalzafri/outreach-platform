@@ -2,6 +2,9 @@ spring:
   application:
     name: report-service
 
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
   # PostgreSQL datasource (READ-ONLY access)
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
