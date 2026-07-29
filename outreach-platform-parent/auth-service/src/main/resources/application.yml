@@ -104,6 +104,11 @@ management:
       export:
         enabled: ${OTLP_TRACING_ENABLED:false}
 
+# Tenant migration configuration
+tenant:
+  grace-period-days: 30
+  migration-start-date: ${TENANT_MIGRATION_START_DATE:2025-01-20}
+
 # Logging
 logging:
   level:
