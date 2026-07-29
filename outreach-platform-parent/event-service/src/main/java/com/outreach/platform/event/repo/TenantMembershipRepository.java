@@ -69,4 +69,12 @@ public interface TenantMembershipRepository extends JpaRepository<TenantMembersh
      * @return the count of memberships with that role
      */
     long countByTenantIdAndRole(UUID tenantId, TenantRole role);
+
+    /**
+     * Check if a user has any membership in any tenant.
+     *
+     * @param userId the user's UUID
+     * @return true if the user has at least one membership anywhere
+     */
+    boolean existsByUserId(UUID userId);
 }
