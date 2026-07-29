@@ -39,6 +39,13 @@
             <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
 
+        <!-- Common Library (TenantConstants, shared infrastructure) -->
+        <dependency>
+            <groupId>com.outreach.platform</groupId>
+            <artifactId>common-lib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- OAuth2 Resource Server for JWT validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
