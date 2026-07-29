@@ -2,6 +2,7 @@ package com.outreach.platform.event.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,9 +17,13 @@ import org.springframework.security.web.SecurityFilterChain;
  * {@code spring.security.oauth2.resourceserver.jwt.jwk-set-uri}.
  * Actuator health/info endpoints are publicly accessible for container probes;
  * all other endpoints require authentication.</p>
+ *
+ * <p>{@code @EnableMethodSecurity} enables {@code @PreAuthorize} annotations
+ * for fine-grained role-based access control on controller methods.</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
