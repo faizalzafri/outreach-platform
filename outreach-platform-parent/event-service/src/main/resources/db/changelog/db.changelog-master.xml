@@ -43,4 +43,7 @@
     <!-- 8. Team and workspace model: teams and team_memberships tables -->
     <include file="db/changelog/20250122-001-create-teams-tables.sql"/>
 
+    <!-- 9. Fine-grained resource permissions -->
+    <include file="db/changelog/20250122-002-create-resource-permissions-table.sql"/>
+
 </databaseChangeLog>

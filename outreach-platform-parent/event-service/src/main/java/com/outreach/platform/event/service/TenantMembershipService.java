@@ -3,6 +3,7 @@ package com.outreach.platform.event.service;
 import com.outreach.platform.event.entity.TenantMembershipEntity;
 import com.outreach.platform.event.model.TenantRole;
 import com.outreach.platform.event.model.dto.MemberResponse;
+import com.outreach.platform.event.repo.TeamMembershipRepository;
 import com.outreach.platform.event.repo.TenantMembershipRepository;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
@@ -28,10 +29,13 @@ public class TenantMembershipService {
     private static final Logger log = LoggerFactory.getLogger(TenantMembershipService.class);
 
     private final TenantMembershipRepository membershipRepository;
+    private final TeamMembershipRepository teamMembershipRepository;
 
     @Inject
-    public TenantMembershipService(TenantMembershipRepository membershipRepository) {
+    public TenantMembershipService(TenantMembershipRepository membershipRepository,
+                                   TeamMembershipRepository teamMembershipRepository) {
         this.membershipRepository = membershipRepository;
+        this.teamMembershipRepository = teamMembershipRepository;
     }
 
     /**
@@ -111,6 +115,9 @@ public class TenantMembershipService {
 
         membershipRepository.delete(membership);
         log.info("Removed user {} from tenant {}", userId, tenantId);
+
+        teamMembershipRepository.deleteByUserIdAndTenantId(userId, tenantId);
+        log.info("Cascade-deleted team memberships for user {} in tenant {}", userId, tenantId);
     }
 
     /**
