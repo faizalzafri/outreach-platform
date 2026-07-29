@@ -227,6 +227,64 @@ public class PermissionService {
         log.info("Changed visibility for resource {}:{} to {}", resourceType, resourceId, newVisibility);
     }
 
+    /**
+     * Lists all permission records for a given resource.
+     * Requires that the current user has at least VIEW access or is the owner.
+     *
+     * @param resourceId   the resource UUID
+     * @param resourceType the type of resource
+     * @return list of permission records for the resource
+     * @throws ResourceNotFoundException if no permission record exists for the resource
+     * @throws AccessDeniedException     if the user lacks VIEW permission
+     */
+    @Transactional(readOnly = true)
+    public List<ResourcePermission> listPermissions(UUID resourceId, ResourceType resourceType) {
+        UUID currentUserId = getCurrentUserId();
+
+        List<ResourcePermission> permissions = resourcePermissionRepository
+                .findByResourceTypeAndResourceId(resourceType, resourceId);
+
+        if (permissions.isEmpty()) {
+            throw new ResourceNotFoundException(resourceType, resourceId);
+        }
+
+        ResourcePermission resource = permissions.get(0);
+
+        // Verify current user is owner or has at least VIEW access
+        if (!currentUserId.equals(resource.getOwnerUserId())
+                && !hasAccess(currentUserId, resourceType, resourceId, PermissionLevel.VIEW)) {
+            throw new AccessDeniedException(resourceType, resourceId);
+        }
+
+        return permissions;
+    }
+
+    /**
+     * Revokes a specific permission by ID.
+     * Requires that the current user is the owner or has MANAGE permission on the resource.
+     *
+     * @param permissionId the permission record UUID to revoke
+     * @throws PermissionNotFoundException if the permission record does not exist
+     * @throws AccessDeniedException       if the user lacks MANAGE permission
+     */
+    @Transactional
+    public void revokePermission(UUID permissionId) {
+        UUID currentUserId = getCurrentUserId();
+
+        ResourcePermission permission = resourcePermissionRepository.findById(permissionId)
+                .orElseThrow(() -> new PermissionNotFoundException(permissionId));
+
+        // Verify current user is owner or has MANAGE permission on the resource
+        if (!currentUserId.equals(permission.getOwnerUserId())
+                && !hasAccess(currentUserId, permission.getResourceType(), permission.getResourceId(), PermissionLevel.MANAGE)) {
+            throw new AccessDeniedException(permission.getResourceType(), permission.getResourceId());
+        }
+
+        resourcePermissionRepository.delete(permission);
+        log.info("Revoked permission {} for resource {}:{}", permissionId,
+                permission.getResourceType(), permission.getResourceId());
+    }
+
     // ─── Internal Helpers ───────────────────────────────────────────────────────
 
     /**
@@ -295,6 +353,12 @@ public class PermissionService {
         public NoTeamGrantedException(ResourceType type, UUID id) {
             super("Cannot set visibility to TEAM for resource " + type + ":" + id
                     + " — at least one team must be granted access first");
+        }
+    }
+
+    public static class PermissionNotFoundException extends RuntimeException {
+        public PermissionNotFoundException(UUID permissionId) {
+            super("Permission with ID " + permissionId + " not found");
         }
     }
 }
