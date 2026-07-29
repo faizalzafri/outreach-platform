@@ -14,4 +14,7 @@
     <!-- Seed data for development/testing (idempotent, skipped if data exists) -->
     <include file="db/changelog/20240102-001-seed-users.sql"/>
 
+    <!-- Multi-tenant SaaS: tenants and tenant_memberships tables -->
+    <include file="db/changelog/20250120-001-tenants-and-memberships.sql"/>
+
 </databaseChangeLog>

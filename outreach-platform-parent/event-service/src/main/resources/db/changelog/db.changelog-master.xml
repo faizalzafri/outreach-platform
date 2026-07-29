@@ -34,4 +34,10 @@
     <!-- 5. Seed data (idempotent, skipped if data exists) -->
     <include file="db/changelog/20240102-001-seed-data.sql"/>
 
+    <!-- 6. Multi-tenant SaaS: add tenant_id to all event-service tables -->
+    <include file="db/changelog/20250120-002-add-tenant-id-to-event-tables.sql"/>
+
+    <!-- 7. Multi-tenant SaaS: add tenant_id to report_schedules (report-service has Liquibase disabled) -->
+    <include file="db/changelog/20250120-003-add-tenant-id-to-report-schedules.sql"/>
+
 </databaseChangeLog>
