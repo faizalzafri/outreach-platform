@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * MongoDB document representing a domain event consumed by the notification service.
@@ -24,6 +25,9 @@ public class DomainEventDocument {
     private Map<String, Object> payload;
 
     private boolean processed;
+
+    @Indexed
+    private UUID tenantId;
 
     private Instant createdAt;
 
@@ -62,6 +66,14 @@ public class DomainEventDocument {
 
     public void setProcessed(boolean processed) {
         this.processed = processed;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public Instant getCreatedAt() {

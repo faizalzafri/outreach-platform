@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outreach.platform.common.messaging.DomainEventMessage;
 import com.outreach.platform.common.messaging.RabbitMqConstants;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.model.DomainEventDocument;
 import com.outreach.platform.event.model.DomainEventStatus;
 import com.outreach.platform.event.repo.DomainEventRepository;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Outbox service for domain events. Persists events as PENDING and includes a
@@ -43,6 +45,7 @@ public class DomainEventOutboxService {
 
     /**
      * Saves a domain event to the outbox with PENDING status.
+     * Sets the tenantId from the current TenantContext if present.
      *
      * @param eventType the type of domain event (e.g., "EventStatusChanged")
      * @param payload   the serialized event payload (JSON string)
@@ -50,8 +53,15 @@ public class DomainEventOutboxService {
      */
     public DomainEventDocument save(String eventType, String payload) {
         DomainEventDocument document = new DomainEventDocument(eventType, payload);
+
+        if (TenantContext.isPresent()) {
+            document.setTenantId(TenantContext.getCurrentTenantId());
+        } else {
+            log.warn("Persisting domain event without tenantId: TenantContext is empty. eventType={}", eventType);
+        }
+
         DomainEventDocument saved = domainEventRepository.save(document);
-        log.info("Domain event saved to outbox: type={}, id={}", eventType, saved.getId());
+        log.info("Domain event saved to outbox: type={}, id={}, tenantId={}", eventType, saved.getId(), saved.getTenantId());
         return saved;
     }
 
