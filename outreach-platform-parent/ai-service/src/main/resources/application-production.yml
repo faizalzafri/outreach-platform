@@ -1,4 +1,33 @@
-# Production profile - disable Swagger UI, keep /v3/api-docs for tooling
+# Production profile overrides for ai-service
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+# Eureka production settings
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI}
+    fetch-registry: true
+    registry-fetch-interval-seconds: 15
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# AI provider configuration - secrets must come from env vars in production
+platform:
+  ai:
+    api-key: ${AI_API_KEY}
+
+# Production Swagger disabled
 springdoc:
   swagger-ui:
     enabled: false
+
+# Logging reduced for production
+logging:
+  level:
+    com.outreach.platform: INFO
+    org.springframework: WARN

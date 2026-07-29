@@ -30,7 +30,6 @@
     <modules>
         <module>common-lib</module>
         <module>gateway-service</module>
-        <module>config-server</module>
         <module>discovery-service</module>
         <module>auth-service</module>
         <module>feedback-service</module>

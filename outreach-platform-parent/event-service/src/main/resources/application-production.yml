@@ -1,4 +1,44 @@
-# Production profile - disable Swagger UI, keep /v3/api-docs for tooling
+# Production profile overrides for event-service
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+
+# Eureka production settings
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI}
+    fetch-registry: true
+    registry-fetch-interval-seconds: 15
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# Production Swagger disabled
 springdoc:
   swagger-ui:
     enabled: false
+
+# Logging reduced for production
+logging:
+  level:
+    com.outreach.platform: INFO
+    org.springframework: WARN
