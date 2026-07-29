@@ -7,6 +7,7 @@ import com.outreach.platform.event.model.dto.CreateTeamRequest;
 import com.outreach.platform.event.model.dto.TeamMemberResponse;
 import com.outreach.platform.event.model.dto.TeamResponse;
 import com.outreach.platform.event.model.dto.UpdateTeamRequest;
+import com.outreach.platform.event.repo.ResourcePermissionRepository;
 import com.outreach.platform.event.repo.TeamMembershipRepository;
 import com.outreach.platform.event.repo.TeamRepository;
 import jakarta.inject.Inject;
@@ -30,11 +31,14 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final TeamMembershipRepository teamMembershipRepository;
+    private final ResourcePermissionRepository resourcePermissionRepository;
 
     @Inject
-    public TeamService(TeamRepository teamRepository, TeamMembershipRepository teamMembershipRepository) {
+    public TeamService(TeamRepository teamRepository, TeamMembershipRepository teamMembershipRepository,
+                       ResourcePermissionRepository resourcePermissionRepository) {
         this.teamRepository = teamRepository;
         this.teamMembershipRepository = teamMembershipRepository;
+        this.resourcePermissionRepository = resourcePermissionRepository;
     }
 
     /**
@@ -115,7 +119,7 @@ public class TeamService {
     }
 
     /**
-     * Deletes a team and cascade-deletes all team memberships.
+     * Deletes a team and cascade-deletes all team memberships and resource permissions.
      *
      * @param id the team UUID
      * @throws TeamNotFoundException if not found
@@ -123,6 +127,10 @@ public class TeamService {
     @Transactional
     public void deleteTeam(UUID id) {
         Team team = findTeamOrThrow(id);
+
+        // Cascade revoke resource permissions granted to this team
+        resourcePermissionRepository.deleteByGrantedTeamId(id);
+        log.info("Cascade-revoked resource permissions for team {}", id);
 
         // Cascade delete team memberships
         teamMembershipRepository.deleteByTeamId(id);

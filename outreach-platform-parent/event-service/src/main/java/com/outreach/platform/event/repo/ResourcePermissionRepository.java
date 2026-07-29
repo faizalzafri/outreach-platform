@@ -36,4 +36,12 @@ public interface ResourcePermissionRepository extends JpaRepository<ResourcePerm
      * @return list of permissions granted to the team
      */
     List<ResourcePermission> findByGrantedTeamId(UUID grantedTeamId);
+
+    /**
+     * Delete all permissions granted to a specific team.
+     * Used for cascade revocation when a team is deleted.
+     *
+     * @param grantedTeamId the team's UUID
+     */
+    void deleteByGrantedTeamId(UUID grantedTeamId);
 }
