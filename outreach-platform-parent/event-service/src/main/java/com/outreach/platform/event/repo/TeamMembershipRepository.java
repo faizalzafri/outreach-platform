@@ -54,4 +54,12 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
      * @param tenantId the tenant's UUID
      */
     void deleteByUserIdAndTenantId(UUID userId, UUID tenantId);
+
+    /**
+     * Delete a specific user's membership in a team.
+     *
+     * @param teamId the team's UUID
+     * @param userId the user's UUID
+     */
+    void deleteByTeamIdAndUserId(UUID teamId, UUID userId);
 }
