@@ -2,6 +2,8 @@ package com.outreach.platform.event.entity;
 
 import com.outreach.platform.common.pii.AesEncryptionConverter;
 import com.outreach.platform.common.pii.PiiField;
+import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.common.tenant.TenantEntityListener;
 import com.outreach.platform.event.model.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -14,6 +16,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -26,13 +31,18 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "users")
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({TenantEntityListener.class, AuditingEntityListener.class})
+@FilterDef(name = TenantConstants.TENANT_FILTER_NAME, parameters = @ParamDef(name = "tenantId", type = UUID.class))
+@Filter(name = TenantConstants.TENANT_FILTER_NAME, condition = "tenant_id = :tenantId")
 public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
 
     @Column(name = "username", nullable = false, unique = true, length = 100)
     private String username;
@@ -91,6 +101,14 @@ public class UserEntity {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getUsername() {
