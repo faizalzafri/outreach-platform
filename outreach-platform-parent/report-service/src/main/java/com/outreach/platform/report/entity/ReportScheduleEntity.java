@@ -1,15 +1,22 @@
 package com.outreach.platform.report.entity;
 
+import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.common.tenant.TenantEntityListener;
 import com.outreach.platform.report.model.ExportFormat;
 import com.outreach.platform.report.model.ScheduleStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,12 +27,24 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "report_schedules")
+@FilterDef(
+        name = TenantConstants.TENANT_FILTER_NAME,
+        parameters = @ParamDef(name = "tenantId", type = UUID.class)
+)
+@Filter(
+        name = TenantConstants.TENANT_FILTER_NAME,
+        condition = "tenant_id = :tenantId"
+)
+@EntityListeners({TenantEntityListener.class, AuditingEntityListener.class})
 public class ReportScheduleEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -71,6 +90,14 @@ public class ReportScheduleEntity {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getName() {

@@ -1,5 +1,7 @@
 package com.outreach.platform.event.entity;
 
+import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.common.tenant.TenantEntityListener;
 import com.outreach.platform.event.model.FeedbackSentiment;
 import com.outreach.platform.event.model.FeedbackStatus;
 import jakarta.persistence.Column;
@@ -16,6 +18,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -30,13 +35,18 @@ import java.util.UUID;
 @Table(name = "volunteer_feedback", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "volunteer_id"})
 })
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({TenantEntityListener.class, AuditingEntityListener.class})
+@FilterDef(name = TenantConstants.TENANT_FILTER_NAME, parameters = @ParamDef(name = "tenantId", type = UUID.class))
+@Filter(name = TenantConstants.TENANT_FILTER_NAME, condition = "tenant_id = :tenantId")
 public class VolunteerFeedbackEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -105,6 +115,14 @@ public class VolunteerFeedbackEntity {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public EventEntity getEvent() {
