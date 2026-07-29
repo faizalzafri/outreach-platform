@@ -40,4 +40,7 @@
     <!-- 7. Multi-tenant SaaS: add tenant_id to report_schedules (report-service has Liquibase disabled) -->
     <include file="db/changelog/20250120-003-add-tenant-id-to-report-schedules.sql"/>
 
+    <!-- 8. Team and workspace model: teams and team_memberships tables -->
+    <include file="db/changelog/20250122-001-create-teams-tables.sql"/>
+
 </databaseChangeLog>
