@@ -1,5 +1,6 @@
 package com.outreach.platform.auth.config;
 
+import com.outreach.platform.auth.service.AccountLockoutService;
 import com.outreach.platform.auth.service.LockoutAwareAuthenticationProvider;
 import jakarta.inject.Inject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -41,13 +42,23 @@ public class SecurityConfig {
      * Default security filter chain for form login.
      * Applied after the authorization server filter chain (Order 2).
      * Wires the lockout-aware authentication provider for brute-force protection.
+     *
+     * <p>The provider is created inline (not as a separate @Bean) to prevent
+     * Spring Boot's auto-configuration from also registering it in the global
+     * AuthenticationManager, which would cause each login attempt to be processed
+     * twice and double-count failed attempts.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(
             HttpSecurity http,
-            LockoutAwareAuthenticationProvider authenticationProvider
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder,
+            AccountLockoutService lockoutService
     ) throws Exception {
+        LockoutAwareAuthenticationProvider authenticationProvider =
+                new LockoutAwareAuthenticationProvider(userDetailsService, passwordEncoder, lockoutService);
+
         http
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(auth -> auth

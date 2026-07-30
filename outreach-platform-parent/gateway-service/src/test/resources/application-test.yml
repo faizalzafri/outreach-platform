@@ -8,6 +8,19 @@ spring:
   application:
     name: gateway-service
 
+  main:
+    # common-lib brings spring-boot-starter-web (servlet) + spring-boot-starter-security
+    # which registers WebSecurityConfiguration. Gateway uses WebFlux + @EnableWebFluxSecurity
+    # which registers WebFluxSecurityConfiguration. Both define 'conversionServicePostProcessor'.
+    allow-bean-definition-overriding: true
+    web-application-type: reactive
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+
   cloud:
     gateway:
       # Routes and default-filters are configured via @DynamicPropertySource in tests
