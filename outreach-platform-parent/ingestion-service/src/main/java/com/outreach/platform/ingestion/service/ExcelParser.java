@@ -15,23 +15,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Parses Excel files (.xlsx and .xls) into a list of parsed rows.
- * Uses Apache POI with streaming-friendly access patterns.
- */
+/** Parses Excel files (.xlsx and .xls) into a list of parsed rows using Apache POI. */
 @Named
 public class ExcelParser {
 
     private static final Logger log = LoggerFactory.getLogger(ExcelParser.class);
 
-    /**
-     * Parse an Excel input stream into rows.
-     *
-     * @param inputStream file input stream
-     * @param extension   file extension (.xlsx or .xls)
-     * @return list of parsed rows with column-to-value mappings
-     * @throws IOException if the file cannot be read or is corrupted
-     */
+    /** Parse an Excel input stream into rows with column-to-value mappings. */
     public List<ParsedRow> parse(InputStream inputStream, String extension) throws IOException {
         try (Workbook workbook = createWorkbook(inputStream, extension)) {
             Sheet sheet = workbook.getSheetAt(0);

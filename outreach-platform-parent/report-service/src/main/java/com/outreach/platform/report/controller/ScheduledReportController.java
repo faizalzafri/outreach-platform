@@ -39,18 +39,12 @@ public class ScheduledReportController {
         this.scheduledReportService = scheduledReportService;
     }
 
-    /**
-     * Lists all scheduled report configurations.
-     */
     @GetMapping
     public ResponseEntity<List<ScheduledReportDto>> listScheduledReports() {
         List<ScheduledReportDto> reports = scheduledReportService.listScheduledReports();
         return ResponseEntity.ok(reports);
     }
 
-    /**
-     * Creates a new scheduled report configuration.
-     */
     @PostMapping
     public ResponseEntity<ScheduledReportDto> createScheduledReport(
             @Valid @RequestBody ScheduledReportCreateRequest request) {
@@ -58,9 +52,6 @@ public class ScheduledReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * Updates an existing scheduled report configuration.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ScheduledReportDto> updateScheduledReport(
             @PathVariable UUID id,
@@ -70,9 +61,6 @@ public class ScheduledReportController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Deletes a scheduled report configuration.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteScheduledReport(@PathVariable UUID id) {
         if (scheduledReportService.deleteScheduledReport(id)) {

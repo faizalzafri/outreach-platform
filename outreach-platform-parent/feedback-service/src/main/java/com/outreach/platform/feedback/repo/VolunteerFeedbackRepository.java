@@ -15,10 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Spring Data JPA repository for volunteer feedback entities.
- * Provides standard CRUD operations plus custom search and stats queries.
- */
+/** Repository for volunteer feedback entities with custom search and stats queries. */
 @Repository
 public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeedbackEntity, UUID> {
 
@@ -28,9 +25,7 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
 
     Optional<VolunteerFeedbackEntity> findByEventIdAndVolunteerId(UUID eventId, UUID volunteerId);
 
-    /**
-     * Search feedback with dynamic filter criteria. Null parameters are treated as "no filter".
-     */
+    /** Searches feedback with dynamic filter criteria; null parameters are ignored. */
     @Query("""
             SELECT f FROM VolunteerFeedbackEntity f
             WHERE (:eventId IS NULL OR f.eventId = :eventId)
@@ -56,19 +51,10 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
             Pageable pageable
     );
 
-    /**
-     * Count submitted feedback for a given event.
-     */
     long countByEventId(UUID eventId);
 
-    /**
-     * Count feedback by event and status.
-     */
     long countByEventIdAndStatus(UUID eventId, FeedbackStatus status);
 
-    /**
-     * Calculate average score for a given event.
-     */
     @Query("SELECT COALESCE(AVG(f.score), 0.0) FROM VolunteerFeedbackEntity f WHERE f.eventId = :eventId")
     double averageScoreByEventId(@Param("eventId") UUID eventId);
 }

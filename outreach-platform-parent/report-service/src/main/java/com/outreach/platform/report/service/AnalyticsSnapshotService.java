@@ -32,7 +32,7 @@ public class AnalyticsSnapshotService {
         this.properties = properties;
     }
 
-    /**
+/**
      * Stores a new analytics snapshot with automatic TTL based on retention configuration.
      */
     public AnalyticsSnapshotDocument saveSnapshot(String snapshotType,
@@ -57,16 +57,10 @@ public class AnalyticsSnapshotService {
         return saved;
     }
 
-    /**
-     * Retrieves snapshots of a given type within a time range.
-     */
     public List<AnalyticsSnapshotDocument> getSnapshots(String snapshotType, Instant start, Instant end) {
         return snapshotRepository.findBySnapshotTypeAndPeriodStartBetween(snapshotType, start, end);
     }
 
-    /**
-     * Retrieves the most recent snapshots of a given type.
-     */
     public List<AnalyticsSnapshotDocument> getLatestSnapshots(String snapshotType) {
         return snapshotRepository.findBySnapshotTypeOrderByPeriodStartDesc(snapshotType);
     }

@@ -7,9 +7,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Security configuration for the Eureka Server.
- * Allows unauthenticated access to Eureka client endpoints (service registration/discovery)
- * while protecting the dashboard and actuator with HTTP Basic authentication.
+ * Security configuration that permits unauthenticated Eureka client endpoints while protecting the dashboard with HTTP Basic.
  */
 @Configuration
 public class SecurityConfig {

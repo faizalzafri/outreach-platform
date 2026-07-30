@@ -36,12 +36,7 @@ public class ExportService {
         this.exportJobRepository = exportJobRepository;
     }
 
-    /**
-     * Submits a new export job, persists it in PENDING status, then triggers async generation.
-     *
-     * @param request the export request containing format and filters
-     * @return the job ID for status polling
-     */
+    /** Submits a new export job and triggers async generation. */
     public String submitExport(ExportRequest request) {
         String jobId = UUID.randomUUID().toString();
 
@@ -60,24 +55,14 @@ public class ExportService {
         return jobId;
     }
 
-    /**
-     * Retrieves the current status of an export job.
-     *
-     * @param jobId the unique job identifier
-     * @return the job DTO or null if not found
-     */
+    /** Retrieves the current status of an export job. */
     public ExportJobDto getExportStatus(String jobId) {
         return exportJobRepository.findByJobId(jobId)
                 .map(this::toDto)
                 .orElse(null);
     }
 
-    /**
-     * Retrieves the file content bytes for a completed export job.
-     *
-     * @param jobId the unique job identifier
-     * @return file content or null if job is not found or not completed
-     */
+    /** Retrieves the file content bytes for a completed export job, or null if unavailable. */
     public byte[] getExportContent(String jobId) {
         return exportJobRepository.findByJobId(jobId)
                 .filter(job -> job.getStatus() == ExportJobStatus.COMPLETED)

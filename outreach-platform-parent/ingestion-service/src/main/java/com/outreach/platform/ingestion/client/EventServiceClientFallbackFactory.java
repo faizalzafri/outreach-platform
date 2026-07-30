@@ -9,11 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Fallback factory for EventServiceClient in Ingestion Service.
- * For ingestion, event-service calls are critical (import must persist data).
- * Fallback throws a specific exception that the caller can handle to retry or fail the job.
- */
+/** Fallback factory that throws EventServiceUnavailableException when the event-service is unreachable. */
 @Component
 public class EventServiceClientFallbackFactory implements FallbackFactory<EventServiceClient> {
 

@@ -5,10 +5,7 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Explicit mapper bean registration to avoid component scan conflicts
- * with multiple Spring Data modules on the classpath.
- */
+/** Registers MapStruct mapper beans to avoid component scan conflicts. */
 @Configuration
 public class MapperConfig {
 

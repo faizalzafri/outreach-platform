@@ -6,8 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request payload for updating an existing notification template.
- * All fields are optional — only non-null values are applied.
+ * Request payload for updating an existing notification template (all fields optional).
  */
 @Schema(description = "Request payload for updating a notification template. All fields are optional.")
 public record TemplateUpdateRequest(

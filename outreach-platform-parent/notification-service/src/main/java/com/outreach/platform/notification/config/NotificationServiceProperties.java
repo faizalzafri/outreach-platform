@@ -5,8 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * Externalized configuration properties for the Notification Service.
- * Bound from the {@code notification-service} prefix in application.yml.
+ * Externalized configuration properties bound from the {@code notification-service} prefix.
  */
 @ConfigurationProperties(prefix = "notification-service")
 public record NotificationServiceProperties(
@@ -17,9 +16,7 @@ public record NotificationServiceProperties(
         int batchSize
 ) {
 
-    /**
-     * Provides sensible defaults when properties are not explicitly configured.
-     */
+
     public NotificationServiceProperties {
         if (maxRetryAttempts <= 0) {
             maxRetryAttempts = 5;

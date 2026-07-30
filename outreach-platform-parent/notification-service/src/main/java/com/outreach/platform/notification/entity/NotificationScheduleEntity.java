@@ -23,8 +23,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * JPA entity mapped to the notification_schedules table.
- * Defines when and how a notification template should be triggered.
+ * JPA entity representing a notification schedule configuration.
  */
 @Entity
 @Table(name = "notification_schedules")

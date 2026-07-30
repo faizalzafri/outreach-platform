@@ -7,14 +7,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * OAuth2 Resource Server security configuration for the Report Service.
- *
- * <p>Validates incoming JWTs using the JWKS endpoint configured via
- * {@code spring.security.oauth2.resourceserver.jwt.jwk-set-uri}.
- * Actuator health endpoints are publicly accessible for container probes;
- * all other endpoints require authentication.</p>
- */
+/** OAuth2 Resource Server security configuration with JWT validation for the Report Service. */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

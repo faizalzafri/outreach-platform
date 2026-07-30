@@ -14,13 +14,7 @@ import jakarta.mail.Transport;
 import jakarta.mail.Session;
 
 /**
- * Custom health indicator that verifies SMTP server connectivity.
- *
- * <p>Performs a lightweight connection check by opening and immediately closing
- * a transport session to the configured SMTP server. Only activated when
- * {@code spring.mail.host} is configured (typically in notification-service).
- *
- * <p>Reports UP with host/port details or DOWN with the failure reason.
+ * Health indicator that verifies SMTP server connectivity by opening and closing a transport session.
  */
 @Component
 @ConditionalOnProperty("spring.mail.host")

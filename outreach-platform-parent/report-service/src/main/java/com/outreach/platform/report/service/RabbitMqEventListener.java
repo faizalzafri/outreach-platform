@@ -9,11 +9,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-/**
- * RabbitMQ listener for domain events consumed by the report service.
- * Bridges RabbitMQ messages to local Spring ApplicationEvents, so existing
- * listeners like {@link ReportCacheInvalidationListener} continue to work.
- */
+/** RabbitMQ listener that bridges domain events to local Spring ApplicationEvents. */
 @Service
 public class RabbitMqEventListener {
 
@@ -27,8 +23,7 @@ public class RabbitMqEventListener {
     }
 
     /**
-     * Listens for ImportJobCompleted events on the report queue and publishes
-     * a local Spring ApplicationEvent to trigger cache invalidation.
+     * Listens for ImportJobCompleted events on the report queue and publishes a local ApplicationEvent.
      */
     @RabbitListener(queues = RabbitMqConstants.QUEUE_REPORT)
     public void onImportJobCompleted(DomainEventMessage message) {

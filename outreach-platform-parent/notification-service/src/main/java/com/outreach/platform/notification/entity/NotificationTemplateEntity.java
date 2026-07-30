@@ -27,8 +27,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * JPA entity mapped to the notification_templates table.
- * Stores reusable notification templates with Thymeleaf/Freemarker body content.
+ * JPA entity representing a reusable notification template.
  */
 @Entity
 @Table(name = "notification_templates")

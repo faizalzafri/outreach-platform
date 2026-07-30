@@ -20,21 +20,7 @@ import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
 /**
- * Shared RabbitMQ infrastructure configuration.
- * Declares exchanges, queues (with DLQ), bindings, retry policy, and message converter.
- *
- * <p>Topology:
- * <pre>
- *   outreach.events (topic)
- *     ├── event.status-changed      → outreach.notification.queue
- *     ├── event.volunteers-imported  → outreach.notification.queue
- *     ├── event.send-feedback-emails → outreach.notification.queue
- *     └── event.import-job-completed → outreach.report.queue
- *
- *   outreach.events.dlx (direct) — dead letter exchange
- *     ├── dlq.notification → outreach.notification.dlq
- *     └── dlq.report       → outreach.report.dlq
- * </pre>
+ * Shared RabbitMQ infrastructure: declares exchanges, queues with DLQ, bindings, retry policy, and JSON message converter.
  */
 @Configuration
 @ConditionalOnClass(name = "org.springframework.amqp.rabbit.core.RabbitTemplate")

@@ -1,9 +1,7 @@
 package com.outreach.platform.common.pii;
 
 /**
- * Classification levels for PII data sensitivity.
- * HIGH: direct identifiers (SSN, full name, email)
- * MEDIUM: indirect identifiers (city, base location, employee ID)
+ * Classification levels for PII data: HIGH for direct identifiers, MEDIUM for indirect identifiers.
  */
 public enum SensitivityLevel {
     HIGH,

@@ -38,10 +38,6 @@ public class ExportController {
         this.exportService = exportService;
     }
 
-    /**
-     * Submits a new asynchronous export job.
-     * Returns 202 Accepted with the jobId for polling.
-     */
     @PostMapping("/export")
     public ResponseEntity<Map<String, String>> submitExport(@Valid @RequestBody ExportRequest request) {
         String jobId = exportService.submitExport(request);
@@ -50,9 +46,7 @@ public class ExportController {
     }
 
     /**
-     * Gets the status of an export job.
-     * If the job is completed, the response includes download information.
-     * If the client wants the file content directly, it can request with Accept: application/octet-stream.
+     * Gets the status of an export job and returns file content if completed.
      */
     @GetMapping("/export/{jobId}")
     public ResponseEntity<?> getExportStatus(@PathVariable String jobId) {

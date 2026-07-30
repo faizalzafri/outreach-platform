@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Handles retry logic for failed email deliveries.
- * Finds deliveries that are due for retry and re-dispatches them.
- */
+/** Retries failed email deliveries based on scheduled retry times or manual triggers. */
 @Service
 public class EmailRetryService {
 
@@ -30,11 +27,7 @@ public class EmailRetryService {
         this.emailDispatchService = emailDispatchService;
     }
 
-    /**
-     * Finds all FAILED deliveries whose nextRetryAt has passed and re-dispatches them.
-     *
-     * @return the number of deliveries queued for retry
-     */
+    /** Re-dispatches all FAILED deliveries whose nextRetryAt has passed. */
     public int retryDueDeliveries() {
         List<EmailDeliveryDocument> dueForRetry =
                 deliveryRepository.findByStatusAndNextRetryAtBefore(DeliveryStatus.FAILED, Instant.now());
@@ -51,13 +44,7 @@ public class EmailRetryService {
         return dueForRetry.size();
     }
 
-    /**
-     * Manually retries all failed or permanently failed deliveries for a given event.
-     * Resets attempt count for permanently failed deliveries to allow retries.
-     *
-     * @param eventId the event whose failed deliveries should be retried
-     * @return the number of deliveries queued for retry
-     */
+    /** Manually retries all failed deliveries for a given event, resetting attempts if permanently failed. */
     public int retryFailedForEvent(String eventId) {
         List<EmailDeliveryDocument> failed = deliveryRepository.findByEventIdAndStatus(eventId, DeliveryStatus.FAILED);
         List<EmailDeliveryDocument> permanentlyFailed = deliveryRepository.findByEventIdAndStatus(eventId, DeliveryStatus.PERMANENTLY_FAILED);

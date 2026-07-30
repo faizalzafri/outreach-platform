@@ -9,10 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * MongoDB document representing an AI job.
- * TTL is managed via the ttlExpiresAt field with a MongoDB TTL index.
- */
+/** MongoDB document representing an AI job with TTL-based expiration. */
 @Document(collection = "ai_jobs")
 public class AiJobDocument {
 

@@ -8,10 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-/**
- * Main application entry point for the Feedback Service.
- * Responsible for accepting, validating, and persisting volunteer feedback submissions.
- */
+/** Bootstrap class for the Feedback Service. */
 @SpringBootApplication
 @EnableJpaAuditing
 @EnableJpaRepositories(basePackages = "com.outreach.platform.feedback.repo")

@@ -15,11 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Scheduled outbox poller for the ingestion service.
- * Reads PENDING domain events from MongoDB and publishes them to RabbitMQ,
- * then marks them as PUBLISHED.
- */
+/** Scheduled poller that reads PENDING domain events from MongoDB and publishes them to RabbitMQ. */
 @Service
 public class DomainEventOutboxPoller {
 

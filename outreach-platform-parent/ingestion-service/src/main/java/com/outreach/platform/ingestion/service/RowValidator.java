@@ -24,10 +24,7 @@ public class RowValidator {
     private static final Pattern EVENT_CODE_PATTERN = Pattern.compile("^[a-zA-Z0-9\\-]+$");
 
     /**
-     * Validates a single row. Returns a list of errors (empty if row is valid).
-     *
-     * @param row the parsed row to validate
-     * @return list of validation errors for this row
+     * Validates a single row against the volunteer import schema rules.
      */
     public List<ValidationError> validate(ParsedRow row) {
         List<ValidationError> errors = new ArrayList<>();
@@ -79,9 +76,7 @@ public class RowValidator {
         return errors;
     }
 
-    /**
-     * Validates a date string if present. Returns an error if the format is not ISO (yyyy-MM-dd).
-     */
+    /** Validates a date string is in ISO format (yyyy-MM-dd), returning an error if not. */
     public ValidationError validateDate(int rowNumber, String columnName, String value) {
         if (isBlank(value)) {
             return null;

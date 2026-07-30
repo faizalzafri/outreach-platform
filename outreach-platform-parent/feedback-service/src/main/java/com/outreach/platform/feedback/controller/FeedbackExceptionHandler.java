@@ -8,10 +8,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Centralized exception handling for feedback REST endpoints.
- * Maps domain exceptions to appropriate HTTP responses using RFC 7807 Problem Detail.
- */
+/** Maps domain exceptions to RFC 7807 Problem Detail HTTP responses. */
 @RestControllerAdvice
 public class FeedbackExceptionHandler {
 
