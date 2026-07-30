@@ -18,10 +18,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
-/**
- * Redis cache configuration with Jackson JSON serialization.
- * Default TTL is 10 minutes for all cache entries.
- */
+/** Redis cache configuration with JSON serialization and a 10-minute default TTL. */
 @Configuration
 @EnableCaching
 @ConditionalOnBean(RedisConnectionFactory.class)

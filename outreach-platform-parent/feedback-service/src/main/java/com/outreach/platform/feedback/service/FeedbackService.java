@@ -23,10 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Business logic service for managing volunteer feedback submissions.
- * Provides CRUD operations, search, status reporting, and cache management.
- */
+/** Core business logic for feedback CRUD, search, and status reporting. */
 @Service
 public class FeedbackService {
 

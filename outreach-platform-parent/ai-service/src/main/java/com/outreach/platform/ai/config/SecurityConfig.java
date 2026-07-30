@@ -8,11 +8,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Security configuration for the AI Service.
- * Configures OAuth2 Resource Server with JWT validation.
- * All endpoints (except health actuator) require ROLE_ADMIN.
- */
+/** OAuth2 Resource Server security configuration requiring ROLE_ADMIN for all AI endpoints. */
 @Configuration
 @EnableWebSecurity
 @Profile("!test")

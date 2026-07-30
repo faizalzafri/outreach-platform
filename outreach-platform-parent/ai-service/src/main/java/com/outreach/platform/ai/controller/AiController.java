@@ -19,12 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * REST controller for AI-powered operations.
- * All endpoints require ROLE_ADMIN (enforced via SecurityConfig).
- * Operations are async: they return 202 Accepted with a jobId.
- * Results are retrieved via GET /ai/jobs/{jobId}.
- */
+/** REST controller for async AI operations (summarize, anomaly detection, NL queries). */
 @RestController
 @RequestMapping("/ai")
 @Tag(name = "AI Operations", description = "AI-powered summarization, anomaly detection, and natural language queries (ROLE_ADMIN only)")
@@ -43,9 +38,6 @@ public class AiController {
         this.properties = properties;
     }
 
-    /**
-     * Submit a summarization job.
-     */
     @Operation(summary = "Summarize feedback", description = "Submits a feedback summarization job (async, returns 202 with jobId)")
     @PostMapping("/summarize")
     public ResponseEntity<?> summarize(@Valid @RequestBody SummarizeRequest request) {
@@ -63,9 +55,6 @@ public class AiController {
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Submit an anomaly detection job.
-     */
     @Operation(summary = "Detect anomalies", description = "Submits an anomaly detection job on feedback dataset (async, returns 202 with jobId)")
     @PostMapping("/anomalies")
     public ResponseEntity<?> detectAnomalies(@Valid @RequestBody AnomalyRequest request) {
@@ -83,9 +72,6 @@ public class AiController {
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Submit a natural language query job.
-     */
     @Operation(summary = "Natural language query", description = "Submits a natural language query job (async, returns 202 with jobId)")
     @PostMapping("/query")
     public ResponseEntity<?> query(@Valid @RequestBody QueryRequest request) {
@@ -103,9 +89,6 @@ public class AiController {
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Retrieve AI job status and result.
-     */
     @Operation(summary = "Get job result", description = "Retrieves AI job status and result by job ID")
     @GetMapping("/jobs/{jobId}")
     public ResponseEntity<AiJobResponse> getJobResult(@Parameter(description = "Job ID") @PathVariable String jobId) {
@@ -119,9 +102,6 @@ public class AiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * AI service health and capabilities status.
-     */
     @Operation(summary = "AI status", description = "Returns AI service health and feature capabilities status")
     @GetMapping("/status")
     public ResponseEntity<AiStatusResponse> status() {

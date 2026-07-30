@@ -5,9 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 
 /**
- * Service registry and discovery server for the Outreach Platform.
- * Provides a Eureka-based registry where all microservices register on startup
- * and discover each other at runtime without hardcoded addresses.
+ * Eureka-based service registry and discovery server for the Outreach Platform.
  */
 @SpringBootApplication
 @EnableEurekaServer

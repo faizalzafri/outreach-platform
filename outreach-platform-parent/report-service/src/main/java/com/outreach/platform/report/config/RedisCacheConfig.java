@@ -17,13 +17,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
-/**
- * Programmatic Redis cache configuration with Jackson JSON serialization.
- *
- * <p>Configures a {@link RedisCacheManager} with a default TTL derived from
- * {@link ReportServiceProperties#cacheTtlMinutes()} and JSON value serialization
- * for readable cache entries.</p>
- */
+/** Redis cache configuration with JSON serialization and configurable TTL. */
 @Configuration
 public class RedisCacheConfig {
 

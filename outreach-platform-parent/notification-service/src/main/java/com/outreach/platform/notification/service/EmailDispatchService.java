@@ -18,10 +18,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-/**
- * Handles asynchronous email dispatch via SMTP and manages delivery status transitions
- * with exponential backoff retry logic.
- */
+/** Handles asynchronous email dispatch via SMTP with exponential backoff retry. */
 @Service
 public class EmailDispatchService {
 
@@ -40,10 +37,7 @@ public class EmailDispatchService {
         this.properties = properties;
     }
 
-    /**
-     * Dispatches an email asynchronously on the emailTaskExecutor thread pool.
-     * Updates delivery status to SENT on success or schedules retry on failure.
-     */
+    /** Dispatches an email asynchronously, updating delivery status on success or scheduling retry on failure. */
     @Async("emailTaskExecutor")
     public void dispatchEmail(EmailDeliveryDocument delivery) {
         log.info("Dispatching email to {} for event {}", delivery.getRecipientEmail(), delivery.getEventId());
@@ -78,10 +72,7 @@ public class EmailDispatchService {
         }
     }
 
-    /**
-     * Handles a dispatch failure by incrementing attempts and calculating next retry time,
-     * or marking as PERMANENTLY_FAILED if max attempts reached.
-     */
+    /** Marks delivery as PERMANENTLY_FAILED or schedules retry with backoff. */
     private void handleFailure(EmailDeliveryDocument delivery, String errorMessage) {
         int newAttempts = delivery.getAttempts() + 1;
         delivery.setAttempts(newAttempts);
@@ -105,10 +96,7 @@ public class EmailDispatchService {
         deliveryRepository.save(delivery);
     }
 
-    /**
-     * Calculates next retry time using the configured exponential backoff schedule.
-     * Backoff minutes: [1, 5, 30, 120, 720]
-     */
+    /** Calculates next retry time using the configured backoff schedule. */
     Instant calculateNextRetry(int attemptNumber) {
         List<Integer> backoffMinutes = properties.retryBackoffMinutes();
         int index = Math.min(attemptNumber - 1, backoffMinutes.size() - 1);

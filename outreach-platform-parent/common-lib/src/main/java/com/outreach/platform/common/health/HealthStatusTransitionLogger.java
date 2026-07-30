@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.HealthEndpoint;
 import org.springframework.boot.actuate.health.HealthComponent;
-import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.actuate.health.SystemHealth;
 import org.springframework.boot.actuate.health.CompositeHealth;
@@ -17,12 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Monitors health indicator status transitions and logs warnings when a
- * dependency transitions from healthy (UP) to unhealthy (DOWN/OUT_OF_SERVICE).
- *
- * <p>Polls the health endpoint every 30 seconds and compares current status
- * against the previously observed status for each component. Logs a warning
- * on transitions to unhealthy state and an info message on recovery.
+ * Polls health indicators on a schedule and logs warnings when components transition between healthy and unhealthy states.
  */
 @Component
 public class HealthStatusTransitionLogger {

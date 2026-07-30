@@ -2,18 +2,7 @@ package com.outreach.platform.ai.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Type-safe configuration properties for the AI Service.
- * Maps to the {@code platform.ai.*} namespace in application.yml.
- *
- * @param provider         AI provider identifier (e.g., "openai", "bedrock", "ollama")
- * @param apiKey           API key for the AI provider (resolved via environment or Secrets Manager)
- * @param model            AI model to use for completions
- * @param maxTokens        maximum tokens per AI request
- * @param temperature      sampling temperature for AI responses
- * @param jobResultTtlHours TTL in hours for AI job results stored in MongoDB
- * @param features         per-feature toggle configuration
- */
+/** Type-safe configuration properties for the AI Service, bound from the "platform.ai" prefix. */
 @ConfigurationProperties(prefix = "platform.ai")
 public record AiServiceProperties(
         String provider,
@@ -33,13 +22,7 @@ public record AiServiceProperties(
         if (features == null) features = new Features(new FeatureToggle(false), new FeatureToggle(false), new FeatureToggle(false));
     }
 
-    /**
-     * Per-feature toggle settings for AI capabilities.
-     *
-     * @param summarize  summarization feature toggle
-     * @param anomalies  anomaly detection feature toggle
-     * @param query      natural language query feature toggle
-     */
+    /** Per-feature toggle settings for AI capabilities. */
     public record Features(
             FeatureToggle summarize,
             FeatureToggle anomalies,
@@ -52,10 +35,6 @@ public record AiServiceProperties(
         }
     }
 
-    /**
-     * Individual feature toggle.
-     *
-     * @param enabled whether this AI feature is active
-     */
+    /** Individual feature toggle. */
     public record FeatureToggle(boolean enabled) {}
 }

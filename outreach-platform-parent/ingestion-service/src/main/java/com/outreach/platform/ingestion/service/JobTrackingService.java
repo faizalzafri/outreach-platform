@@ -129,8 +129,7 @@ public class JobTrackingService {
 
     /**
      * Cancels a job if it is still PENDING or RUNNING.
-     *
-     * @return true if the job was cancelled, false if it was already in a terminal state
+     * @return true if cancelled, false if already in a terminal state
      */
     public boolean cancelJob(String jobId) {
         Optional<JobTrackingDocument> optJob = jobTrackingRepository.findById(jobId);

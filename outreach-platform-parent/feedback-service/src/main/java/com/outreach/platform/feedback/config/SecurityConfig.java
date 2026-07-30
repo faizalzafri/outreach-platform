@@ -8,11 +8,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Security configuration for the Feedback Service.
- * Configures OAuth2 Resource Server with JWT validation
- * and stateless session management for a REST API.
- */
+/** Configures OAuth2 Resource Server with JWT validation and stateless sessions. */
 @Configuration
 @EnableWebSecurity
 @Profile("!test")

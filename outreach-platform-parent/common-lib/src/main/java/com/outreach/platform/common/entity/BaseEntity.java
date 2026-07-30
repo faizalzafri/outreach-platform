@@ -19,10 +19,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Base entity class providing common fields for all JPA entities:
- * - UUID primary key
- * - JPA Auditing fields (createdDate, lastModifiedDate, createdBy, lastModifiedBy)
- * - Optimistic locking version field
+ * Base entity providing UUID primary key, JPA audit fields, and an optimistic locking version.
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)

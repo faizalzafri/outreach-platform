@@ -12,11 +12,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * JPA AttributeConverter that encrypts/decrypts PII field values using AES-256-GCM.
- * The encryption key is loaded from environment variables or Secrets Manager.
- * <p>
- * Storage format: Base64(IV + ciphertext + authTag)
- * IV is generated fresh for every encryption operation (12 bytes for GCM).
+ * JPA AttributeConverter that encrypts/decrypts string fields using AES-256-GCM with a per-operation random IV.
  */
 @Converter
 public class AesEncryptionConverter implements AttributeConverter<String, String> {

@@ -22,13 +22,7 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Shared Redis cache configuration providing sensible defaults for all platform services.
- *
- * <p>Activates only when Redis classes are on the classpath and no other CacheManager bean is defined.
- * Services with custom RedisCacheConfig (e.g., feedback-service, report-service) take precedence.</p>
- *
- * <p>Configuration properties under {@code platform.cache.ttl.*} allow per-cache TTL overrides,
- * for example: {@code platform.cache.ttl.eventCache=30m}</p>
+ * Shared Redis cache configuration with JSON serialization, 10-minute default TTL, and per-cache TTL overrides.
  */
 @Configuration
 @EnableCaching
@@ -37,10 +31,7 @@ public class DefaultRedisCacheConfig {
 
     private static final Duration DEFAULT_TTL = Duration.ofMinutes(10);
 
-    /**
-     * Provides a RedisCacheManager with Jackson JSON serialization and a 10-minute default TTL.
-     * Only activates when no other CacheManager bean is already registered.
-     */
+    /** Provides a RedisCacheManager when no other CacheManager bean is registered. */
     @Bean
     @ConditionalOnMissingBean(CacheManager.class)
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory,
@@ -80,9 +71,7 @@ public class DefaultRedisCacheConfig {
         return builder.build();
     }
 
-    /**
-     * Binds per-cache TTL overrides from {@code platform.cache.ttl.<cacheName>=<duration>} properties.
-     */
+    /** Binds per-cache TTL overrides from platform.cache.ttl properties. */
     @Bean
     @ConditionalOnMissingBean
     public CacheTtlProperties cacheTtlProperties() {

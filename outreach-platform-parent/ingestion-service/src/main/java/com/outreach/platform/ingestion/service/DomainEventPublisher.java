@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Writes domain events to the MongoDB domain_events outbox collection with PENDING status.
- * An external poller is responsible for picking up PENDING events and publishing them.
- */
+/** Writes domain events to the MongoDB outbox collection with PENDING status for later publishing. */
 @Named
 public class DomainEventPublisher {
 
@@ -34,10 +31,6 @@ public class DomainEventPublisher {
 
     /**
      * Publishes a domain event by writing it to the outbox collection.
-     * Sets the tenantId from the current TenantContext if present.
-     *
-     * @param eventType the event type constant
-     * @param payload   event data as a key-value map
      */
     public void publish(String eventType, Map<String, Object> payload) {
         DomainEventDocument event = new DomainEventDocument();

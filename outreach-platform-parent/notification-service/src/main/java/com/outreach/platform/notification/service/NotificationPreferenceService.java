@@ -27,20 +27,14 @@ public class NotificationPreferenceService {
         this.preferenceRepository = preferenceRepository;
     }
 
-    /**
-     * Retrieves notification preferences for an employee.
-     * Returns default preferences if none exist yet.
-     */
+    /** Returns default preferences if none exist yet. */
     public PreferenceDto getPreferences(String employeeId) {
         NotificationPreferenceDocument doc = preferenceRepository.findByEmployeeId(employeeId)
                 .orElseGet(() -> createDefault(employeeId));
         return toDto(doc);
     }
 
-    /**
-     * Updates notification preferences for an employee.
-     * Creates the preference document if it doesn't exist.
-     */
+    /** Updates preferences for an employee, creating the document if it doesn't exist. */
     public PreferenceDto updatePreferences(String employeeId, PreferenceUpdateRequest request) {
         NotificationPreferenceDocument doc = preferenceRepository.findByEmployeeId(employeeId)
                 .orElseGet(() -> {

@@ -14,19 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * JPA entity mapped to the volunteer_feedback table.
- * Represents a feedback submission from a volunteer for a specific event.
- * <p>
- * Extends {@link TenantAwareBaseEntity} which provides:
- * <ul>
- *   <li>UUID primary key (id)</li>
- *   <li>Tenant isolation via tenant_id column + Hibernate filter</li>
- *   <li>Automatic tenant assignment on persist via TenantEntityListener</li>
- *   <li>Audit fields (created_date, last_modified_date, created_by, last_modified_by)</li>
- *   <li>Optimistic locking (version)</li>
- * </ul>
- */
+/** JPA entity representing a volunteer's feedback submission for an event. */
 @Entity
 @Table(name = "volunteer_feedback", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "volunteer_id"})

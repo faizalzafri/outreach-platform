@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Fallback factory for EventServiceClient.
- * Returns empty/default results when event-service is unavailable,
- * allowing non-critical operations to degrade gracefully.
+ * Fallback factory for EventServiceClient that returns defaults when event-service is unavailable.
  */
 @Component
 public class EventServiceClientFallbackFactory implements FallbackFactory<EventServiceClient> {

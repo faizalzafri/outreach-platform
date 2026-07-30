@@ -11,19 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Validates that provided template variables match the declared variables_schema.
- * <p>
- * The variables_schema is a JSON object where each key is a variable name and
- * the value is an object describing the variable (e.g. type, required).
- * Example schema:
- * <pre>
- * {
- *   "volunteerName": { "type": "string", "required": true },
- *   "eventDate": { "type": "string", "required": false }
- * }
- * </pre>
- */
+/** Validates provided template variables against the declared JSON schema. */
 @Service
 public class TemplateValidationService {
 
@@ -34,13 +22,7 @@ public class TemplateValidationService {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Validates that the provided variables satisfy the template's schema.
-     *
-     * @param variablesSchema the JSON schema string from the template entity
-     * @param variables       the actual variables provided for rendering
-     * @return list of validation error messages; empty if valid
-     */
+    /** Validates that the provided variables satisfy the template's schema, returning any errors. */
     public List<String> validate(String variablesSchema, Map<String, Object> variables) {
         List<String> errors = new ArrayList<>();
 

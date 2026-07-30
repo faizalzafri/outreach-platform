@@ -23,7 +23,6 @@ import java.util.NoSuchElementException;
 
 /**
  * Global exception handler providing consistent structured error responses across all services.
- * Handles validation errors, authentication/authorization failures, not-found, conflict, and storage errors.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {

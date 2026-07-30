@@ -10,9 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Security configuration for the Notification Service.
- * Configures OAuth2 Resource Server with JWT validation.
- * Stateless session management — CSRF disabled for API-only service.
+ * Security configuration for the Notification Service with OAuth2 JWT validation and stateless sessions.
  */
 @Configuration
 @EnableWebSecurity

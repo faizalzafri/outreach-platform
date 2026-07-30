@@ -15,11 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/**
- * RabbitMQ listener for domain events consumed by the notification service.
- * Listens on the notification queue and routes messages to the appropriate handler.
- * The existing MongoDB poller ({@link DomainEventConsumer}) is kept as a fallback.
- */
+/** RabbitMQ listener that routes domain events to notification handlers. */
 @Service
 public class RabbitMqEventListener {
 
@@ -35,10 +31,7 @@ public class RabbitMqEventListener {
         this.emailDispatchService = emailDispatchService;
     }
 
-    /**
-     * Handles all domain events arriving on the notification queue.
-     * Routes to the appropriate handler based on eventType.
-     */
+    /** Routes incoming domain events to the appropriate handler based on eventType. */
     @RabbitListener(queues = RabbitMqConstants.QUEUE_NOTIFICATION)
     public void onMessage(DomainEventMessage message) {
         log.info("Received domain event via RabbitMQ: type={}, eventId={}",

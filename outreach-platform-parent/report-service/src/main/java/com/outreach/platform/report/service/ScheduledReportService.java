@@ -21,11 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Service managing CRUD operations for scheduled report configurations.
- * Stores schedules in PostgreSQL via JPA with JSON serialization for
- * filter criteria and recipient lists.
- */
+/** Manages CRUD operations for scheduled report configurations stored in PostgreSQL. */
 @Service
 public class ScheduledReportService {
 
@@ -40,9 +36,6 @@ public class ScheduledReportService {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Lists all scheduled reports ordered by creation time descending.
-     */
     @Transactional(readOnly = true)
     public List<ScheduledReportDto> listScheduledReports() {
         return scheduleRepository.findAllByOrderByCreatedAtDesc()
@@ -51,17 +44,11 @@ public class ScheduledReportService {
                 .toList();
     }
 
-    /**
-     * Retrieves a single scheduled report by ID.
-     */
     @Transactional(readOnly = true)
     public Optional<ScheduledReportDto> getScheduledReport(UUID id) {
         return scheduleRepository.findById(id).map(this::toDto);
     }
 
-    /**
-     * Creates a new scheduled report configuration.
-     */
     @Transactional
     public ScheduledReportDto createScheduledReport(ScheduledReportCreateRequest request) {
         ReportScheduleEntity entity = new ReportScheduleEntity();
@@ -79,9 +66,6 @@ public class ScheduledReportService {
         return toDto(saved);
     }
 
-    /**
-     * Updates an existing scheduled report configuration.
-     */
     @Transactional
     public Optional<ScheduledReportDto> updateScheduledReport(UUID id, ScheduledReportUpdateRequest request) {
         return scheduleRepository.findById(id).map(entity -> {
@@ -113,9 +97,6 @@ public class ScheduledReportService {
         });
     }
 
-    /**
-     * Deletes a scheduled report by ID.
-     */
     @Transactional
     public boolean deleteScheduledReport(UUID id) {
         if (scheduleRepository.existsById(id)) {

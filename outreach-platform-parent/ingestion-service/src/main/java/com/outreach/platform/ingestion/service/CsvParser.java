@@ -15,10 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Parses CSV files into a list of parsed rows.
- * Handles quoted fields and streaming line-by-line reading.
- */
+/** Parses CSV files into a list of parsed rows, handling quoted fields. */
 @Named
 public class CsvParser {
 
@@ -26,13 +23,7 @@ public class CsvParser {
     private static final char DELIMITER = ',';
     private static final char QUOTE = '"';
 
-    /**
-     * Parse a CSV input stream into rows.
-     *
-     * @param inputStream file input stream
-     * @return list of parsed rows with column-to-value mappings
-     * @throws IOException if the file cannot be read
-     */
+    /** Parse a CSV input stream into rows with column-to-value mappings. */
     public List<ParsedRow> parse(InputStream inputStream) throws IOException {
         List<ParsedRow> rows = new ArrayList<>();
 
@@ -67,9 +58,7 @@ public class CsvParser {
         return rows;
     }
 
-    /**
-     * Parses a single CSV line respecting quoted fields.
-     */
+
     private List<String> parseLine(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder current = new StringBuilder();

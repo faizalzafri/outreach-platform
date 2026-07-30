@@ -8,9 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * AuditorAware implementation that extracts the current authenticated user's
- * identity from the Spring Security context.
- * Used to populate @CreatedBy and @LastModifiedBy fields on JPA entities.
+ * AuditorAware implementation that extracts the current user from the SecurityContext for @CreatedBy/@LastModifiedBy fields.
  */
 @Component("auditorAware")
 public class SecurityAuditorAware implements AuditorAware<String> {

@@ -11,14 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 /**
- * Custom health indicator that verifies the Identity Provider's JWKS endpoint
- * is reachable and returning valid JSON.
- *
- * <p>Only activated when {@code spring.security.oauth2.resourceserver.jwt.jwk-set-uri}
- * is configured. Performs a lightweight GET request to the JWKS URI and validates
- * the response contains a {@code keys} array (standard JWKS response structure).
- *
- * <p>Reports UP with the JWKS URI or DOWN with the failure reason.
+ * Health indicator that checks IdP reachability by fetching the configured JWKS endpoint.
  */
 @Component
 @ConditionalOnProperty("spring.security.oauth2.resourceserver.jwt.jwk-set-uri")

@@ -8,11 +8,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Security configuration for the Ingestion Service.
- * Configures OAuth2 Resource Server with JWT validation.
- * All endpoints require authentication except health actuator probes.
- */
+/** OAuth2 Resource Server security configuration with JWT validation. */
 @Configuration
 @EnableWebSecurity
 @Profile("!it")

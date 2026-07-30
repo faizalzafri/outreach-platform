@@ -8,10 +8,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * OpenAPI 3.1 configuration for the Feedback Service.
- * Exposes /v3/api-docs in all environments and Swagger UI in non-production.
- */
+/** OpenAPI 3.1 documentation configuration for the Feedback Service. */
 @Configuration
 public class OpenApiConfig {
 

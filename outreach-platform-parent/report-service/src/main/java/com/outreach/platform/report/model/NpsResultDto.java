@@ -4,10 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 
-/**
- * Net Promoter Score breakdown by event.
- * NPS is calculated from feedback scores: promoters (4-5), passives (3), detractors (1-2).
- */
+/** Net Promoter Score breakdown by event, calculated from feedback scores. */
 @Schema(description = "Net Promoter Score breakdown for an event")
 public record NpsResultDto(
         @Schema(description = "Event ID", example = "550e8400-e29b-41d4-a716-446655440000")
