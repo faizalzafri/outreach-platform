@@ -43,8 +43,6 @@ public class TenantService {
      *
      * @param request the create request with name and slug
      * @return the created tenant response
-     * @throws DuplicateTenantNameException if name already exists
-     * @throws DuplicateTenantSlugException if slug already exists
      */
     @Transactional
     public TenantResponse createTenant(CreateTenantRequest request) {
@@ -81,7 +79,6 @@ public class TenantService {
      *
      * @param id the tenant UUID
      * @return the tenant response
-     * @throws TenantNotFoundException if not found
      */
     @Transactional(readOnly = true)
     public TenantResponse getTenant(UUID id) {
@@ -95,8 +92,6 @@ public class TenantService {
      * @param id      the tenant UUID
      * @param request the update request with new name
      * @return the updated tenant response
-     * @throws TenantNotFoundException     if not found
-     * @throws DuplicateTenantNameException if new name already exists
      */
     @Transactional
     public TenantResponse updateTenant(UUID id, UpdateTenantRequest request) {
@@ -113,11 +108,10 @@ public class TenantService {
     }
 
     /**
-     * Deactivates a tenant (sets status to DEACTIVATED).
+     * Deactivates a tenant.
      *
      * @param id the tenant UUID
      * @return the updated tenant response
-     * @throws TenantNotFoundException if not found
      */
     @Transactional
     public TenantResponse deactivateTenant(UUID id) {
@@ -129,11 +123,10 @@ public class TenantService {
     }
 
     /**
-     * Suspends a tenant (sets status to SUSPENDED).
+     * Suspends a tenant.
      *
      * @param id the tenant UUID
      * @return the updated tenant response
-     * @throws TenantNotFoundException if not found
      */
     @Transactional
     public TenantResponse suspendTenant(UUID id) {
@@ -145,11 +138,10 @@ public class TenantService {
     }
 
     /**
-     * Reactivates a tenant (sets status to ACTIVE).
+     * Reactivates a tenant.
      *
      * @param id the tenant UUID
      * @return the updated tenant response
-     * @throws TenantNotFoundException if not found
      */
     @Transactional
     public TenantResponse activateTenant(UUID id) {
@@ -161,15 +153,10 @@ public class TenantService {
     }
 
     /**
-     * Onboards a new tenant atomically: creates the tenant and assigns
-     * the first admin user membership in a single transaction.
-     * Full rollback on any failure.
+     * Onboards a new tenant atomically: creates the tenant and assigns the first admin membership.
      *
      * @param request the onboarding request with tenant details and admin user ID
-     * @return the onboarding response with created tenant and admin info
-     * @throws DuplicateTenantNameException if tenant name already exists
-     * @throws DuplicateTenantSlugException if tenant slug already exists
-     * @throws AdminUserAlreadyAssignedException if admin user already has a membership in any tenant
+     * @return the onboarding response
      */
     @Transactional
     public OnboardTenantResponse onboardTenant(OnboardTenantRequest request) {

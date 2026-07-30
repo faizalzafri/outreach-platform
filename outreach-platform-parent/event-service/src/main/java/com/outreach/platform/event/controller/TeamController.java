@@ -32,9 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * REST controller for team CRUD operations and team membership management.
- * All endpoints require TENANT_ADMIN, ADMIN, or PLATFORM_ADMIN role.
- * Tenant scoping is enforced automatically via the Hibernate TenantFilter.
+ * REST controller for team CRUD and team membership management.
  */
 @RestController
 @CrossOrigin(origins = "*")

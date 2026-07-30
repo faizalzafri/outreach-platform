@@ -20,10 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Service for writing and querying audit log entries in the MongoDB audit_logs collection.
- * Called explicitly by service-layer code after mutations for full transparency.
- */
+/** Service for writing and querying audit log entries in MongoDB. */
 @Service
 public class AuditLogService {
 
@@ -39,14 +36,11 @@ public class AuditLogService {
     }
 
     /**
-     * Logs a Platform_Admin cross-tenant access event asynchronously (fire-and-forget).
-     * <p>
-     * Records the admin user, target tenant, action performed, endpoint accessed,
-     * and any additional metadata to the {@code platform_admin_audit_logs} collection.
+     * Logs a Platform_Admin cross-tenant access event asynchronously.
      *
-     * @param adminUserId    the Platform_Admin user performing the cross-tenant access
-     * @param targetTenantId the tenant being accessed (null if accessing all tenants)
-     * @param action         the action performed (e.g., method name or operation type)
+     * @param adminUserId    the admin user performing access
+     * @param targetTenantId the tenant being accessed (or null for all)
+     * @param action         the action performed
      * @param endpoint       the REST endpoint accessed
      * @param metadata       additional context (nullable)
      */
@@ -66,10 +60,10 @@ public class AuditLogService {
      * Logs an audit entry for a mutation operation.
      *
      * @param userId       the user who performed the action
-     * @param action       the action performed (e.g., "CREATE_EVENT", "UPDATE_STATUS")
-     * @param resourceType the type of resource affected (e.g., "Event", "Volunteer")
+     * @param action       the action performed
+     * @param resourceType the type of resource affected
      * @param resourceId   the identifier of the affected resource
-     * @param details      additional context about the action (nullable)
+     * @param details      additional context (nullable)
      */
     public void log(String userId, String action, String resourceType,
                     String resourceId, Map<String, Object> details) {
@@ -82,7 +76,7 @@ public class AuditLogService {
     /**
      * Queries audit log entries with optional filters and pagination.
      *
-     * @param criteria search filters (all optional)
+     * @param criteria search filters
      * @param pageable pagination parameters
      * @return paginated audit log entries
      */
@@ -103,8 +97,8 @@ public class AuditLogService {
     /**
      * Exports audit log entries matching the criteria as a CSV string.
      *
-     * @param criteria search filters (all optional)
-     * @return CSV-formatted string of matching audit log entries
+     * @param criteria search filters
+     * @return CSV-formatted string
      */
     public String exportAuditLogCsv(AuditLogSearchCriteria criteria) {
         Query query = buildQuery(criteria);

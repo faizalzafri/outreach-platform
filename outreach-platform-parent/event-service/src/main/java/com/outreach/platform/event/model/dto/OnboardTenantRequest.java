@@ -7,10 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
-/**
- * Request DTO for the tenant onboarding endpoint.
- * Creates a tenant and its first admin membership in a single atomic operation.
- */
+/** Request DTO for tenant onboarding — creates a tenant and its first admin atomically. */
 public record OnboardTenantRequest(
 
         @NotBlank(message = "Tenant name is required")

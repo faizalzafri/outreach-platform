@@ -30,11 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * REST controller for managing tenant memberships.
- * <p>
- * TENANT_ADMIN users can manage members within their own tenant.
- * PLATFORM_ADMIN users can manage members in any tenant.
- * Cross-tenant access for non-platform-admins is rejected with 403.
+ * REST controller for managing tenant memberships with cross-tenant access control.
  */
 @RestController
 @CrossOrigin(origins = "*")
@@ -49,9 +45,6 @@ public class TenantMembershipController {
         this.membershipService = membershipService;
     }
 
-    /**
-     * Lists all members of the specified tenant (paginated, default page size 20).
-     */
     @Operation(summary = "List tenant members", description = "Returns paginated members of the specified tenant")
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_PLATFORM_ADMIN')")
@@ -65,9 +58,6 @@ public class TenantMembershipController {
         return ResponseEntity.ok(members);
     }
 
-    /**
-     * Adds a member to the specified tenant.
-     */
     @Operation(summary = "Add tenant member", description = "Adds a user to the tenant with the specified role")
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_PLATFORM_ADMIN')")
@@ -81,9 +71,6 @@ public class TenantMembershipController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Removes a member from the specified tenant.
-     */
     @Operation(summary = "Remove tenant member", description = "Removes a user from the tenant")
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_PLATFORM_ADMIN')")
@@ -99,14 +86,7 @@ public class TenantMembershipController {
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
-    /**
-     * Enforces that a TENANT_ADMIN can only manage members in their own tenant.
-     * PLATFORM_ADMIN bypasses this check.
-     *
-     * @param tenantId       the tenant being accessed
-     * @param authentication the current authentication
-     * @throws AccessDeniedException if a non-platform-admin attempts cross-tenant access
-     */
+    /** Ensures TENANT_ADMINs can only manage their own tenant; PLATFORM_ADMINs bypass this. */
     private void enforceOwnTenantAccess(UUID tenantId, Authentication authentication) {
         boolean isPlatformAdmin = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

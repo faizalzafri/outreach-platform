@@ -11,10 +11,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Exception handling for tenant management REST endpoints.
- * Uses RFC 9457 Problem Detail responses.
- */
+/** Exception handler for tenant management endpoints using RFC 9457 Problem Detail. */
 @RestControllerAdvice(assignableTypes = TenantController.class)
 public class TenantControllerAdvice {
 

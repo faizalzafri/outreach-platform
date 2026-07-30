@@ -18,11 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/**
- * Business logic service for tenant membership management.
- * Handles adding/removing members and enforces invariants such as
- * duplicate detection and the last-admin protection rule.
- */
+/** Service for tenant membership management with duplicate detection and last-admin protection. */
 @Service
 public class TenantMembershipService {
 
@@ -39,18 +35,12 @@ public class TenantMembershipService {
     }
 
     /**
-     * Adds a member to a tenant with the specified role.
-     * <p>
-     * If the role being assigned is PLATFORM_ADMIN, verifies that the currently
-     * authenticated user already has ROLE_PLATFORM_ADMIN authority. Non-platform-admins
-     * cannot grant the PLATFORM_ADMIN role (self-elevation prevention).
+     * Adds a member to a tenant with the specified role. Only existing Platform_Admins can assign PLATFORM_ADMIN.
      *
      * @param tenantId the tenant UUID
      * @param userId   the user UUID to add
      * @param role     the role to assign
      * @return the created membership response
-     * @throws DuplicateMembershipException      if the user already has this role in the tenant
-     * @throws SelfElevationForbiddenException   if a non-platform-admin attempts to assign PLATFORM_ADMIN
      */
     @Transactional
     public MemberResponse addMember(UUID tenantId, UUID userId, TenantRole role) {
@@ -72,10 +62,7 @@ public class TenantMembershipService {
         return toResponse(saved);
     }
 
-    /**
-     * Verifies the currently authenticated user holds ROLE_PLATFORM_ADMIN authority.
-     * Rejects with {@link SelfElevationForbiddenException} if not.
-     */
+    /** Verifies the caller holds ROLE_PLATFORM_ADMIN authority. */
     private void enforceCallerIsPlatformAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -98,8 +85,6 @@ public class TenantMembershipService {
      *
      * @param tenantId the tenant UUID
      * @param userId   the user UUID to remove
-     * @throws MemberNotFoundException if the user is not a member of the tenant
-     * @throws LastAdminRemovalException if removing this user would leave no admins
      */
     @Transactional
     public void removeMember(UUID tenantId, UUID userId) {

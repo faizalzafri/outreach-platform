@@ -24,20 +24,7 @@ import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * Global gateway filter that enforces per-tenant rate limiting using Bucket4j token buckets.
- *
- * <p>Each tenant gets an independent token bucket stored in-memory (per instance).
- * The bucket is configured with a capacity and greedy refill rate controlled by
- * the {@code tenant.rate-limit.requests-per-second} property.</p>
- *
- * <p>Behavior:</p>
- * <ul>
- *   <li>If no {@code X-Tenant-ID} header is present (Platform_Admin), rate limiting is bypassed</li>
- *   <li>If the tenant's bucket is exhausted, returns HTTP 429 with {@code Retry-After} header</li>
- *   <li>Buckets are keyed by {@code ratelimit:{tenantId}}</li>
- * </ul>
- */
+/** Enforces per-tenant rate limiting using in-memory Bucket4j token buckets. */
 @Component
 public class TenantRateLimitFilter implements GlobalFilter, Ordered {
 

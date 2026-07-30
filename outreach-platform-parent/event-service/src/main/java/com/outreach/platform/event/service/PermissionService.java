@@ -18,19 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service for fine-grained resource permission checks and management.
- * Enforces access control based on resource visibility, ownership, team membership,
- * and permission levels.
- *
- * <p>Access logic:
- * <ol>
- *   <li>Owner always has full access (all permission levels)</li>
- *   <li>TENANT-visible resources grant VIEW to all tenant users; higher levels require explicit permission</li>
- *   <li>TEAM-visible resources grant access to team members with permission_level &ge; required</li>
- *   <li>PRIVATE resources are accessible only by the owner</li>
- * </ol>
- */
+/** Service enforcing resource access control based on visibility, ownership, team membership, and permission levels. */
 @Service
 public class PermissionService {
 
@@ -53,7 +41,7 @@ public class PermissionService {
      * @param resourceType the type of resource
      * @param resourceId   the resource identifier
      * @param required     the minimum permission level required
-     * @return true if access is granted, false otherwise
+     * @return true if access is granted
      */
     @Transactional(readOnly = true)
     public boolean hasAccess(UUID userId, ResourceType resourceType, UUID resourceId, PermissionLevel required) {
@@ -96,22 +84,13 @@ public class PermissionService {
     }
 
     /**
-     * Shares a resource with a team by creating or updating a resource permission record.
-     * <p>
-     * Validates that:
-     * <ul>
-     *   <li>The current user is the owner or has MANAGE permission on the resource</li>
-     *   <li>The current user belongs to the target team (unless they have ADMIN role)</li>
-     * </ul>
-     * If the resource was PRIVATE, its visibility is upgraded to TEAM.
+     * Shares a resource with a team by creating or updating a permission record.
+     * Upgrades PRIVATE visibility to TEAM if needed.
      *
      * @param resourceId   the resource UUID
      * @param resourceType the type of resource
      * @param teamId       the team to share with
      * @param level        the permission level to grant
-     * @throws ResourceNotFoundException    if no permission record exists for the resource
-     * @throws AccessDeniedException        if the user lacks MANAGE permission
-     * @throws TeamMembershipRequiredException if the user does not belong to the target team
      */
     @Transactional
     public void shareWithTeam(UUID resourceId, ResourceType resourceType, UUID teamId, PermissionLevel level) {
@@ -175,20 +154,11 @@ public class PermissionService {
     }
 
     /**
-     * Changes the visibility of a resource.
-     * <p>
-     * Validates that:
-     * <ul>
-     *   <li>The current user is the owner or has MANAGE permission</li>
-     *   <li>When changing to TEAM, at least one team must already be granted access</li>
-     * </ul>
+     * Changes the visibility of a resource. Requires owner or MANAGE permission.
      *
      * @param resourceId    the resource UUID
      * @param resourceType  the type of resource
      * @param newVisibility the new visibility level
-     * @throws ResourceNotFoundException     if no permission record exists for the resource
-     * @throws AccessDeniedException         if the user lacks MANAGE permission
-     * @throws NoTeamGrantedException        if changing to TEAM but no team has been granted access
      */
     @Transactional
     public void changeVisibility(UUID resourceId, ResourceType resourceType, Visibility newVisibility) {
@@ -228,14 +198,11 @@ public class PermissionService {
     }
 
     /**
-     * Lists all permission records for a given resource.
-     * Requires that the current user has at least VIEW access or is the owner.
+     * Lists all permission records for a resource. Requires at least VIEW access.
      *
      * @param resourceId   the resource UUID
      * @param resourceType the type of resource
-     * @return list of permission records for the resource
-     * @throws ResourceNotFoundException if no permission record exists for the resource
-     * @throws AccessDeniedException     if the user lacks VIEW permission
+     * @return list of permission records
      */
     @Transactional(readOnly = true)
     public List<ResourcePermission> listPermissions(UUID resourceId, ResourceType resourceType) {
@@ -260,12 +227,9 @@ public class PermissionService {
     }
 
     /**
-     * Revokes a specific permission by ID.
-     * Requires that the current user is the owner or has MANAGE permission on the resource.
+     * Revokes a specific permission by ID. Requires owner or MANAGE permission.
      *
      * @param permissionId the permission record UUID to revoke
-     * @throws PermissionNotFoundException if the permission record does not exist
-     * @throws AccessDeniedException       if the user lacks MANAGE permission
      */
     @Transactional
     public void revokePermission(UUID permissionId) {
@@ -287,9 +251,7 @@ public class PermissionService {
 
     // ─── Internal Helpers ───────────────────────────────────────────────────────
 
-    /**
-     * Checks if the user belongs to any team that has been granted access at or above the required level.
-     */
+    /** Checks if the user belongs to any team granted access at or above the required level. */
     private boolean hasTeamGrantedAccess(UUID userId, List<ResourcePermission> permissions, PermissionLevel required) {
         return permissions.stream()
                 .filter(p -> p.getGrantedTeamId() != null)
@@ -297,17 +259,12 @@ public class PermissionService {
                 .anyMatch(p -> teamMembershipRepository.existsByTeamIdAndUserId(p.getGrantedTeamId(), userId));
     }
 
-    /**
-     * Returns true if the granted level meets or exceeds the required level.
-     * Order: VIEW &lt; EDIT &lt; MANAGE
-     */
+    /** Returns true if granted level meets or exceeds required (VIEW < EDIT < MANAGE). */
     private boolean meetsOrExceeds(PermissionLevel granted, PermissionLevel required) {
         return granted.ordinal() >= required.ordinal();
     }
 
-    /**
-     * Extracts the current user's UUID from the SecurityContext.
-     */
+    /** Extracts the current user's UUID from the SecurityContext. */
     private UUID getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
@@ -316,9 +273,7 @@ public class PermissionService {
         return UUID.fromString(authentication.getName());
     }
 
-    /**
-     * Checks if the current user has the ADMIN role (ROLE_ADMIN or ROLE_PLATFORM_ADMIN).
-     */
+    /** Checks if the current user has ADMIN or PLATFORM_ADMIN role. */
     private boolean isCurrentUserAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

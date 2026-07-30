@@ -2,32 +2,15 @@ package com.outreach.platform.common.tenant;
 
 import java.util.UUID;
 
-/**
- * Thread-local holder for the current tenant identity.
- * <p>
- * Each incoming request is associated with exactly one tenant. The tenant ID is extracted
- * from the {@code X-Tenant-ID} header by {@code TenantContextFilter} and stored here
- * for the duration of the request. All downstream components (Hibernate filters, entity
- * listeners, cache key generators, message post-processors) read from this context.
- * <p>
- * <strong>Important:</strong> Always call {@link #clear()} in a {@code finally} block
- * to prevent thread-local leakage in pooled thread environments.
- *
- * @see TenantConstants#X_TENANT_ID_HEADER
- */
+/** Thread-local holder for the current tenant ID. Always call clear() in a finally block. */
 public final class TenantContext {
 
     private static final ThreadLocal<UUID> CURRENT_TENANT = new ThreadLocal<>();
 
     private TenantContext() {
-        // utility class — not instantiable
     }
 
-    /**
-     * Returns the tenant ID bound to the current thread.
-     *
-     * @return the current tenant UUID, or {@code null} if no tenant context is set
-     */
+    /** Returns the tenant ID bound to the current thread, or null if not set. */
     public static UUID getCurrentTenantId() {
         return CURRENT_TENANT.get();
     }
@@ -35,8 +18,7 @@ public final class TenantContext {
     /**
      * Binds the given tenant ID to the current thread.
      *
-     * @param tenantId the tenant UUID to associate with this thread; must not be {@code null}
-     * @throws IllegalArgumentException if {@code tenantId} is {@code null}
+     * @param tenantId the tenant UUID to associate with this thread
      */
     public static void setCurrentTenantId(UUID tenantId) {
         if (tenantId == null) {
@@ -45,19 +27,12 @@ public final class TenantContext {
         CURRENT_TENANT.set(tenantId);
     }
 
-    /**
-     * Removes the tenant context from the current thread.
-     * This must be called in a {@code finally} block after request processing completes.
-     */
+    /** Removes the tenant context from the current thread. */
     public static void clear() {
         CURRENT_TENANT.remove();
     }
 
-    /**
-     * Checks whether a tenant context is currently set on this thread.
-     *
-     * @return {@code true} if a tenant ID is present, {@code false} otherwise
-     */
+    /** Returns true if a tenant ID is currently set on this thread. */
     public static boolean isPresent() {
         return CURRENT_TENANT.get() != null;
     }

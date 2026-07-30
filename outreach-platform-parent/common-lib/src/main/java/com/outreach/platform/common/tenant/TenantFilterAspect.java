@@ -16,27 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Collection;
 import java.util.UUID;
 
-/**
- * AOP aspect that automatically enables the Hibernate tenant filter on JPA repository calls.
- * <p>
- * Before any Spring Data JPA repository method executes, this aspect:
- * <ol>
- *   <li>Checks whether the current user holds the {@code ROLE_PLATFORM_ADMIN} authority —
- *       if so, the filter is <em>not</em> enabled, allowing cross-tenant data access.</li>
- *   <li>Reads the tenant ID from {@link TenantContext} and enables the Hibernate
- *       {@code tenantFilter} session filter with that value.</li>
- *   <li>Throws an {@link IllegalStateException} if no tenant context is present and the
- *       user is not a platform admin — this prevents unscoped queries from leaking data
- *       across tenants.</li>
- * </ol>
- * <p>
- * The filter name is read from {@link TenantConstants#TENANT_FILTER_NAME} to keep it
- * consistent with the {@code @FilterDef} declared on {@link TenantAwareBaseEntity}.
- *
- * @see TenantContext
- * @see TenantAwareBaseEntity
- * @see TenantConstants#TENANT_FILTER_NAME
- */
+/** AOP aspect that enables the Hibernate tenant filter before JPA repository method execution. */
 @Aspect
 @Named("tenantFilterAspect")
 public class TenantFilterAspect {
@@ -52,19 +32,13 @@ public class TenantFilterAspect {
         this.entityManager = entityManager;
     }
 
-    /**
-     * Pointcut targeting all methods on Spring Data JPA repository interfaces.
-     */
     @Pointcut("execution(* org.springframework.data.jpa.repository.JpaRepository+.*(..))")
     public void jpaRepositoryMethods() {
-        // pointcut definition — no body required
     }
 
     /**
      * Enables the Hibernate tenant filter before repository method execution.
-     * <p>
-     * Skips enablement for users with {@code ROLE_PLATFORM_ADMIN} authority.
-     * Throws {@link IllegalStateException} if tenant context is absent for non-admin users.
+     * Skips enablement for platform admins to allow cross-tenant access.
      */
     @Before("jpaRepositoryMethods()")
     public void enableTenantFilter() {
@@ -88,11 +62,6 @@ public class TenantFilterAspect {
         log.debug("Tenant filter enabled with tenantId: {}", tenantId);
     }
 
-    /**
-     * Checks whether the current authenticated user holds the {@code ROLE_PLATFORM_ADMIN} authority.
-     *
-     * @return {@code true} if the user is a platform admin, {@code false} otherwise
-     */
     private boolean isPlatformAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

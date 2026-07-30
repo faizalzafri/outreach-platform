@@ -23,19 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Set;
 
-/**
- * Global gateway filter that validates the tenant's lifecycle status after the
- * tenant ID has been extracted by {@link TenantExtractionFilter}.
- *
- * <p>Enforcement rules:</p>
- * <ul>
- *   <li>DEACTIVATED → reject all requests with HTTP 403, error code {@code TENANT_DEACTIVATED}</li>
- *   <li>SUSPENDED + write method (POST/PUT/PATCH/DELETE) → reject with HTTP 403,
- *       error code {@code TENANT_SUSPENDED}</li>
- *   <li>SUSPENDED + read method (GET) → allow through</li>
- *   <li>ACTIVE → allow through</li>
- * </ul>
- */
+/** Validates the tenant's lifecycle status and rejects requests for deactivated or write-suspended tenants. */
 @Component
 public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
 
@@ -56,8 +44,7 @@ public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
         String tenantId = exchange.getRequest().getHeaders()
                 .getFirst(TenantConstants.X_TENANT_ID_HEADER);
 
-        // If no X-Tenant-ID header is present (e.g., Platform_Admin or unauthenticated),
-        // skip validation — TenantExtractionFilter handles those cases.
+        // No X-Tenant-ID means Platform_Admin or unauthenticated — skip validation
         if (tenantId == null || tenantId.isBlank()) {
             return chain.filter(exchange);
         }
@@ -66,7 +53,7 @@ public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
                 .flatMap(status -> evaluateStatus(exchange, chain, tenantId, status))
                 .onErrorResume(ex -> {
                     log.error("Failed to resolve tenant status for {}: {}", tenantId, ex.getMessage());
-                    // On Redis/network failure, allow the request through (fail-open for availability)
+                    // Fail-open for availability
                     return chain.filter(exchange);
                 });
     }
@@ -96,9 +83,7 @@ public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange);
     }
 
-    /**
-     * Writes a JSON error response conforming to the platform's standardized error format.
-     */
+    /** Writes a JSON error response in the platform's standardized format. */
     private Mono<Void> rejectWithError(ServerWebExchange exchange,
                                         HttpStatus httpStatus,
                                         String errorCode,
@@ -126,8 +111,7 @@ public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // Run after TenantExtractionFilter (HIGHEST_PRECEDENCE + 100)
-        // so that X-Tenant-ID header is already set on the request.
+        // Run after TenantExtractionFilter (+100)
         return Ordered.HIGHEST_PRECEDENCE + 101;
     }
 }

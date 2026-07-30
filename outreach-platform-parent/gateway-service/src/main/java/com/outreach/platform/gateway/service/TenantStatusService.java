@@ -10,17 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-/**
- * Service responsible for resolving tenant status using a two-tier cache strategy:
- * <ol>
- *   <li><b>L1 — Caffeine (local, 5s TTL, max 1000 entries)</b>: eliminates network roundtrip for hot-path reads</li>
- *   <li><b>L2 — Redis (60s TTL)</b>: shared cache across gateway instances</li>
- *   <li><b>L3 — Database</b>: source of truth (fallback, not yet wired)</li>
- * </ol>
- * <p>
- * Pattern: Caffeine (5s) → Redis (60s) → Database
- * This reduces Redis load by ~90% for hot-path reads (every request hits tenant status).
- */
+/** Resolves tenant status using two-tier caching: Caffeine (L1, 5s) → Redis (L2, 60s) → Database (L3). */
 @Service
 public class TenantStatusService {
 
@@ -35,11 +25,7 @@ public class TenantStatusService {
 
     private final ReactiveStringRedisTemplate redisTemplate;
 
-    /**
-     * L1 local cache: Caffeine with 5-second TTL and bounded size of 1000 entries.
-     * Short TTL ensures status changes propagate within seconds while eliminating
-     * a Redis network roundtrip on every gateway request.
-     */
+    /** L1 local cache: Caffeine with 5s TTL, max 1000 entries. */
     private final Cache<String, String> localCache;
 
     public TenantStatusService(ReactiveStringRedisTemplate redisTemplate) {
@@ -52,20 +38,13 @@ public class TenantStatusService {
     }
 
     /**
-     * Resolves the status of the given tenant using two-tier caching.
-     * <p>
-     * Lookup order:
-     * <ol>
-     *   <li>Check Caffeine local cache (L1) — no network call</li>
-     *   <li>On L1 miss: check Redis (L2) — one network call</li>
-     *   <li>On L2 miss: resolve from DB (L3) — currently defaults to ACTIVE</li>
-     * </ol>
+     * Resolves the tenant status using L1 (Caffeine) → L2 (Redis) → L3 (DB) lookup.
      *
      * @param tenantId the tenant identifier
-     * @return a Mono emitting the tenant status string (ACTIVE, SUSPENDED, or DEACTIVATED)
+     * @return a Mono emitting the tenant status string
      */
     public Mono<String> getTenantStatus(String tenantId) {
-        // L1: Check Caffeine local cache first (no network roundtrip)
+        // L1: Check local cache first
         String cachedLocally = localCache.getIfPresent(tenantId);
         if (cachedLocally != null) {
             log.debug("Tenant status L1 cache hit for {}: {}", tenantId, cachedLocally);
@@ -83,10 +62,7 @@ public class TenantStatusService {
                 .switchIfEmpty(resolveAndCache(tenantId, cacheKey));
     }
 
-    /**
-     * Resolves tenant status on L1+L2 cache miss. Currently defaults to ACTIVE.
-     * In the future, this will call an internal endpoint (e.g., auth-service) to fetch the actual status.
-     */
+    /** Resolves tenant status on cache miss; currently defaults to ACTIVE. */
     private Mono<String> resolveAndCache(String tenantId, String cacheKey) {
         log.debug("Tenant status L1+L2 cache miss for {}; defaulting to ACTIVE", tenantId);
 
@@ -102,8 +78,7 @@ public class TenantStatusService {
     }
 
     /**
-     * Invalidates the L1 local cache entry for a specific tenant.
-     * Called when a tenant status change event is received.
+     * Invalidates the L1 local cache entry for a tenant.
      *
      * @param tenantId the tenant identifier to invalidate
      */
@@ -112,9 +87,7 @@ public class TenantStatusService {
         log.debug("Invalidated L1 cache for tenant {}", tenantId);
     }
 
-    /**
-     * Returns the Caffeine cache stats for monitoring/actuator purposes.
-     */
+    /** Returns the Caffeine cache stats for monitoring. */
     public com.github.benmanes.caffeine.cache.stats.CacheStats getLocalCacheStats() {
         return localCache.stats();
     }
