@@ -16,10 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service for recording activity events and querying the activity feed.
- * Activities are stored in MongoDB as append-only documents with cursor-based pagination.
- */
+/** Service for recording activity events and querying the activity feed with cursor-based pagination. */
 @Service
 public class ActivityFeedService {
 
@@ -32,26 +29,21 @@ public class ActivityFeedService {
         this.activityEventRepository = activityEventRepository;
     }
 
-    /**
-     * Records an activity event to MongoDB (fire-and-forget, non-blocking).
-     *
-     * @param event the activity event to persist
-     */
+    /** Records an activity event to MongoDB asynchronously. */
     @Async
     public void record(ActivityEvent event) {
         activityEventRepository.save(event);
     }
 
     /**
-     * Retrieves the activity feed for a user within a tenant, applying optional filters
-     * and cursor-based pagination.
+     * Retrieves the activity feed for a user within a tenant.
      *
-     * @param tenantId the tenant ID to scope the query
-     * @param userId   the requesting user's ID (for visibility filtering)
-     * @param filter   optional filter criteria (teamId, actionType, resourceType, dateFrom, dateTo)
-     * @param cursor   optional cursor (timestamp) for fetching the next page (events before this timestamp)
+     * @param tenantId the tenant ID
+     * @param userId   the requesting user's ID
+     * @param filter   optional filter criteria
+     * @param cursor   optional cursor timestamp for pagination
      * @param limit    maximum number of items to return
-     * @return the activity feed response with items and a next cursor
+     * @return the activity feed response with items and next cursor
      */
     public ActivityFeedResponse getFeed(UUID tenantId, UUID userId, ActivityFeedFilter filter, Instant cursor, int limit) {
         Query query = new Query();

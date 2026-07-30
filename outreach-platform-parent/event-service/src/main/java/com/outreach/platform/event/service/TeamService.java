@@ -42,12 +42,10 @@ public class TeamService {
     }
 
     /**
-     * Creates a new team within the current tenant.
-     * Validates name uniqueness within the tenant.
+     * Creates a new team within the current tenant. Validates name uniqueness.
      *
      * @param request the create request with name and description
      * @return the created team response
-     * @throws DuplicateTeamNameException if a team with the same name exists in the tenant
      */
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest request) {
@@ -68,7 +66,6 @@ public class TeamService {
 
     /**
      * Returns a paginated list of teams in the current tenant.
-     * Tenant scoping is enforced automatically via Hibernate TenantFilter.
      *
      * @param pageable pagination parameters
      * @return page of team responses
@@ -79,11 +76,10 @@ public class TeamService {
     }
 
     /**
-     * Gets a team by ID within the current tenant.
+     * Gets a team by ID.
      *
      * @param id the team UUID
      * @return the team response
-     * @throws TeamNotFoundException if not found
      */
     @Transactional(readOnly = true)
     public TeamResponse getTeam(UUID id) {
@@ -92,14 +88,11 @@ public class TeamService {
     }
 
     /**
-     * Updates a team's name and description.
-     * Validates name uniqueness within the tenant if the name is changed.
+     * Updates a team's name and description. Validates name uniqueness if changed.
      *
      * @param id      the team UUID
-     * @param request the update request with new name and description
+     * @param request the update request
      * @return the updated team response
-     * @throws TeamNotFoundException      if not found
-     * @throws DuplicateTeamNameException if new name already exists in the tenant
      */
     @Transactional
     public TeamResponse updateTeam(UUID id, UpdateTeamRequest request) {
@@ -119,10 +112,9 @@ public class TeamService {
     }
 
     /**
-     * Deletes a team and cascade-deletes all team memberships and resource permissions.
+     * Deletes a team and cascade-deletes memberships and resource permissions.
      *
      * @param id the team UUID
-     * @throws TeamNotFoundException if not found
      */
     @Transactional
     public void deleteTeam(UUID id) {
@@ -145,8 +137,6 @@ public class TeamService {
      * @param teamId the team UUID
      * @param userId the user UUID to add
      * @return the created membership response
-     * @throws TeamNotFoundException           if the team is not found
-     * @throws DuplicateTeamMemberException if the user is already a member
      */
     @Transactional
     public TeamMemberResponse addMember(UUID teamId, UUID userId) {
@@ -170,8 +160,6 @@ public class TeamService {
      *
      * @param teamId the team UUID
      * @param userId the user UUID to remove
-     * @throws TeamNotFoundException   if the team is not found
-     * @throws MemberNotFoundException if the user is not a member of the team
      */
     @Transactional
     public void removeMember(UUID teamId, UUID userId) {
@@ -191,7 +179,6 @@ public class TeamService {
      * @param teamId   the team UUID
      * @param pageable pagination parameters
      * @return page of team member responses
-     * @throws TeamNotFoundException if the team is not found
      */
     @Transactional(readOnly = true)
     public Page<TeamMemberResponse> listMembers(UUID teamId, Pageable pageable) {

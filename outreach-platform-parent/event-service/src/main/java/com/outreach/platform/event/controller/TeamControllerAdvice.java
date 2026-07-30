@@ -11,10 +11,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Exception handling for team management REST endpoints.
- * Uses RFC 9457 Problem Detail responses.
- */
+/** Exception handler for team management endpoints using RFC 9457 Problem Detail. */
 @RestControllerAdvice(assignableTypes = TeamController.class)
 public class TeamControllerAdvice {
 

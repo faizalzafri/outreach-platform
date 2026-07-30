@@ -20,21 +20,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * AOP aspect that intercepts controller methods when the authenticated user
- * holds the {@code ROLE_PLATFORM_ADMIN} authority.
- * <p>
- * Logs all Platform_Admin cross-tenant access to MongoDB via {@link AuditLogService}
- * using fire-and-forget semantics ({@code @Async} on the service method).
- * <p>
- * Captures:
- * <ul>
- *   <li>Who: the admin's principal name</li>
- *   <li>What: the controller method name</li>
- *   <li>Which tenant: from the {@code ?tenantId} query parameter or {@link TenantContext}</li>
- *   <li>Endpoint: the HTTP method and URI</li>
- * </ul>
- */
+/** AOP aspect that logs all Platform_Admin cross-tenant controller access to MongoDB via AuditLogService. */
 @Aspect
 @Component
 public class PlatformAdminAuditAspect {
@@ -49,18 +35,13 @@ public class PlatformAdminAuditAspect {
         this.auditLogService = auditLogService;
     }
 
-    /**
-     * Pointcut targeting all public methods in the controller package.
-     */
+    /** Pointcut targeting all public methods in the controller package. */
     @Pointcut("execution(* com.outreach.platform.event.controller..*(..))")
     public void controllerMethods() {
         // pointcut definition
     }
 
-    /**
-     * After a controller method returns successfully, log the access if the user
-     * is a Platform_Admin.
-     */
+
     @AfterReturning("controllerMethods()")
     public void auditPlatformAdminAccess(JoinPoint joinPoint) {
         if (!isPlatformAdmin()) {
@@ -106,12 +87,7 @@ public class PlatformAdminAuditAspect {
         return authentication != null ? authentication.getName() : "unknown";
     }
 
-    /**
-     * Resolves the target tenant ID from:
-     * 1. The {@code tenantId} query parameter (explicit scoping)
-     * 2. The current {@link TenantContext} (from header propagation)
-     * 3. {@code "ALL"} if no specific tenant is targeted (cross-tenant query)
-     */
+    /** Resolves target tenant from query param, TenantContext, or "ALL" for cross-tenant. */
     private String resolveTargetTenantId() {
         HttpServletRequest request = getCurrentRequest();
         if (request != null) {

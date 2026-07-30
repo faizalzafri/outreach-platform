@@ -12,13 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Service responsible for resolving tenant memberships for authenticated users.
- *
- * <p>Used by the token customizer to determine which tenant a user belongs to
- * at authentication time, enabling the {@code tenant_id} claim to be embedded
- * in issued JWTs.</p>
- */
+/** Resolves tenant memberships for authenticated users at token-issuance time. */
 @Named
 public class TenantMembershipService {
 
@@ -32,27 +26,12 @@ public class TenantMembershipService {
         this.tenantRepository = tenantRepository;
     }
 
-    /**
-     * Finds all tenant memberships for a given user.
-     *
-     * @param userId the unique identifier of the user
-     * @return list of memberships across all tenants the user belongs to
-     */
+
     public List<TenantMembership> findMembershipsByUserId(UUID userId) {
         return tenantMembershipRepository.findByUserId(userId);
     }
 
-    /**
-     * Resolves the active tenant for a user at authentication time.
-     *
-     * <p>Iterates through the user's tenant memberships and returns the first
-     * tenant that has an {@link TenantStatus#ACTIVE ACTIVE} status. This ensures
-     * that users are not authenticated into suspended or deactivated tenants.</p>
-     *
-     * @param userId the unique identifier of the user
-     * @return the first active tenant, or {@link Optional#empty()} if the user
-     *         has no membership in any active tenant
-     */
+    /** Returns the first active tenant the user belongs to, or empty if none. */
     public Optional<Tenant> getActiveTenantForUser(UUID userId) {
         List<TenantMembership> memberships = tenantMembershipRepository.findByUserId(userId);
 

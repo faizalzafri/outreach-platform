@@ -12,10 +12,7 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-/**
- * JPA entity representing the membership of a user within a tenant,
- * including their assigned role. Maps to the {@code tenant_memberships} table.
- */
+/** JPA entity representing a user's membership and role within a tenant. */
 @Entity
 @Table(name = "tenant_memberships")
 @Getter

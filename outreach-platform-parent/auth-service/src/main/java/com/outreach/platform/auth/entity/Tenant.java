@@ -10,10 +10,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * JPA entity representing a tenant in the multi-tenant platform.
- * Maps to the {@code tenants} table created by the Liquibase migration.
- */
+/** JPA entity representing a tenant in the multi-tenant platform. */
 @Entity
 @Table(name = "tenants")
 @Getter

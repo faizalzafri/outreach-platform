@@ -29,10 +29,6 @@ import java.util.UUID;
 
 /**
  * REST controller for fine-grained resource permission management.
- * Provides endpoints for sharing resources with teams, changing visibility,
- * listing permissions, and revoking access.
- *
- * <p>Permission checks are enforced at the service layer via {@link PermissionService}.
  */
 @RestController
 @CrossOrigin(origins = "*")

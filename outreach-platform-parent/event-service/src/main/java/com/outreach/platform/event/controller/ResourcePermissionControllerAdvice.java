@@ -13,10 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/**
- * Exception handling for resource permission REST endpoints.
- * Uses RFC 9457 Problem Detail responses.
- */
+/** Exception handler for resource permission endpoints using RFC 9457 Problem Detail. */
 @RestControllerAdvice(assignableTypes = ResourcePermissionController.class)
 public class ResourcePermissionControllerAdvice {
 

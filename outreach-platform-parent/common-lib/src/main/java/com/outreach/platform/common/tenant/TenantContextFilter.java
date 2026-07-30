@@ -12,26 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Servlet filter that extracts the tenant identifier from the {@code X-Tenant-ID} request header
- * and populates the {@link TenantContext} thread-local for the duration of the request.
- * <p>
- * Behavior:
- * <ul>
- *   <li>If the header is present and contains a valid UUID, the tenant context is set.</li>
- *   <li>If the header is present but contains an invalid UUID format, the request is rejected
- *       with HTTP 400 and error code {@code INVALID_TENANT_ID}.</li>
- *   <li>If the header is absent, the filter passes through without setting context.
- *       Endpoints that require tenant scoping are protected separately by
- *       {@code TenantFilterAspect} at the repository layer.</li>
- * </ul>
- * <p>
- * The {@link TenantContext} is <strong>always</strong> cleared in a {@code finally} block
- * to prevent thread-local leakage in servlet container thread pools.
- *
- * @see TenantContext
- * @see TenantConstants#X_TENANT_ID_HEADER
- */
+/** Servlet filter that extracts X-Tenant-ID from the request header and populates TenantContext. */
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(TenantContextFilter.class);
@@ -66,12 +47,6 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * Attempts to parse the given string as a UUID.
-     *
-     * @param value the string to parse
-     * @return the parsed UUID, or {@code null} if the format is invalid
-     */
     private UUID parseUuid(String value) {
         try {
             return UUID.fromString(value);
@@ -80,9 +55,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * Writes a JSON error response conforming to the platform's standardized error format.
-     */
+    /** Writes a JSON error response in the platform's standardized error format. */
     private void writeErrorResponse(HttpServletResponse response, int status,
                                     String errorCode, String message) throws IOException {
         response.setStatus(status);

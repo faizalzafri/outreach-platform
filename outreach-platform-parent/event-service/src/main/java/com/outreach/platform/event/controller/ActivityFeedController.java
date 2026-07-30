@@ -23,8 +23,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * REST controller for the activity feed.
- * Returns a cursor-paginated feed of activity events visible to the current user.
+ * REST controller for the activity feed with cursor-based pagination.
  */
 @RestController
 @CrossOrigin(origins = "*")

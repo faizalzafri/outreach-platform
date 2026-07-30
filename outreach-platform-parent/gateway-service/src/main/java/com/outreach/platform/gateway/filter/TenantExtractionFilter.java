@@ -16,19 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-/**
- * Global gateway filter that extracts the tenant identity from the authenticated JWT
- * and propagates it as the {@code X-Tenant-ID} header to downstream services.
- *
- * <p>Security responsibilities:</p>
- * <ul>
- *   <li>Strips any client-provided {@code X-Tenant-ID} header to prevent spoofing</li>
- *   <li>Extracts {@code tenant_id} claim from the validated JWT payload</li>
- *   <li>Validates the claim is a well-formed UUID (rejects with 400 if malformed)</li>
- *   <li>Forwards without {@code X-Tenant-ID} for platform administrators</li>
- *   <li>Rejects non-admin requests that lack a {@code tenant_id} claim with 403</li>
- * </ul>
- */
+/** Extracts tenant ID from the JWT and propagates it as X-Tenant-ID header to downstream services. */
 @Component
 public class TenantExtractionFilter implements GlobalFilter, Ordered {
 
@@ -89,9 +77,7 @@ public class TenantExtractionFilter implements GlobalFilter, Ordered {
         return chain.filter(mutatedExchange);
     }
 
-    /**
-     * Strips any client-provided X-Tenant-ID header from the request to prevent spoofing.
-     */
+    /** Strips any client-provided X-Tenant-ID header to prevent spoofing. */
     private ServerWebExchange stripTenantHeader(ServerWebExchange exchange) {
         ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                 .headers(headers -> headers.remove(TenantConstants.X_TENANT_ID_HEADER))
@@ -104,8 +90,7 @@ public class TenantExtractionFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // Run after security filter (which validates JWT) but before routing.
-        // CorrelationIdFilter is at HIGHEST_PRECEDENCE, RateLimit at +10.
+        // Run after security filter but before routing
         return Ordered.HIGHEST_PRECEDENCE + 100;
     }
 }
