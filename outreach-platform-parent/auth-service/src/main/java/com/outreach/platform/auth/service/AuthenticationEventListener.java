@@ -30,9 +30,11 @@ public class AuthenticationEventListener {
 
     @EventListener
     public void onAuthenticationFailure(AuthenticationFailureBadCredentialsEvent event) {
+        // Failure recording is handled directly by LockoutAwareAuthenticationProvider.
+        // This listener only logs for observability; the provider increments the counter
+        // to avoid double-counting when events are also published.
         String username = event.getAuthentication().getName();
         log.debug("Authentication failed for user: {}", username);
-        lockoutService.recordFailedAttempt(username);
     }
 
     @EventListener

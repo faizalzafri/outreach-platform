@@ -12,7 +12,6 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -26,7 +25,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -43,8 +41,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
  * Integration tests for the API Gateway.
  * Tests JWT validation, rate limiting, and circuit breaker behavior.
  *
- * Uses Testcontainers for Redis when Docker is available.
- * Falls back to local Redis on localhost:6379 when Docker is unavailable.
+ * Uses Testcontainers for Redis (started in a static initializer so it is
+ * available when @DynamicPropertySource runs — which happens before @BeforeAll).
  * WireMock simulates the JWKS endpoint and downstream backend services.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -53,44 +51,33 @@ class GatewayIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayIntegrationTest.class);
 
-    private static GenericContainer<?> redisContainer;
-    private static boolean usingTestcontainers = false;
+    // All infrastructure must be started in a static initializer because
+    // @DynamicPropertySource is resolved before @BeforeAll.
+    private static final GenericContainer<?> redisContainer;
+    private static final WireMockServer jwksServer;
+    private static final WireMockServer backendServer;
+    private static final RSAKey rsaKey;
 
-    private static WireMockServer jwksServer;
-    private static WireMockServer backendServer;
-    private static RSAKey rsaKey;
-
-    @Autowired
-    private WebTestClient webTestClient;
-
-    @Autowired
-    private ReactiveStringRedisTemplate redisTemplate;
-
-    @BeforeAll
-    static void setupInfrastructure() throws Exception {
-        // Try Testcontainers Redis if Docker is available; fall back to local Redis
-        try {
-            if (DockerClientFactory.instance().isDockerAvailable()) {
-                redisContainer = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-                        .withExposedPorts(6379);
-                redisContainer.start();
-                usingTestcontainers = true;
-                log.info("Using Testcontainers Redis on port {}", redisContainer.getMappedPort(6379));
-            }
-        } catch (Exception e) {
-            log.info("Docker not available, falling back to local Redis on localhost:6379");
-        }
+    static {
+        // Start Redis via Testcontainers
+        redisContainer = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                .withExposedPorts(6379);
+        redisContainer.start();
+        log.info("Testcontainers Redis started on port {}", redisContainer.getMappedPort(6379));
 
         // Generate RSA key pair for JWT signing
-        rsaKey = new RSAKeyGenerator(2048)
-                .keyID(UUID.randomUUID().toString())
-                .generate();
+        try {
+            rsaKey = new RSAKeyGenerator(2048)
+                    .keyID(UUID.randomUUID().toString())
+                    .generate();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate RSA key for tests", e);
+        }
 
         // Start WireMock to serve the JWKS endpoint
         jwksServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         jwksServer.start();
 
-        // Serve the JWKS endpoint
         JWKSet jwkSet = new JWKSet(rsaKey.toPublicJWK());
         jwksServer.stubFor(get(urlPathEqualTo("/protocol/openid-connect/certs"))
                 .willReturn(aResponse()
@@ -101,7 +88,6 @@ class GatewayIntegrationTest {
         backendServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         backendServer.start();
 
-        // Stub a simple endpoint on the backend
         backendServer.stubFor(get(urlPathMatching("/.*"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -114,29 +100,24 @@ class GatewayIntegrationTest {
                         .withBody("{\"status\":\"ok\"}")));
     }
 
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @Autowired
+    private ReactiveStringRedisTemplate redisTemplate;
+
     @AfterAll
     static void tearDown() {
-        if (jwksServer != null) {
-            jwksServer.stop();
-        }
-        if (backendServer != null) {
-            backendServer.stop();
-        }
-        if (redisContainer != null && redisContainer.isRunning()) {
-            redisContainer.stop();
-        }
+        jwksServer.stop();
+        backendServer.stop();
+        redisContainer.stop();
     }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        // Redis: Testcontainers if Docker available, local otherwise
-        if (usingTestcontainers && redisContainer != null) {
-            registry.add("spring.data.redis.host", redisContainer::getHost);
-            registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
-        } else {
-            registry.add("spring.data.redis.host", () -> "localhost");
-            registry.add("spring.data.redis.port", () -> "6379");
-        }
+        // Redis from Testcontainers (already started in static initializer)
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
 
         // JWKS endpoint from WireMock
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
