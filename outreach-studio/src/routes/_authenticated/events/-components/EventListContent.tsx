@@ -8,11 +8,15 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/data-table/DataTable';
+import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useToast } from '@/hooks/useToast';
+import type { NormalizedError } from '@/types/api';
 import type { Event, EventStatus } from '@/types/domain';
 
 import { Route } from '../index';
@@ -44,7 +48,8 @@ function StatusBadge({ status }: { status: EventStatus }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-const columns: ColumnDef<Event, unknown>[] = [
+function buildColumns(onDelete: (event: Event) => void): ColumnDef<Event, unknown>[] {
+  return [
   {
     accessorKey: 'eventCode',
     header: 'Code',
@@ -139,13 +144,15 @@ const columns: ColumnDef<Event, unknown>[] = [
           type="button"
           className={styles['actionBtn']}
           aria-label={`Delete event ${row.original.eventName}`}
+          onClick={() => onDelete(row.original)}
         >
           Delete
         </button>
       </div>
     ),
   },
-];
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -155,6 +162,8 @@ export function EventListContent() {
   const search = Route.useSearch();
   const [searchText, setSearchText] = useState(search.search ?? '');
   const debouncedSearch = useDebounce(searchText, 300);
+  const queryClient = useQueryClient();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const queryKey = useMemo(
     () => queryKeys.events.list({
@@ -164,6 +173,28 @@ export function EventListContent() {
       search: debouncedSearch || undefined,
     }),
     [search.page, search.size, search.status, debouncedSearch],
+  );
+
+  const deleteMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      await httpClient.delete(`/events/${eventId}`);
+    },
+    onSuccess: () => {
+      toastSuccess('Event deleted');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+    },
+    onError: (error: NormalizedError) => {
+      toastError(error.message || 'Failed to delete event');
+    },
+  });
+
+  const columns = useMemo(
+    () => buildColumns((event) => {
+      if (window.confirm(`Delete event "${event.eventName}"? This cannot be undone.`)) {
+        deleteMutation.mutate(event.id);
+      }
+    }),
+    [deleteMutation],
   );
 
   return (
