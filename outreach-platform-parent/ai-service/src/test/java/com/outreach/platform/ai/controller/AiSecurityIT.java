@@ -124,7 +124,7 @@ class AiSecurityIT {
     @WithMockUser(roles = "ADMIN")
     void adminRole_returns202() throws Exception {
         // Mock repository save to return a document with an ID
-        AiJobDocument savedJob = new AiJobDocument(AiJobType.SUMMARIZE, Map.of("context", "test"), Instant.now().plusSeconds(3600));
+        AiJobDocument savedJob = new AiJobDocument(java.util.UUID.randomUUID(), AiJobType.SUMMARIZE, Map.of("context", "test"), Instant.now().plusSeconds(3600));
         savedJob.setId("test-job-id");
         when(aiJobRepository.save(any())).thenReturn(savedJob);
         when(aiService.summarize(any(SummarizeRequest.class)))

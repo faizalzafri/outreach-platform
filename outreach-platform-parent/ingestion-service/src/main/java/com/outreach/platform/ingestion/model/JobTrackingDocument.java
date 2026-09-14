@@ -1,11 +1,13 @@
 package com.outreach.platform.ingestion.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * MongoDB document tracking the lifecycle of an import job.
@@ -15,6 +17,8 @@ public class JobTrackingDocument {
 
     @Id
     private String id;
+    @Indexed
+    private UUID tenantId;
     private String jobType;
     private String fileName;
     private JobStatus status;
@@ -37,6 +41,14 @@ public class JobTrackingDocument {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getJobType() {

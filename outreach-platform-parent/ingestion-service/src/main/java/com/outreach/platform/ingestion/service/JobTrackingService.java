@@ -1,5 +1,6 @@
 package com.outreach.platform.ingestion.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.model.FileMetadataDocument;
 import com.outreach.platform.ingestion.model.JobStatus;
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
@@ -43,6 +44,7 @@ public class JobTrackingService {
 
         JobTrackingDocument job = new JobTrackingDocument();
         job.setId(jobId);
+        job.setTenantId(TenantContext.getCurrentTenantId());
         job.setJobType(jobType);
         job.setFileName(fileName);
         job.setStatus(JobStatus.PENDING);
@@ -69,6 +71,14 @@ public class JobTrackingService {
 
     /**
      * Marks a job as RUNNING.
+     *
+     * <p>Not currently called from anywhere in this service — the lifecycle methods below
+     * (startJob/updateProgress/completeJob/failJob) use bare {@code findById} rather than
+     * {@link #findByIdTenantScoped(String)}, frozen in ArchUnit's {@code archunit_store} as a
+     * known, currently-inert gap rather than fixed, since they're not exposed to any tenant-
+     * crossing caller today. If one of these is ever wired up to a real async job processor, give
+     * it the tenant ID at job-creation time (the way {@link #createJob} already does) and route
+     * it through the tenant-scoped lookup before removing it from the freeze baseline.
      */
     public void startJob(String jobId, int totalRows) {
         jobTrackingRepository.findById(jobId).ifPresent(job -> {
@@ -132,7 +142,7 @@ public class JobTrackingService {
      * @return true if cancelled, false if already in a terminal state
      */
     public boolean cancelJob(String jobId) {
-        Optional<JobTrackingDocument> optJob = jobTrackingRepository.findById(jobId);
+        Optional<JobTrackingDocument> optJob = findByIdTenantScoped(jobId);
         if (optJob.isEmpty()) {
             return false;
         }
@@ -152,13 +162,27 @@ public class JobTrackingService {
      * Retrieves a job by its ID.
      */
     public Optional<JobTrackingDocument> getJob(String jobId) {
-        return jobTrackingRepository.findById(jobId);
+        return findByIdTenantScoped(jobId);
     }
 
     /**
      * Lists all jobs, paginated and sorted by creation date descending.
      */
     public Page<JobTrackingDocument> listJobs(Pageable pageable) {
-        return jobTrackingRepository.findAllByOrderByCreatedAtDesc(pageable);
+        // findAllByOrderByCreatedAtDesc() alone would return every tenant's jobs to any caller —
+        // see docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls
+        // back to the unscoped listing only for the PLATFORM_ADMIN case.
+        return TenantContext.isPresent()
+                ? jobTrackingRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.getCurrentTenantId(), pageable)
+                : jobTrackingRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    private Optional<JobTrackingDocument> findByIdTenantScoped(String jobId) {
+        // findById() alone would let any caller read/cancel any tenant's job by ID — see
+        // docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls back to
+        // the unscoped lookup only for the PLATFORM_ADMIN case.
+        return TenantContext.isPresent()
+                ? jobTrackingRepository.findByIdAndTenantId(jobId, TenantContext.getCurrentTenantId())
+                : jobTrackingRepository.findById(jobId);
     }
 }
