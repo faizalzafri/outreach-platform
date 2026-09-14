@@ -265,6 +265,10 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
+      # event-service owns the shared schema (creates volunteer_feedback etc.) — this service's
+      # own migrations ALTER those tables, so they must not race event-service's own migration run.
+      event-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9001/actuator/health || exit 1"]
       interval: 15s
@@ -312,6 +316,11 @@ services:
       discovery-service:
         condition: service_healthy
       mailhog:
+        condition: service_healthy
+      # event-service owns the shared schema (creates notification_templates/notification_schedules)
+      # — this service's own migrations ALTER/ensure those tables, so they must not race
+      # event-service's own migration run.
+      event-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9002/actuator/health/liveness || exit 1"]

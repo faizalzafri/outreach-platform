@@ -46,11 +46,30 @@
             <version>8.10.1</version>
         </dependency>
 
-        <!-- Common Library (TenantConstants, shared infrastructure) -->
+        <!--
+            Common Library (TenantConstants, shared infrastructure). Excludes
+            spring-boot-starter-web: gateway-service is a reactive WebFlux app
+            (spring-cloud-starter-gateway) and common-lib pulls in the servlet
+            starter unconditionally — with both on the classpath, Spring Security
+            auto-configures its servlet AND reactive security config in the same
+            context and they collide on the bean name conversionServicePostProcessor,
+            failing startup. Also excludes spring-boot-starter-data-jpa: the gateway
+            has no relational persistence of its own and configures no DataSource.
+        -->
         <dependency>
             <groupId>com.outreach.platform</groupId>
             <artifactId>common-lib</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-web</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-jpa</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.outreach.platform</groupId>

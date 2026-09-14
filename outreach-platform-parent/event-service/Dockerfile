@@ -7,7 +7,6 @@ WORKDIR /build
 
 COPY pom.xml ./
 COPY common-lib/pom.xml common-lib/pom.xml
-COPY config-server/pom.xml config-server/pom.xml
 COPY discovery-service/pom.xml discovery-service/pom.xml
 COPY gateway-service/pom.xml gateway-service/pom.xml
 COPY auth-service/pom.xml auth-service/pom.xml
