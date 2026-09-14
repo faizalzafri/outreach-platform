@@ -8,7 +8,9 @@ import type {
   DeliveryParams,
   UserListParams,
   AuditLogParams,
+  ListParams,
 } from '@/types/api';
+import type { ActivityFilters } from '@/types/tenant';
 
 /**
  * Structured query key factory for all domains.
@@ -58,5 +60,32 @@ export const queryKeys = {
     all: ['admin'] as const,
     users: (params?: UserListParams) => [...queryKeys.admin.all, 'users', params] as const,
     auditLog: (params: AuditLogParams) => [...queryKeys.admin.all, 'audit-log', params] as const,
+  },
+  tenants: {
+    all: ['tenants'] as const,
+    current: () => [...queryKeys.tenants.all, 'current'] as const,
+    list: (params?: { search?: string; page?: number }) =>
+      [...queryKeys.tenants.all, 'list', params] as const,
+  },
+  // Tenant-scoped: tenantId is included as a key segment so switching tenants
+  // (via the Platform Admin selector, or re-login) invalidates the right caches
+  // without touching data from a different tenant.
+  teams: {
+    all: (tenantId: string | null) => ['teams', tenantId] as const,
+    list: (tenantId: string | null, params?: ListParams) =>
+      [...queryKeys.teams.all(tenantId), 'list', params] as const,
+    detail: (tenantId: string | null, teamId: string) =>
+      [...queryKeys.teams.all(tenantId), 'detail', teamId] as const,
+    members: (tenantId: string | null, teamId: string, params?: ListParams) =>
+      [...queryKeys.teams.all(tenantId), 'detail', teamId, 'members', params] as const,
+  },
+  activities: {
+    all: (tenantId: string | null) => ['activities', tenantId] as const,
+    feed: (tenantId: string | null, filters?: ActivityFilters) =>
+      [...queryKeys.activities.all(tenantId), 'feed', filters] as const,
+  },
+  resources: {
+    permissions: (type: string, resourceId: string) =>
+      ['resources', type, resourceId, 'permissions'] as const,
   },
 } as const;

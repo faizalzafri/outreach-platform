@@ -37,6 +37,9 @@ export interface JwtClaims {
   };
   exp: number;
   iat: number;
+  tenant_id?: string;
+  tenant_roles?: string[];
+  platform_admin?: boolean;
 }
 
 export interface TokenResponse {

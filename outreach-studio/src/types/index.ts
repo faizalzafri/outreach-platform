@@ -43,3 +43,24 @@ export type {
   ApiErrorResponse,
   ToastPayload,
 } from './api';
+
+export type {
+  TenantStatus,
+  Tenant,
+  TenantMembership,
+  Team,
+  TeamMember,
+  Visibility,
+  PermissionLevel,
+  ResourcePermission,
+  ResourcePermissions,
+  ActivityActionType,
+  ActivityResourceType,
+  ActivityEvent,
+  ActivityFeedResponse,
+  TenantSelectionResponse,
+  TenantJwtClaims,
+  TeamListParams,
+  TeamMemberListParams,
+  ActivityFilters,
+} from './tenant';
