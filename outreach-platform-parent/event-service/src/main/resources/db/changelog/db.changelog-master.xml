@@ -61,4 +61,8 @@
          TenantAwareBaseEntity — owned here since report-service itself has Liquibase disabled -->
     <include file="db/changelog/20250122-006-add-audit-columns-to-report-schedules.sql"/>
 
+    <!-- 14. Fix seed users/volunteers whose PII columns were inserted as plaintext instead of
+         AES-256-GCM ciphertext, breaking JPA decryption for every list/read of those rows -->
+    <include file="db/changelog/20260914-001-fix-plaintext-seed-pii.sql"/>
+
 </databaseChangeLog>
