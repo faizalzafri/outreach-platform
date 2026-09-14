@@ -351,7 +351,6 @@ services:
       RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWT_JWK_SET_URI: http://auth-service:8090/oauth2/jwks
-      JWT_ISSUER_URI: http://auth-service:8090
       IDP_PROVIDER: keycloak
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
       INGESTION_INPUT_DIR: /tmp/ingestion

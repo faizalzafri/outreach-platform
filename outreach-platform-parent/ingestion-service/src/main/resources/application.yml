@@ -158,8 +158,13 @@ springdoc:
     operations-sorter: method
 
 # JWT configuration
+# No issuer-uri here, matching every other service: it would add a JwtIssuerValidator that
+# checks the token's iss claim string-equals this value, but auth-service issues tokens with
+# iss=http://localhost:8090 (how a browser reaches it for the OAuth2/PKCE flow) while a
+# same-service default here would use the internal Docker DNS name — a mismatch that 401s
+# every request with "The iss claim is not valid", even though the signature (validated via
+# jwk-set-uri below) is genuinely from auth-service.
 spring.security.oauth2.resourceserver.jwt:
-  issuer-uri: ${JWT_ISSUER_URI:http://localhost:8090}
   jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8090/oauth2/jwks}
 
 

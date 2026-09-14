@@ -43,15 +43,30 @@ public class ResponseBufferingFilter implements GlobalFilter, Ordered {
             public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
                 return DataBufferUtils.join(body)
                         .flatMap(buffer -> {
-                            getHeaders().remove(HttpHeaders.TRANSFER_ENCODING);
-                            getHeaders().setContentLength(buffer.readableByteCount());
+                            setContentLengthHeader(buffer.readableByteCount());
                             return super.writeWith(Mono.just(buffer));
                         })
                         .switchIfEmpty(Mono.defer(() -> {
-                            getHeaders().remove(HttpHeaders.TRANSFER_ENCODING);
-                            getHeaders().setContentLength(0);
+                            setContentLengthHeader(0);
                             return super.setComplete();
                         }));
+            }
+
+            /**
+             * A response the gateway's own security filter chain writes directly — a 401 from
+             * an expired/invalid JWT, before any proxying happens — carries {@link
+             * org.springframework.http.ReadOnlyHttpHeaders}, which throws on any mutation. That
+             * kind of response is already small, complete, and not streamed through the
+             * Reactor Netty proxy path this filter works around, so there's nothing to fix;
+             * skip the header rewrite rather than crash the exchange.
+             */
+            private void setContentLengthHeader(long length) {
+                try {
+                    getHeaders().remove(HttpHeaders.TRANSFER_ENCODING);
+                    getHeaders().setContentLength(length);
+                } catch (UnsupportedOperationException ignored) {
+                    // read-only headers — see method javadoc
+                }
             }
         };
 
