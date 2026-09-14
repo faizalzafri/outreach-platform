@@ -73,7 +73,7 @@ public class TeamService {
 
         Team saved = teamRepository.save(team);
         log.info("Created team '{}' (id={}) in tenant {}", saved.getName(), saved.getId(), tenantId);
-        return toResponse(saved);
+        return toResponse(saved, 0);
     }
 
     /**
@@ -84,7 +84,8 @@ public class TeamService {
      */
     @Transactional(readOnly = true)
     public Page<TeamResponse> listTeams(Pageable pageable) {
-        return teamRepository.findAll(pageable).map(this::toResponse);
+        return teamRepository.findAll(pageable)
+                .map(team -> toResponse(team, teamMembershipRepository.countByTeamId(team.getId())));
     }
 
     /**
@@ -96,7 +97,7 @@ public class TeamService {
     @Transactional(readOnly = true)
     public TeamResponse getTeam(UUID id) {
         Team team = findTeamOrThrow(id);
-        return toResponse(team);
+        return toResponse(team, teamMembershipRepository.countByTeamId(id));
     }
 
     /**
@@ -120,7 +121,7 @@ public class TeamService {
 
         Team saved = teamRepository.save(team);
         log.info("Updated team {} name to '{}' in tenant {}", id, saved.getName(), tenantId);
-        return toResponse(saved);
+        return toResponse(saved, teamMembershipRepository.countByTeamId(id));
     }
 
     /**
@@ -244,11 +245,12 @@ public class TeamService {
         return team.orElseThrow(() -> new TeamNotFoundException(id));
     }
 
-    private TeamResponse toResponse(Team team) {
+    private TeamResponse toResponse(Team team, long memberCount) {
         return new TeamResponse(
                 team.getId(),
                 team.getName(),
                 team.getDescription(),
+                memberCount,
                 team.getCreatedDate()
         );
     }

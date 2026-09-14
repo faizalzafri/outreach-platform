@@ -40,6 +40,14 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
     boolean existsByTeamIdAndUserId(UUID teamId, UUID userId);
 
     /**
+     * Count members of a team, for the team list page's member-count column.
+     *
+     * @param teamId the team's UUID
+     * @return number of members
+     */
+    long countByTeamId(UUID teamId);
+
+    /**
      * Delete all memberships for a given team (cascade on team deletion).
      *
      * @param teamId the team's UUID

@@ -7,7 +7,8 @@ export interface Tenant {
   name: string;
   slug: string;
   status: TenantStatus;
-  createdAt: string;
+  /** Named to match the backend's TenantResponse record field exactly (Jackson doesn't rename it). */
+  createdDate: string;
 }
 
 export interface TenantMembership {
@@ -22,14 +23,15 @@ export interface Team {
   name: string;
   description: string;
   memberCount: number;
-  createdAt: string;
+  /** Named to match the backend's TeamResponse record field exactly (Jackson doesn't rename it). */
+  createdDate: string;
 }
 
 export interface TeamMember {
   userId: string;
-  name: string;
-  email: string;
-  role: string;
+  username: string | null;
+  email: string | null;
+  joinedAt: string;
 }
 
 export type Visibility = 'PRIVATE' | 'TEAM' | 'TENANT';

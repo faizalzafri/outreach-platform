@@ -10,6 +10,7 @@ public record TeamResponse(
         UUID id,
         String name,
         String description,
+        long memberCount,
         Instant createdDate
 ) {
 }
