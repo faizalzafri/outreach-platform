@@ -141,7 +141,7 @@ class NotificationScheduleServiceTest {
         entity.setTriggerType(TriggerType.SCHEDULED);
         entity.setScheduledAt(scheduledAt);
         entity.setStatus(ScheduleStatus.PENDING);
-        entity.setCreatedAt(Instant.now());
+        entity.setCreatedDate(Instant.now());
         entity.setCreatedBy("admin");
         return entity;
     }

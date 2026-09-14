@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,7 +59,6 @@ public class ScheduledReportService {
         entity.setFilterCriteria(serializeJson(request.filterCriteria()));
         entity.setRecipients(serializeJson(request.recipients()));
         entity.setStatus(ScheduleStatus.ACTIVE);
-        entity.setCreatedAt(Instant.now());
 
         ReportScheduleEntity saved = scheduleRepository.save(entity);
         log.info("Created scheduled report: id={}, name={}", saved.getId(), saved.getName());
@@ -132,7 +130,7 @@ public class ScheduledReportService {
                 deserializeList(entity.getRecipients()),
                 entity.getStatus(),
                 entity.getNextRunAt(),
-                entity.getCreatedAt()
+                entity.getCreatedDate()
         );
     }
 

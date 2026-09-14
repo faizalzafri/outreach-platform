@@ -142,8 +142,8 @@ public class TemplateService {
                 entity.getVariablesSchema(),
                 entity.isActive(),
                 entity.getVersion(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt(),
+                entity.getCreatedDate(),
+                entity.getLastModifiedDate(),
                 entity.getCreatedBy()
         );
     }

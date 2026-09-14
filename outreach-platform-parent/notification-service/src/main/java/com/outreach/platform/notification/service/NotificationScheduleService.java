@@ -91,7 +91,7 @@ public class NotificationScheduleService {
                 entity.getScheduledAt(),
                 entity.getStatus(),
                 entity.getRecipientFilter(),
-                entity.getCreatedAt(),
+                entity.getCreatedDate(),
                 entity.getCreatedBy()
         );
     }

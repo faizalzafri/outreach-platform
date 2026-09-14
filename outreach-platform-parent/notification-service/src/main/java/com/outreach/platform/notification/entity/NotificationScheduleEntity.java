@@ -1,23 +1,14 @@
 package com.outreach.platform.notification.entity;
 
-import com.outreach.platform.common.tenant.TenantConstants;
-import com.outreach.platform.common.tenant.TenantEntityListener;
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.notification.model.ScheduleStatus;
 import com.outreach.platform.notification.model.TriggerType;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,24 +18,10 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "notification_schedules")
-@FilterDef(
-        name = TenantConstants.TENANT_FILTER_NAME,
-        parameters = @ParamDef(name = "tenantId", type = UUID.class)
-)
-@Filter(
-        name = TenantConstants.TENANT_FILTER_NAME,
-        condition = "tenant_id = :tenantId"
-)
-@EntityListeners({TenantEntityListener.class, AuditingEntityListener.class})
-public class NotificationScheduleEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
-    @Column(name = "tenant_id", nullable = false, updatable = false)
-    private UUID tenantId;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class NotificationScheduleEntity extends TenantAwareBaseEntity {
 
     @Column(name = "template_id", nullable = false)
     private UUID templateId;
@@ -69,33 +46,14 @@ public class NotificationScheduleEntity {
     @Column(name = "recipient_filter", columnDefinition = "jsonb")
     private String recipientFilter;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
     public NotificationScheduleEntity() {
     }
 
     // --- Getters and Setters ---
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getTenantId() {
-        return tenantId;
-    }
-
-    void setTenantId(UUID tenantId) {
-        this.tenantId = tenantId;
-    }
+    // id/tenantId/createdDate(→created_at)/lastModifiedDate(→updated_at)/createdBy/
+    // lastModifiedBy(→updated_by)/version are inherited from TenantAwareBaseEntity/BaseEntity —
+    // see the class-level @AttributeOverrides for the column-name mapping. Callers previously
+    // using getCreatedAt() must switch to getCreatedDate().
 
     public UUID getTemplateId() {
         return templateId;
@@ -151,21 +109,5 @@ public class NotificationScheduleEntity {
 
     public void setRecipientFilter(String recipientFilter) {
         this.recipientFilter = recipientFilter;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
     }
 }

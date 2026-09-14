@@ -10,4 +10,7 @@
     <!-- Multi-tenant SaaS: add tenant_id to notification tables -->
     <include file="db/changelog/20250120-002-add-tenant-id-to-notification-tables.sql"/>
 
+    <!-- Platform hardening: audit columns needed to extend TenantAwareBaseEntity -->
+    <include file="db/changelog/20250122-003-add-missing-audit-columns.sql"/>
+
 </databaseChangeLog>

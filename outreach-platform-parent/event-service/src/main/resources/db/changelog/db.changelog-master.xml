@@ -57,4 +57,8 @@
          but TenantMembershipEntity maps to it here too — needed for this service's own isolated tests) -->
     <include file="db/changelog/20250122-005-ensure-tenant-memberships-table-exists.sql"/>
 
+    <!-- 13. Add missing audit/version columns to report_schedules so ReportScheduleEntity can extend
+         TenantAwareBaseEntity — owned here since report-service itself has Liquibase disabled -->
+    <include file="db/changelog/20250122-006-add-audit-columns-to-report-schedules.sql"/>
+
 </databaseChangeLog>
