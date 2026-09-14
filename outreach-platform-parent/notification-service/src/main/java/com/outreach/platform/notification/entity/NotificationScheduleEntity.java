@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -43,6 +45,7 @@ public class NotificationScheduleEntity extends TenantAwareBaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private ScheduleStatus status;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "recipient_filter", columnDefinition = "jsonb")
     private String recipientFilter;
 
