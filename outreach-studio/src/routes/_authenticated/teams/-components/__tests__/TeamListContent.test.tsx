@@ -158,6 +158,7 @@ describe('TeamListContent', () => {
     expect(navigateSpy).toHaveBeenCalledWith({
       to: '/teams/$teamId',
       params: { teamId: MOCK_TEAMS[0]!.id },
+      search: { edit: false },
     });
 
     const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });

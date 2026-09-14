@@ -23,7 +23,9 @@
     <!-- Seed tenant_memberships for existing users → Default_Tenant -->
     <include file="db/changelog/20250121-002-seed-default-tenant-memberships.sql"/>
 
+    <!-- Fix admin password hash to match documented dev password -->
+    <include file="db/changelog/20250130-001-fix-admin-password-hash.sql"/>
+
     <!-- Multi-tenant login: track explicit tenant selection for users in multiple tenants -->
     <include file="db/changelog/20250131-001-add-tenant-membership-selection.sql"/>
-
 </databaseChangeLog>

@@ -128,7 +128,7 @@ export type TeamListSearch = z.infer<typeof teamListSearchSchema>;
  * Team detail search params — `edit=true` opens the edit form immediately.
  */
 export const teamDetailSearchSchema = z.object({
-  edit: z.boolean().default(false).catch(false),
+  edit: z.boolean().optional().default(false).catch(false),
 });
 
 export type TeamDetailSearch = z.infer<typeof teamDetailSearchSchema>;

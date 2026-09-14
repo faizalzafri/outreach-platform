@@ -183,7 +183,7 @@ export function TeamListContent() {
               <button
                 type="button"
                 className={styles['actionBtn']}
-                onClick={() => void navigate({ to: '/teams/$teamId', params: { teamId: team.id } })}
+                onClick={() => void navigate({ to: '/teams/$teamId', params: { teamId: team.id }, search: { edit: false } })}
               >
                 View
               </button>
