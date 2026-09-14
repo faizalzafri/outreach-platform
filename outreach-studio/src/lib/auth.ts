@@ -48,11 +48,13 @@ function getKeycloakEndpoints(config: KeycloakConfig) {
   // Otherwise, use Spring Authorization Server endpoints
   // Authorization endpoint uses the full URL (browser redirect)
   // Token/revoke use relative paths (proxied via Vite in dev, Nginx in prod)
-  // Logout uses the full URL (browser redirect to end server session)
+  // Logout uses the full URL (browser redirect to end server session) — auth-service's own
+  // SecurityConfig maps its logout endpoint at the plain Spring Security default path, /logout,
+  // not the OIDC RP-initiated-logout path /connect/logout (which this auth server doesn't expose).
   return {
     authorization: `${config.url}/oauth2/authorize`,
     token: `/oauth2/token`,
-    logout: `${config.url}/connect/logout`,
+    logout: `${config.url}/logout`,
     revoke: `/oauth2/revoke`,
   };
 }
@@ -432,7 +434,7 @@ export function createAuthModule(): AuthModule {
 
     // Redirect to auth server's logout which invalidates the session
     // and redirects back to our login page (configured in SecurityConfig)
-    window.location.href = `${config.url}/logout`;
+    window.location.href = endpoints.logout;
   }
 
   function getAccessToken(): string | null {
