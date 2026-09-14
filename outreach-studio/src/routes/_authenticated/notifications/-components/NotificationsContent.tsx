@@ -297,8 +297,9 @@ function TemplatesTab() {
 
   const previewMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await httpClient.get<PreviewResponse>(
-        `/notifications/templates/${id}/preview`
+      const response = await httpClient.post<PreviewResponse>(
+        `/notifications/templates/${id}/preview`,
+        { templateId: id, variables: {} }
       );
       return response.data;
     },
