@@ -10,6 +10,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { z } from 'zod';
 import { PageSkeleton } from '@/components/feedback/PageSkeleton';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
 const IngestionContent = lazy(() =>
   import('./-components/IngestionContent').then((mod) => ({
@@ -36,8 +37,10 @@ export const Route = createFileRoute('/_authenticated/ingestion/')({
 
 function IngestionPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Data Ingestion" />}>
-      <IngestionContent />
-    </Suspense>
+    <ProtectedRoute requiredRoles={['ROLE_ADMIN']}>
+      <Suspense fallback={<PageSkeleton title="Data Ingestion" />}>
+        <IngestionContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

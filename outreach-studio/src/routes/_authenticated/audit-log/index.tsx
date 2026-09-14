@@ -10,6 +10,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { z } from 'zod';
 import { PageSkeleton } from '@/components/feedback/PageSkeleton';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
 const AuditLogContent = lazy(() =>
   import('./-components/AuditLogContent').then((mod) => ({
@@ -37,8 +38,10 @@ export const Route = createFileRoute('/_authenticated/audit-log/')({
 
 function AuditLogPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Audit Log" />}>
-      <AuditLogContent />
-    </Suspense>
+    <ProtectedRoute requiredRoles={['ROLE_ADMIN']}>
+      <Suspense fallback={<PageSkeleton title="Audit Log" />}>
+        <AuditLogContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

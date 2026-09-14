@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @RequestMapping("/ingestion/jobs")
 @Tag(name = "Job Tracking", description = "Ingestion job status, progress, error details, and cancellation")
+@PreAuthorize("hasAnyRole('TENANT_ADMIN', 'ADMIN', 'PLATFORM_ADMIN')")
 public class JobController {
 
     private final JobTrackingService jobTrackingService;
