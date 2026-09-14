@@ -11,7 +11,7 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { authModule } from '@/lib/auth';
+import { authModule, NoTenantAssociationError } from '@/lib/auth';
 import styles from './login.module.css';
 
 interface CallbackSearchParams {
@@ -41,8 +41,19 @@ function CallbackPage() {
 
       try {
         await authModule.handleCallback(code, state);
-        void navigate({ to: '/' });
+        // Tenant selection is checked again by the /_authenticated route guard on every
+        // protected-route render, not just here — this early redirect just avoids an extra
+        // flash of the dashboard before that guard kicks in.
+        if (authModule.getState().tenantSelectionRequired) {
+          void navigate({ to: '/select-tenant' });
+        } else {
+          void navigate({ to: '/' });
+        }
       } catch (err) {
+        if (err instanceof NoTenantAssociationError) {
+          void navigate({ to: '/no-tenant' });
+          return;
+        }
         const message = err instanceof Error ? err.message : 'Authentication failed';
         setError(message);
       }

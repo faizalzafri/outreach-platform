@@ -1,0 +1,127 @@
+.wideCard {
+  max-width: 480px;
+  width: 100%;
+}
+
+.list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.tenantCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.tenantCard:hover:not(:disabled) {
+  border-color: var(--focus-ring);
+  background-color: var(--bg-hover);
+}
+
+.tenantCard:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.disabledCard {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tenantCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tenantName {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lastUsedLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.tenantCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.statusBadge {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.active {
+  background-color: var(--color-success-50);
+  color: var(--color-success-700);
+}
+
+.suspended {
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-700);
+}
+
+.deactivated {
+  background-color: var(--color-danger-50);
+  color: var(--color-danger-700);
+}
+
+.roleLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.selectingSpinner {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorBox {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-danger-500);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-50);
+  color: var(--color-danger-700);
+  font-size: 0.8125rem;
+  text-align: center;
+}

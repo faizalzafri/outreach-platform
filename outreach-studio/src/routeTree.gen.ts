@@ -13,6 +13,8 @@ import { Route as R404RouteImport } from './routes/404'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NoTenantRouteImport } from './routes/no-tenant'
+import { Route as SelectTenantRouteImport } from './routes/select-tenant'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
@@ -44,6 +46,16 @@ const CallbackRoute = CallbackRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoTenantRoute = NoTenantRouteImport.update({
+  id: '/no-tenant',
+  path: '/no-tenant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelectTenantRoute = SelectTenantRouteImport.update({
+  id: '/select-tenant',
+  path: '/select-tenant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -127,6 +139,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/events/create': typeof AuthenticatedEventsCreateRoute
@@ -144,6 +158,8 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/': typeof AuthenticatedIndexRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
@@ -164,6 +180,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/events/$eventId': typeof AuthenticatedEventsEventIdRoute
@@ -185,6 +203,8 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/dashboard'
     | '/events/$eventId'
     | '/events/create'
@@ -202,6 +222,8 @@ export interface FileRouteTypes {
     | '/404'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/dashboard'
     | '/'
     | '/events/$eventId'
@@ -221,6 +243,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/_authenticated/dashboard'
     | '/_authenticated/'
     | '/_authenticated/events/$eventId'
@@ -241,6 +265,8 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   CallbackRoute: typeof CallbackRoute
   LoginRoute: typeof LoginRoute
+  NoTenantRoute: typeof NoTenantRoute
+  SelectTenantRoute: typeof SelectTenantRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -271,6 +297,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/no-tenant': {
+      id: '/no-tenant'
+      path: '/no-tenant'
+      fullPath: '/no-tenant'
+      preLoaderRoute: typeof NoTenantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/select-tenant': {
+      id: '/select-tenant'
+      path: '/select-tenant'
+      fullPath: '/select-tenant'
+      preLoaderRoute: typeof SelectTenantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -409,6 +449,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   CallbackRoute: CallbackRoute,
   LoginRoute: LoginRoute,
+  NoTenantRoute: NoTenantRoute,
+  SelectTenantRoute: SelectTenantRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

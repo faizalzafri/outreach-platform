@@ -66,6 +66,7 @@ export const queryKeys = {
     current: () => [...queryKeys.tenants.all, 'current'] as const,
     list: (params?: { search?: string; page?: number }) =>
       [...queryKeys.tenants.all, 'list', params] as const,
+    memberships: () => [...queryKeys.tenants.all, 'memberships'] as const,
   },
   // Tenant-scoped: tenantId is included as a key segment so switching tenants
   // (via the Platform Admin selector, or re-login) invalidates the right caches

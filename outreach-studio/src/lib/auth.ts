@@ -86,6 +86,19 @@ export function generateState(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * Thrown by {@link createAuthModule}'s `handleCallback` when the auth server rejects token
+ * issuance with the `NO_TENANT_ASSOCIATION` OAuth2 error — the authenticated user has no tenant
+ * membership at all. The callback route checks for this specific type to redirect to `/no-tenant`
+ * instead of showing a generic authentication-failed message.
+ */
+export class NoTenantAssociationError extends Error {
+  constructor() {
+    super('User has no tenant association');
+    this.name = 'NoTenantAssociationError';
+  }
+}
+
 // --- Token Helpers ---
 
 /**
@@ -308,6 +321,14 @@ export function createAuthModule(): AuthModule {
       });
 
       if (!response.ok) {
+        // The auth server rejects token issuance with this specific OAuth2 error code (RFC 6749
+        // §5.2 error response) when an authenticated user has no tenant membership at all —
+        // distinct from every other token-exchange failure, since the callback route needs to
+        // send the user to a dedicated explanatory page rather than a generic error message.
+        const errorBody = await response.json().catch(() => null) as { error?: string } | null;
+        if (errorBody?.error === 'NO_TENANT_ASSOCIATION') {
+          throw new NoTenantAssociationError();
+        }
         throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
       }
 

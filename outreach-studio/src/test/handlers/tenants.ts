@@ -8,10 +8,35 @@ export const MOCK_TENANT = {
   createdDate: '2025-01-15T10:00:00Z',
 }
 
+export const MOCK_TENANT_MEMBERSHIPS = [
+  {
+    tenantId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    tenantName: 'Acme Corporation',
+    tenantStatus: 'ACTIVE',
+    role: 'ADMIN',
+  },
+  {
+    tenantId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    tenantName: 'Globex Industries',
+    tenantStatus: 'ACTIVE',
+    role: 'PMO',
+  },
+]
+
 export const tenantHandlers = [
   // GET /api/tenants/current - current user's own tenant
   http.get('/api/tenants/current', () => {
     return HttpResponse.json(MOCK_TENANT)
+  }),
+
+  // GET /api/auth/tenant-memberships - active memberships for tenant selection
+  http.get('/api/auth/tenant-memberships', () => {
+    return HttpResponse.json(MOCK_TENANT_MEMBERSHIPS)
+  }),
+
+  // POST /api/auth/select-tenant - record tenant choice
+  http.post('/api/auth/select-tenant', () => {
+    return new HttpResponse(null, { status: 200 })
   }),
 
   // GET /api/tenants - paginated, searchable list (Platform Admin only)

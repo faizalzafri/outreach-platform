@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_authenticated')({
 });
 
 function AuthenticatedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, tenantSelectionRequired } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,6 +32,15 @@ function AuthenticatedLayout() {
       });
     }
   }, [isLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    // Checked on every protected-route render, not just right after the OAuth callback — a user
+    // who never completed tenant selection (closed the tab, navigated away) would otherwise keep
+    // operating under an arbitrarily-picked tenant indefinitely.
+    if (!isLoading && isAuthenticated && tenantSelectionRequired) {
+      void navigate({ to: '/select-tenant' });
+    }
+  }, [isLoading, isAuthenticated, tenantSelectionRequired, navigate]);
 
   if (isLoading) {
     return (
@@ -51,7 +60,7 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || tenantSelectionRequired) {
     return null;
   }
 
