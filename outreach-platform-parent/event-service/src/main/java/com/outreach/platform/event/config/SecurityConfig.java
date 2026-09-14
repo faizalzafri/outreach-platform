@@ -2,6 +2,7 @@ package com.outreach.platform.event.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,10 +21,20 @@ import org.springframework.security.web.SecurityFilterChain;
  *
  * <p>{@code @EnableMethodSecurity} enables {@code @PreAuthorize} annotations
  * for fine-grained role-based access control on controller methods.</p>
+ *
+ * <p>Excluded from the {@code test} profile: {@code application-test.yml} already excludes
+ * Spring Boot's own {@code OAuth2ResourceServerAutoConfiguration} intending to disable JWT
+ * validation for integration tests, but that exclusion doesn't reach this class's own
+ * unconditional {@code oauth2ResourceServer(...)} filter chain, which requires a
+ * {@code JwtDecoder} bean regardless. Without this profile guard, every {@code @SpringBootTest}
+ * with a web environment fails to even start ({@code NoSuchBeanDefinitionException} for
+ * {@code JwtDecoder}) — see {@code com.outreach.platform.event.config.TestSecurityConfig} in
+ * {@code src/test/java} for the permissive replacement used instead.</p>
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Profile("!test")
 public class SecurityConfig {
 
     @Bean

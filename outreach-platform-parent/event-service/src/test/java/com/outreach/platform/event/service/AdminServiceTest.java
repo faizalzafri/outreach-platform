@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.UserEntity;
 import com.outreach.platform.event.mapper.UserMapper;
 import com.outreach.platform.event.model.EventStatus;
@@ -13,6 +14,7 @@ import com.outreach.platform.event.model.dto.UserUpdateRequest;
 import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.UserRepository;
 import com.outreach.platform.event.repo.VolunteerRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +58,16 @@ class AdminServiceTest {
         adminService = new AdminService(
                 userRepository, eventRepository, volunteerRepository, userMapper, passwordEncoder
         );
+        // Production requests always have TenantContext populated by TenantContextFilter — set it
+        // here too so these tests exercise the tenant-scoped findByIdAndTenantId path rather than
+        // the plain-findById fallback that only real PLATFORM_ADMIN requests should take. See
+        // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        TenantContext.setCurrentTenantId(UUID.randomUUID());
+    }
+
+    @AfterEach
+    void clearTenantContext() {
+        TenantContext.clear();
     }
 
     @Test
@@ -104,7 +117,7 @@ class AdminServiceTest {
         entity.setUsername("oldname");
         entity.setEmail("old@mail.com");
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(userRepository.findByIdAndTenantId(eq(userId), any(UUID.class))).thenReturn(Optional.of(entity));
         when(userRepository.existsByUsername("newname")).thenReturn(false);
         when(userRepository.save(any(UserEntity.class))).thenReturn(entity);
         when(userMapper.toDto(any(UserEntity.class))).thenReturn(
@@ -122,7 +135,7 @@ class AdminServiceTest {
     @DisplayName("updateUser should throw when user not found")
     void updateUserShouldThrowWhenNotFound() {
         UUID userId = UUID.randomUUID();
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndTenantId(eq(userId), any(UUID.class))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adminService.updateUser(userId, new UserUpdateRequest("x", null, null)))
                 .isInstanceOf(AdminService.UserNotFoundException.class);
@@ -136,7 +149,7 @@ class AdminServiceTest {
         entity.setId(userId);
         entity.setEnabled(true);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(userRepository.findByIdAndTenantId(eq(userId), any(UUID.class))).thenReturn(Optional.of(entity));
         when(userRepository.save(any(UserEntity.class))).thenReturn(entity);
         when(userMapper.toDto(any(UserEntity.class))).thenReturn(
                 new UserDto(userId, "user", "u@e.com", UserRole.POC, false)
@@ -156,7 +169,7 @@ class AdminServiceTest {
         entity.setAccountLocked(true);
         entity.setFailedLoginAttempts(5);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(userRepository.findByIdAndTenantId(eq(userId), any(UUID.class))).thenReturn(Optional.of(entity));
         when(userRepository.save(any(UserEntity.class))).thenReturn(entity);
         when(userMapper.toDto(any(UserEntity.class))).thenReturn(
                 new UserDto(userId, "user", "u@e.com", UserRole.POC, true)
@@ -180,7 +193,7 @@ class AdminServiceTest {
         entity.setId(userId);
         entity.setRole(UserRole.POC);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(userRepository.findByIdAndTenantId(eq(userId), any(UUID.class))).thenReturn(Optional.of(entity));
         when(userRepository.save(any(UserEntity.class))).thenReturn(entity);
         when(userMapper.toDto(any(UserEntity.class))).thenReturn(
                 new UserDto(userId, "user", "u@e.com", UserRole.ADMIN, true)

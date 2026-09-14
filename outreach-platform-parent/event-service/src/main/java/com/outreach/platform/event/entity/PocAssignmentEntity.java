@@ -1,47 +1,37 @@
 package com.outreach.platform.event.entity;
 
-import com.outreach.platform.common.tenant.TenantConstants;
-import com.outreach.platform.common.tenant.TenantEntityListener;
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.event.model.AssignmentRole;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Assigns a POC user to an event with a specific role.
+ *
+ * <p>{@code assigned_at}/{@code assigned_by} are a distinct domain concept (who assigned this
+ * POC and when) from the generic {@code createdDate}/{@code createdBy} audit trail gained by
+ * extending {@link TenantAwareBaseEntity} — both are kept, per
+ * {@code docs/specs/platform-hardening/design.md}'s modeling decision. The generic audit columns
+ * were added by {@code 20250122-004-add-missing-audit-columns.sql}; this entity had none before.
  */
 @Entity
 @Table(name = "poc_assignments", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "user_id"})
 })
-@EntityListeners(TenantEntityListener.class)
-@FilterDef(name = TenantConstants.TENANT_FILTER_NAME, parameters = @ParamDef(name = "tenantId", type = UUID.class))
-@Filter(name = TenantConstants.TENANT_FILTER_NAME, condition = "tenant_id = :tenantId")
-public class PocAssignmentEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
-    @Column(name = "tenant_id", nullable = false, updatable = false)
-    private UUID tenantId;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class PocAssignmentEntity extends TenantAwareBaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -62,22 +52,6 @@ public class PocAssignmentEntity {
     private String assignedBy;
 
     public PocAssignmentEntity() {
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(UUID tenantId) {
-        this.tenantId = tenantId;
     }
 
     public EventEntity getEvent() {

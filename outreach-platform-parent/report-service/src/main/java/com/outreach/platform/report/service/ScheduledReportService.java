@@ -3,6 +3,7 @@ package com.outreach.platform.report.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.report.entity.ReportScheduleEntity;
 import com.outreach.platform.report.model.ScheduleStatus;
 import com.outreach.platform.report.model.ScheduledReportCreateRequest;
@@ -46,7 +47,7 @@ public class ScheduledReportService {
 
     @Transactional(readOnly = true)
     public Optional<ScheduledReportDto> getScheduledReport(UUID id) {
-        return scheduleRepository.findById(id).map(this::toDto);
+        return findEntityById(id).map(this::toDto);
     }
 
     @Transactional
@@ -68,7 +69,7 @@ public class ScheduledReportService {
 
     @Transactional
     public Optional<ScheduledReportDto> updateScheduledReport(UUID id, ScheduledReportUpdateRequest request) {
-        return scheduleRepository.findById(id).map(entity -> {
+        return findEntityById(id).map(entity -> {
             if (request.name() != null) {
                 entity.setName(request.name());
             }
@@ -99,12 +100,25 @@ public class ScheduledReportService {
 
     @Transactional
     public boolean deleteScheduledReport(UUID id) {
-        if (scheduleRepository.existsById(id)) {
-            scheduleRepository.deleteById(id);
+        // deleteById() is more dangerous than findById() here: Spring Data JPA's default
+        // SimpleJpaRepository.deleteById() implementation internally calls findById() and then
+        // removes the result — so this was a cross-tenant delete risk, not just a read risk.
+        // Route through the same tenant-scoped lookup and an explicit delete(entity) call instead.
+        // See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<ReportScheduleEntity> entity = findEntityById(id);
+        entity.ifPresent(e -> {
+            scheduleRepository.delete(e);
             log.info("Deleted scheduled report: id={}", id);
-            return true;
-        }
-        return false;
+        });
+        return entity.isPresent();
+    }
+
+    private Optional<ReportScheduleEntity> findEntityById(UUID id) {
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        return TenantContext.isPresent()
+                ? scheduleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
+                : scheduleRepository.findById(id);
     }
 
     private ScheduledReportDto toDto(ReportScheduleEntity entity) {

@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -189,8 +190,12 @@ public class TeamService {
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
     private Team findTeamOrThrow(UUID id) {
-        return teamRepository.findById(id)
-                .orElseThrow(() -> new TeamNotFoundException(id));
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<Team> team = TenantContext.isPresent()
+                ? teamRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
+                : teamRepository.findById(id);
+        return team.orElseThrow(() -> new TeamNotFoundException(id));
     }
 
     private TeamResponse toResponse(Team team) {

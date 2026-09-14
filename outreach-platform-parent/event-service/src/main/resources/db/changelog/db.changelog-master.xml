@@ -46,4 +46,15 @@
     <!-- 9. Fine-grained resource permissions -->
     <include file="db/changelog/20250122-002-create-resource-permissions-table.sql"/>
 
+    <!-- 10. Add tenant_id to team_memberships (backfill for a gap in the original teams migration) -->
+    <include file="db/changelog/20250122-003-add-tenant-id-to-team-memberships.sql"/>
+
+    <!-- 11. Add missing audit/version columns so all remaining entities can extend TenantAwareBaseEntity
+         without a Hibernate "Multiple @FilterDef" conflict — see docs/specs/platform-hardening/ -->
+    <include file="db/changelog/20250122-004-add-missing-audit-columns.sql"/>
+
+    <!-- 12. Ensure tenant_memberships exists in this service's own schema (owned by auth-service,
+         but TenantMembershipEntity maps to it here too — needed for this service's own isolated tests) -->
+    <include file="db/changelog/20250122-005-ensure-tenant-memberships-table-exists.sql"/>
+
 </databaseChangeLog>

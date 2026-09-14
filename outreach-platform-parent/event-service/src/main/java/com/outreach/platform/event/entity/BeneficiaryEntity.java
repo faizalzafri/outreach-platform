@@ -2,44 +2,24 @@ package com.outreach.platform.event.entity;
 
 import com.outreach.platform.common.pii.AesEncryptionConverter;
 import com.outreach.platform.common.pii.PiiField;
-import com.outreach.platform.common.tenant.TenantConstants;
-import com.outreach.platform.common.tenant.TenantEntityListener;
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Beneficiary organization that receives outreach events.
+ *
+ * <p>See {@link EventEntity} for why the audit columns are overridden rather than renamed.
  */
 @Entity
 @Table(name = "beneficiaries")
-@EntityListeners({TenantEntityListener.class, AuditingEntityListener.class})
-@FilterDef(name = TenantConstants.TENANT_FILTER_NAME, parameters = @ParamDef(name = "tenantId", type = UUID.class))
-@Filter(name = TenantConstants.TENANT_FILTER_NAME, condition = "tenant_id = :tenantId")
-public class BeneficiaryEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
-    @Column(name = "tenant_id", nullable = false, updatable = false)
-    private UUID tenantId;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class BeneficiaryEntity extends TenantAwareBaseEntity {
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -69,35 +49,7 @@ public class BeneficiaryEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @Version
-    @Column(name = "version")
-    private Long version;
-
     public BeneficiaryEntity() {
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(UUID tenantId) {
-        this.tenantId = tenantId;
     }
 
     public String getName() {
@@ -164,27 +116,6 @@ public class BeneficiaryEntity {
         this.active = active;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
+    // id, tenantId, createdDate/lastModifiedDate/createdBy/lastModifiedBy, and version
+    // are inherited — see the class-level @AttributeOverrides.
 }

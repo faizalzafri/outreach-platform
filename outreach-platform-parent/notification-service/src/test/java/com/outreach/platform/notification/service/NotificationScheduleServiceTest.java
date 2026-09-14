@@ -1,11 +1,13 @@
 package com.outreach.platform.notification.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.entity.NotificationScheduleEntity;
 import com.outreach.platform.notification.model.ScheduleStatus;
 import com.outreach.platform.notification.model.TriggerType;
 import com.outreach.platform.notification.model.dto.ScheduleCreateRequest;
 import com.outreach.platform.notification.model.dto.ScheduleDto;
 import com.outreach.platform.notification.repo.NotificationScheduleRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,6 +46,16 @@ class NotificationScheduleServiceTest {
     @BeforeEach
     void setUp() {
         scheduleService = new NotificationScheduleService(scheduleRepository);
+        // Production requests always have TenantContext populated by TenantContextFilter — set it
+        // here too so these tests exercise the tenant-scoped findByIdAndTenantId path rather than
+        // the plain-findById fallback that only real PLATFORM_ADMIN requests should take. See
+        // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        TenantContext.setCurrentTenantId(UUID.randomUUID());
+    }
+
+    @AfterEach
+    void clearTenantContext() {
+        TenantContext.clear();
     }
 
     @Test
@@ -89,7 +102,7 @@ class NotificationScheduleServiceTest {
         entity.setId(scheduleId);
         entity.setStatus(ScheduleStatus.PENDING);
 
-        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(entity));
+        when(scheduleRepository.findByIdAndTenantId(eq(scheduleId), any(UUID.class))).thenReturn(Optional.of(entity));
         when(scheduleRepository.save(entity)).thenReturn(entity);
 
         scheduleService.cancelSchedule(scheduleId);
@@ -101,7 +114,7 @@ class NotificationScheduleServiceTest {
     @Test
     void cancelScheduleThrowsWhenNotFound() {
         UUID scheduleId = UUID.randomUUID();
-        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.empty());
+        when(scheduleRepository.findByIdAndTenantId(eq(scheduleId), any(UUID.class))).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> scheduleService.cancelSchedule(scheduleId));
     }
@@ -113,7 +126,7 @@ class NotificationScheduleServiceTest {
         entity.setId(scheduleId);
         entity.setStatus(ScheduleStatus.CANCELLED);
 
-        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(entity));
+        when(scheduleRepository.findByIdAndTenantId(eq(scheduleId), any(UUID.class))).thenReturn(Optional.of(entity));
 
         scheduleService.cancelSchedule(scheduleId);
 

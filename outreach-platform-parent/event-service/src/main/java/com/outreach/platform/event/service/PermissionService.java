@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.ResourcePermission;
 import com.outreach.platform.event.model.PermissionLevel;
 import com.outreach.platform.event.model.ResourceType;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /** Service enforcing resource access control based on visibility, ownership, team membership, and permission levels. */
@@ -235,7 +237,12 @@ public class PermissionService {
     public void revokePermission(UUID permissionId) {
         UUID currentUserId = getCurrentUserId();
 
-        ResourcePermission permission = resourcePermissionRepository.findById(permissionId)
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<ResourcePermission> permissionLookup = TenantContext.isPresent()
+                ? resourcePermissionRepository.findByIdAndTenantId(permissionId, TenantContext.getCurrentTenantId())
+                : resourcePermissionRepository.findById(permissionId);
+        ResourcePermission permission = permissionLookup
                 .orElseThrow(() -> new PermissionNotFoundException(permissionId));
 
         // Verify current user is owner or has MANAGE permission on the resource

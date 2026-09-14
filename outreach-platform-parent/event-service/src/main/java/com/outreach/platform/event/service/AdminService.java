@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.UserEntity;
 import com.outreach.platform.event.mapper.UserMapper;
 import com.outreach.platform.event.model.UserRole;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -187,8 +189,12 @@ public class AdminService {
     }
 
     private UserEntity findUserOrThrow(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<UserEntity> user = TenantContext.isPresent()
+                ? userRepository.findByIdAndTenantId(userId, TenantContext.getCurrentTenantId())
+                : userRepository.findById(userId);
+        return user.orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.config.EventServiceProperties;
 import com.outreach.platform.event.entity.EventEntity;
 import com.outreach.platform.event.mapper.EventMapper;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -201,8 +203,15 @@ public class EventService {
     }
 
     private EventEntity findEntityOrThrow(UUID eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
+        // findById() alone does not enforce tenant isolation — Hibernate's @Filter does not apply
+        // to EntityManager.find()-style primary-key loads, only to query-based access. When
+        // TenantContext is empty, the caller has already been established as PLATFORM_ADMIN
+        // (TenantFilterAspect throws for anyone else), so an unscoped lookup is the intended
+        // cross-tenant behavior. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<EventEntity> entity = TenantContext.isPresent()
+                ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
+                : eventRepository.findById(eventId);
+        return entity.orElseThrow(() -> new EventNotFoundException(eventId));
     }
 
     private void applyStatusTimestamps(EventEntity entity, EventStatus targetStatus) {

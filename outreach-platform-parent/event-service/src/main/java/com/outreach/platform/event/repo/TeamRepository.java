@@ -14,6 +14,13 @@ import java.util.UUID;
 public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     /**
+     * Tenant-scoped primary-key lookup — use instead of the inherited {@code findById}, which
+     * compiles to {@code EntityManager.find()} and is not reached by Hibernate's {@code @Filter}.
+     * See {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0.
+     */
+    Optional<Team> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    /**
      * Find all teams within a given tenant (paginated).
      *
      * @param tenantId the tenant's UUID
