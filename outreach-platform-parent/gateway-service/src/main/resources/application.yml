@@ -95,6 +95,35 @@ spring:
           filters:
             - StripPrefix=1
 
+        # Tenant/team/sharing/activity-feed controllers in event-service keep the full
+        # /api/... prefix in their own @RequestMapping (unlike every other service's
+        # controllers, which expect StripPrefix=1 to have already removed it) — no
+        # StripPrefix filter here so the incoming path reaches them unchanged.
+        - id: tenant-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/tenants/**
+
+        - id: team-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/teams/**
+
+        - id: resource-permission-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/resources/**
+
+        - id: activity-feed-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/activity/**
+
+        - id: auth-api-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+
 # Eureka client configuration
 eureka:
   client:

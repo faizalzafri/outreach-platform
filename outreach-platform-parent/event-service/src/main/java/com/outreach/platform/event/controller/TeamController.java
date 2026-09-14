@@ -1,6 +1,7 @@
 package com.outreach.platform.event.controller;
 
 import com.outreach.platform.event.model.dto.AddTeamMemberRequest;
+import com.outreach.platform.event.model.dto.AvailableUserResponse;
 import com.outreach.platform.event.model.dto.CreateTeamRequest;
 import com.outreach.platform.event.model.dto.TeamMemberResponse;
 import com.outreach.platform.event.model.dto.TeamResponse;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -121,5 +123,15 @@ public class TeamController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
         Page<TeamMemberResponse> members = teamService.listMembers(id, pageable);
         return ResponseEntity.ok(members);
+    }
+
+    @Operation(summary = "Search available users", description = "Searches users in the current tenant not already on this team, for the add-member selector")
+    @GetMapping("/{id}/available-users")
+    public ResponseEntity<List<AvailableUserResponse>> searchAvailableUsers(
+            @Parameter(description = "Team UUID") @PathVariable UUID id,
+            @Parameter(description = "Case-insensitive username search term")
+            @RequestParam(required = false) String search) {
+        List<AvailableUserResponse> users = teamService.searchAvailableUsers(id, search);
+        return ResponseEntity.ok(users);
     }
 }

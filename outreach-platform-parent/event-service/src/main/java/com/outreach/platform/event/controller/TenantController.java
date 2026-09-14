@@ -55,16 +55,26 @@ public class TenantController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @Operation(summary = "List tenants", description = "Returns a paginated list of all tenants")
+    @Operation(summary = "List tenants", description = "Returns a paginated list of all tenants, optionally filtered by name")
     @GetMapping
     public ResponseEntity<Page<TenantResponse>> listTenants(
             @Parameter(description = "Page number (0-indexed)")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (default 20)")
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Case-insensitive name filter")
+            @RequestParam(required = false) String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
-        Page<TenantResponse> tenants = tenantService.listTenants(pageable);
+        Page<TenantResponse> tenants = tenantService.listTenants(pageable, search);
         return ResponseEntity.ok(tenants);
+    }
+
+    @Operation(summary = "Get current tenant", description = "Returns the caller's own tenant, resolved from TenantContext — available to any authenticated tenant user, not just PLATFORM_ADMIN")
+    @GetMapping("/current")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TenantResponse> getCurrentTenant() {
+        TenantResponse tenant = tenantService.getCurrentTenant();
+        return ResponseEntity.ok(tenant);
     }
 
     @Operation(summary = "Get tenant", description = "Returns a single tenant by ID")

@@ -3,6 +3,8 @@ package com.outreach.platform.event.service;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.Team;
 import com.outreach.platform.event.entity.TeamMembership;
+import com.outreach.platform.event.entity.UserEntity;
+import com.outreach.platform.event.model.dto.AvailableUserResponse;
 import com.outreach.platform.event.model.dto.CreateTeamRequest;
 import com.outreach.platform.event.model.dto.TeamMemberResponse;
 import com.outreach.platform.event.model.dto.TeamResponse;
@@ -10,6 +12,7 @@ import com.outreach.platform.event.model.dto.UpdateTeamRequest;
 import com.outreach.platform.event.repo.ResourcePermissionRepository;
 import com.outreach.platform.event.repo.TeamMembershipRepository;
 import com.outreach.platform.event.repo.TeamRepository;
+import com.outreach.platform.event.repo.UserRepository;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +20,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Service for team CRUD operations and team membership management.
@@ -30,16 +37,20 @@ public class TeamService {
 
     private static final Logger log = LoggerFactory.getLogger(TeamService.class);
 
+    private static final int AVAILABLE_USERS_MAX_RESULTS = 20;
+
     private final TeamRepository teamRepository;
     private final TeamMembershipRepository teamMembershipRepository;
     private final ResourcePermissionRepository resourcePermissionRepository;
+    private final UserRepository userRepository;
 
     @Inject
     public TeamService(TeamRepository teamRepository, TeamMembershipRepository teamMembershipRepository,
-                       ResourcePermissionRepository resourcePermissionRepository) {
+                       ResourcePermissionRepository resourcePermissionRepository, UserRepository userRepository) {
         this.teamRepository = teamRepository;
         this.teamMembershipRepository = teamMembershipRepository;
         this.resourcePermissionRepository = resourcePermissionRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -147,13 +158,16 @@ public class TeamService {
             throw new DuplicateTeamMemberException(teamId, userId);
         }
 
+        UserEntity user = userRepository.findByIdAndTenantId(userId, TenantContext.getCurrentTenantId())
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
         TeamMembership membership = new TeamMembership();
         membership.setTeamId(teamId);
         membership.setUserId(userId);
 
         TeamMembership saved = teamMembershipRepository.save(membership);
         log.info("Added user {} to team {}", userId, teamId);
-        return toMemberResponse(saved);
+        return toMemberResponse(saved, user);
     }
 
     /**
@@ -175,7 +189,7 @@ public class TeamService {
     }
 
     /**
-     * Lists all members of a team (paginated).
+     * Lists all members of a team (paginated), enriched with each member's username/email.
      *
      * @param teamId   the team UUID
      * @param pageable pagination parameters
@@ -184,7 +198,39 @@ public class TeamService {
     @Transactional(readOnly = true)
     public Page<TeamMemberResponse> listMembers(UUID teamId, Pageable pageable) {
         findTeamOrThrow(teamId);
-        return teamMembershipRepository.findByTeamId(teamId, pageable).map(this::toMemberResponse);
+        Page<TeamMembership> memberships = teamMembershipRepository.findByTeamId(teamId, pageable);
+
+        List<UUID> userIds = memberships.map(TeamMembership::getUserId).toList();
+        Map<UUID, UserEntity> usersById = userRepository.findByIdIn(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(UserEntity::getId, Function.identity()));
+
+        return memberships.map(membership -> toMemberResponse(membership, usersById.get(membership.getUserId())));
+    }
+
+    /**
+     * Searches users in the current tenant not already on the given team, for the "add member"
+     * selector's search-as-you-type field. Deliberately unpaged and capped at a small fixed limit
+     * — this is a typeahead, not a browsable list.
+     *
+     * @param teamId the team UUID (used only to exclude its current members)
+     * @param search search term matched case-insensitively against username
+     * @return up to {@value #AVAILABLE_USERS_MAX_RESULTS} matching users
+     */
+    @Transactional(readOnly = true)
+    public List<AvailableUserResponse> searchAvailableUsers(UUID teamId, String search) {
+        findTeamOrThrow(teamId);
+        String term = StringUtils.hasText(search) ? search : "";
+        Pageable limit = Pageable.ofSize(AVAILABLE_USERS_MAX_RESULTS);
+
+        List<UUID> existingMemberIds = teamMembershipRepository.findByTeamId(teamId).stream()
+                .map(TeamMembership::getUserId)
+                .toList();
+
+        Page<UserEntity> matches = existingMemberIds.isEmpty()
+                ? userRepository.findByUsernameContainingIgnoreCase(term, limit)
+                : userRepository.findByUsernameContainingIgnoreCaseAndIdNotIn(term, existingMemberIds, limit);
+
+        return matches.map(this::toAvailableUserResponse).toList();
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -207,11 +253,18 @@ public class TeamService {
         );
     }
 
-    private TeamMemberResponse toMemberResponse(TeamMembership membership) {
+    /** {@code user} may be null if it was deleted after joining the team — fall back gracefully rather than 500. */
+    private TeamMemberResponse toMemberResponse(TeamMembership membership, UserEntity user) {
         return new TeamMemberResponse(
                 membership.getUserId(),
+                user != null ? user.getUsername() : null,
+                user != null ? user.getEmail() : null,
                 membership.getCreatedDate()
         );
+    }
+
+    private AvailableUserResponse toAvailableUserResponse(UserEntity user) {
+        return new AvailableUserResponse(user.getId(), user.getUsername(), user.getEmail());
     }
 
     // ─── Exceptions ─────────────────────────────────────────────────────────────
@@ -219,6 +272,12 @@ public class TeamService {
     public static class TeamNotFoundException extends RuntimeException {
         public TeamNotFoundException(UUID id) {
             super("Team with ID " + id + " not found");
+        }
+    }
+
+    public static class UserNotFoundException extends RuntimeException {
+        public UserNotFoundException(UUID id) {
+            super("User with ID " + id + " not found");
         }
     }
 

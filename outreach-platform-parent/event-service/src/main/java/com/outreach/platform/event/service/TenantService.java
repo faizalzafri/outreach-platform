@@ -9,6 +9,7 @@ import com.outreach.platform.event.model.dto.OnboardTenantRequest;
 import com.outreach.platform.event.model.dto.OnboardTenantResponse;
 import com.outreach.platform.event.model.dto.TenantResponse;
 import com.outreach.platform.event.model.dto.UpdateTenantRequest;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.repo.TenantMembershipRepository;
 import com.outreach.platform.event.repo.TenantRepository;
 import jakarta.inject.Inject;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.UUID;
 
@@ -64,14 +66,18 @@ public class TenantService {
     }
 
     /**
-     * Returns a paginated list of all tenants.
+     * Returns a paginated list of tenants, optionally filtered by a case-insensitive name search.
      *
      * @param pageable pagination parameters
+     * @param search   optional case-insensitive substring filter on tenant name
      * @return page of tenant responses
      */
     @Transactional(readOnly = true)
-    public Page<TenantResponse> listTenants(Pageable pageable) {
-        return tenantRepository.findAll(pageable).map(this::toResponse);
+    public Page<TenantResponse> listTenants(Pageable pageable, String search) {
+        Page<TenantEntity> page = StringUtils.hasText(search)
+                ? tenantRepository.findByNameContainingIgnoreCase(search, pageable)
+                : tenantRepository.findAll(pageable);
+        return page.map(this::toResponse);
     }
 
     /**
@@ -84,6 +90,18 @@ public class TenantService {
     public TenantResponse getTenant(UUID id) {
         TenantEntity entity = findTenantOrThrow(id);
         return toResponse(entity);
+    }
+
+    /**
+     * Gets the caller's own tenant, resolved from {@link TenantContext} — available to any
+     * authenticated tenant user, unlike the other methods on this service which are
+     * PLATFORM_ADMIN-only at the controller layer.
+     *
+     * @return the current tenant's response
+     */
+    @Transactional(readOnly = true)
+    public TenantResponse getCurrentTenant() {
+        return getTenant(TenantContext.getCurrentTenantId());
     }
 
     /**
