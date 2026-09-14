@@ -190,6 +190,7 @@ export type FeedbackForm = z.infer<typeof feedbackFormSchema>;
 export const userCreateSchema = z.object({
   username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/),
   email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
   role: z.enum(['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC']),
 });
 
