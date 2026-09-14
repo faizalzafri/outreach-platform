@@ -156,10 +156,18 @@ tenant:
     requests-per-second: ${RATE_LIMIT_RPS:100}
 
 # CORS configurable allowlist
+# outreach-studio (the active React frontend) runs on 5173 by default, falling back to 5174+ if
+# that port is taken. localhost:4200 was the legacy Angular dashboard's port — that app isn't part
+# of this repo's active source tree (see CLAUDE.md) and this allowlist was never updated when it
+# was replaced, so every non-GET request from the real frontend was rejected by CORS (GET requests
+# went unnoticed because a same-origin browser request only carries an Origin header for
+# non-"safe" methods like POST/PUT/DELETE — confirmed via gateway server logs showing
+# DefaultCorsProcessor rejecting the Origin on a POST while identical GETs passed through fine).
 gateway:
   cors:
     allowed-origins:
-      - http://localhost:4200
+      - http://localhost:5173
+      - http://localhost:5174
     allowed-methods:
       - GET
       - POST
