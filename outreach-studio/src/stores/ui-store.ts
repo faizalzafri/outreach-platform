@@ -7,6 +7,8 @@ export interface ToastNotification {
   message: string;
   correlationId?: string;
   timestamp: number;
+  /** Overrides the default auto-dismiss duration (5s for non-error toasts). Ignored for errors, which always persist until manually dismissed. */
+  durationMs?: number;
 }
 
 export interface UIState {

@@ -7,6 +7,7 @@ import { reportHandlers } from './reports'
 import { adminHandlers } from './admin'
 import { auditLogHandlers } from './audit-log'
 import { authHandlers } from './auth'
+import { tenantHandlers } from './tenants'
 
 /**
  * Combined default handlers for all domains.
@@ -23,6 +24,7 @@ export const handlers = [
   ...adminHandlers,
   ...auditLogHandlers,
   ...authHandlers,
+  ...tenantHandlers,
 ]
 
 // Re-export individual handler arrays for selective use in tests
@@ -35,3 +37,4 @@ export { reportHandlers, reportErrorHandlers } from './reports'
 export { adminHandlers, adminErrorHandlers } from './admin'
 export { auditLogHandlers, auditLogErrorHandlers } from './audit-log'
 export { authHandlers, authErrorHandlers, TEST_REALM } from './auth'
+export { tenantHandlers, tenantErrorHandlers, MOCK_TENANT } from './tenants'
