@@ -24,5 +24,5 @@ public interface ReportScheduleRepository extends JpaRepository<ReportScheduleEn
 
     List<ReportScheduleEntity> findByStatus(ScheduleStatus status);
 
-    List<ReportScheduleEntity> findAllByOrderByCreatedAtDesc();
+    List<ReportScheduleEntity> findAllByOrderByCreatedDateDesc();
 }

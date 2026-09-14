@@ -38,7 +38,7 @@ public class ScheduledReportService {
 
     @Transactional(readOnly = true)
     public List<ScheduledReportDto> listScheduledReports() {
-        return scheduleRepository.findAllByOrderByCreatedAtDesc()
+        return scheduleRepository.findAllByOrderByCreatedDateDesc()
                 .stream()
                 .map(this::toDto)
                 .toList();

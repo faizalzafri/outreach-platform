@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -36,9 +38,11 @@ public class ReportScheduleEntity extends TenantAwareBaseEntity {
     @Column(name = "export_format", nullable = false, length = 20)
     private ExportFormat exportFormat;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "filter_criteria", columnDefinition = "jsonb")
     private String filterCriteria;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "recipients", columnDefinition = "jsonb")
     private String recipients;
 

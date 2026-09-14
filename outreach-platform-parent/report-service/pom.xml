@@ -105,6 +105,17 @@
         </dependency>
 
         <!-- Test -->
+        <!--
+            Test-scope only: report-service never runs Liquibase in production (it's read-only
+            by design, schema owned by event-service), but its schema-drift/tenant-isolation
+            tests need Liquibase to build a real schema against Testcontainers Postgres — see
+            db.changelog-test.xml and docs/specs/platform-hardening/ Task 1.5.
+        -->
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
