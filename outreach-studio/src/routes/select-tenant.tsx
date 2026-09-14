@@ -44,10 +44,12 @@ export function SelectTenantPage() {
   const activeMemberships = (memberships ?? []).filter((m) => m.tenantStatus === 'ACTIVE');
   const lastUsedId = typeof window !== 'undefined' ? localStorage.getItem(LAST_TENANT_STORAGE_KEY) : null;
 
-  // Auto-select when there's only one real choice to make.
+  // Auto-select when there's only one real choice to make. Deferred to a microtask so the
+  // effect body itself never synchronously triggers the state update inside chooseTenant.
   useEffect(() => {
     if (activeMemberships.length === 1 && !selectingId && !selectTenant.isPending) {
-      void chooseTenant(activeMemberships[0]!.tenantId);
+      const tenantId = activeMemberships[0]!.tenantId;
+      queueMicrotask(() => void chooseTenant(tenantId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the membership list itself changes
   }, [activeMemberships.length]);

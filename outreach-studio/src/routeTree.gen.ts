@@ -26,6 +26,8 @@ import { Route as AuthenticatedFeedbackIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedIngestionIndexRouteImport } from './routes/_authenticated/ingestion/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports/index'
+import { Route as AuthenticatedTeamsIndexRouteImport } from './routes/_authenticated/teams/index'
+import { Route as AuthenticatedTeamsTeamIdRouteImport } from './routes/_authenticated/teams/$teamId'
 import { Route as AuthenticatedVolunteersIndexRouteImport } from './routes/_authenticated/volunteers/index'
 import { Route as AuthenticatedVolunteersEmployeeIdRouteImport } from './routes/_authenticated/volunteers/$employeeId'
 
@@ -121,6 +123,17 @@ const AuthenticatedReportsIndexRoute =
     path: '/reports/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTeamsIndexRoute = AuthenticatedTeamsIndexRouteImport.update({
+  id: '/teams/',
+  path: '/teams/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTeamsTeamIdRoute =
+  AuthenticatedTeamsTeamIdRouteImport.update({
+    id: '/teams/$teamId',
+    path: '/teams/$teamId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedVolunteersIndexRoute =
   AuthenticatedVolunteersIndexRouteImport.update({
     id: '/volunteers/',
@@ -144,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/events/create': typeof AuthenticatedEventsCreateRoute
+  '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/audit-log/': typeof AuthenticatedAuditLogIndexRoute
@@ -152,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/teams/': typeof AuthenticatedTeamsIndexRoute
   '/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -164,6 +179,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/events/create': typeof AuthenticatedEventsCreateRoute
+  '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/audit-log': typeof AuthenticatedAuditLogIndexRoute
@@ -172,6 +188,7 @@ export interface FileRoutesByTo {
   '/ingestion': typeof AuthenticatedIngestionIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/teams': typeof AuthenticatedTeamsIndexRoute
   '/volunteers': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRoutesById {
@@ -186,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/_authenticated/events/create': typeof AuthenticatedEventsCreateRoute
+  '/_authenticated/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/_authenticated/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/audit-log/': typeof AuthenticatedAuditLogIndexRoute
@@ -194,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/_authenticated/teams/': typeof AuthenticatedTeamsIndexRoute
   '/_authenticated/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRouteTypes {
@@ -208,6 +227,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/events/$eventId'
     | '/events/create'
+    | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin/'
     | '/audit-log/'
@@ -216,6 +236,7 @@ export interface FileRouteTypes {
     | '/ingestion/'
     | '/notifications/'
     | '/reports/'
+    | '/teams/'
     | '/volunteers/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -228,6 +249,7 @@ export interface FileRouteTypes {
     | '/'
     | '/events/$eventId'
     | '/events/create'
+    | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin'
     | '/audit-log'
@@ -236,6 +258,7 @@ export interface FileRouteTypes {
     | '/ingestion'
     | '/notifications'
     | '/reports'
+    | '/teams'
     | '/volunteers'
   id:
     | '__root__'
@@ -249,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/events/$eventId'
     | '/_authenticated/events/create'
+    | '/_authenticated/teams/$teamId'
     | '/_authenticated/volunteers/$employeeId'
     | '/_authenticated/admin/'
     | '/_authenticated/audit-log/'
@@ -257,6 +281,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ingestion/'
     | '/_authenticated/notifications/'
     | '/_authenticated/reports/'
+    | '/_authenticated/teams/'
     | '/_authenticated/volunteers/'
   fileRoutesById: FileRoutesById
 }
@@ -390,6 +415,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/teams/': {
+      id: '/_authenticated/teams/'
+      path: '/teams'
+      fullPath: '/teams/'
+      preLoaderRoute: typeof AuthenticatedTeamsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/teams/$teamId': {
+      id: '/_authenticated/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/teams/$teamId'
+      preLoaderRoute: typeof AuthenticatedTeamsTeamIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/volunteers/': {
       id: '/_authenticated/volunteers/'
       path: '/volunteers'
@@ -412,6 +451,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedEventsEventIdRoute: typeof AuthenticatedEventsEventIdRoute
   AuthenticatedEventsCreateRoute: typeof AuthenticatedEventsCreateRoute
+  AuthenticatedTeamsTeamIdRoute: typeof AuthenticatedTeamsTeamIdRoute
   AuthenticatedVolunteersEmployeeIdRoute: typeof AuthenticatedVolunteersEmployeeIdRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAuditLogIndexRoute: typeof AuthenticatedAuditLogIndexRoute
@@ -420,6 +460,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIngestionIndexRoute: typeof AuthenticatedIngestionIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
+  AuthenticatedTeamsIndexRoute: typeof AuthenticatedTeamsIndexRoute
   AuthenticatedVolunteersIndexRoute: typeof AuthenticatedVolunteersIndexRoute
 }
 
@@ -428,6 +469,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedEventsEventIdRoute: AuthenticatedEventsEventIdRoute,
   AuthenticatedEventsCreateRoute: AuthenticatedEventsCreateRoute,
+  AuthenticatedTeamsTeamIdRoute: AuthenticatedTeamsTeamIdRoute,
   AuthenticatedVolunteersEmployeeIdRoute:
     AuthenticatedVolunteersEmployeeIdRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -437,6 +479,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIngestionIndexRoute: AuthenticatedIngestionIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
+  AuthenticatedTeamsIndexRoute: AuthenticatedTeamsIndexRoute,
   AuthenticatedVolunteersIndexRoute: AuthenticatedVolunteersIndexRoute,
 }
 

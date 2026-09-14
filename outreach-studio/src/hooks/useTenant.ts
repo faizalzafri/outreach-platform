@@ -8,6 +8,17 @@ import type { PageResponse } from '@/types/api';
 import type { Tenant, TenantMembership } from '@/types/tenant';
 
 /**
+ * The tenant ID that should scope this render's queries: the Platform Admin's
+ * selector override if one is set, else the token's own tenant. Subscribes to
+ * the store reactively so components re-render when the admin switches tenants.
+ */
+export function useEffectiveTenantId(): string | null {
+  const tenantId = useTenantStore((state) => state.tenantId);
+  const adminSelectedTenantId = useTenantStore((state) => state.adminSelectedTenantId);
+  return adminSelectedTenantId ?? tenantId;
+}
+
+/**
  * Fetches the current user's own tenant name and keeps the Tenant Store in sync with it.
  * Falls back to a truncated UUID display (handled by TenantBadge) if the fetch fails — this hook
  * only fetches the *name*, since tenantId/roles already come from the JWT via the auth module.

@@ -115,6 +115,25 @@ export const auditLogSearchSchema = z.object({
 export type AuditLogSearch = z.infer<typeof auditLogSearchSchema>;
 
 /**
+ * Team list search params — pagination only (teams have no server-side sort/search yet).
+ */
+export const teamListSearchSchema = z.object({
+  page: z.number().int().positive().default(1).catch(1),
+  size: z.number().int().positive().default(20).catch(20),
+});
+
+export type TeamListSearch = z.infer<typeof teamListSearchSchema>;
+
+/**
+ * Team detail search params — `edit=true` opens the edit form immediately.
+ */
+export const teamDetailSearchSchema = z.object({
+  edit: z.boolean().default(false).catch(false),
+});
+
+export type TeamDetailSearch = z.infer<typeof teamDetailSearchSchema>;
+
+/**
  * Ingestion job list search params.
  */
 export const ingestionSearchSchema = z.object({
@@ -175,6 +194,16 @@ export const userCreateSchema = z.object({
 });
 
 export type UserCreateForm = z.infer<typeof userCreateSchema>;
+
+/**
+ * Team creation/edit form schema.
+ */
+export const teamFormSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  description: z.string().max(500).optional().default(''),
+});
+
+export type TeamFormValues = z.infer<typeof teamFormSchema>;
 
 /**
  * Cron expression validation (5-field format).
