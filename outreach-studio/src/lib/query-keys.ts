@@ -61,6 +61,11 @@ export const queryKeys = {
     users: (params?: UserListParams) => [...queryKeys.admin.all, 'users', params] as const,
     auditLog: (params: AuditLogParams) => [...queryKeys.admin.all, 'audit-log', params] as const,
   },
+  ai: {
+    all: ['ai'] as const,
+    status: () => [...queryKeys.ai.all, 'status'] as const,
+    job: (jobId: string) => [...queryKeys.ai.all, 'job', jobId] as const,
+  },
   tenants: {
     all: ['tenants'] as const,
     current: () => [...queryKeys.tenants.all, 'current'] as const,

@@ -45,6 +45,17 @@ export type {
 } from './api';
 
 export type {
+  AiFeatureName,
+  AiStatus,
+  AiJobStatus,
+  AiJob,
+  SubmitJobResponse,
+  SummarizeRequest,
+  AnomalyRequest,
+  QueryRequest,
+} from './ai';
+
+export type {
   TenantStatus,
   Tenant,
   TenantMembership,

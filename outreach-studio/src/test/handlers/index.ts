@@ -9,6 +9,7 @@ import { auditLogHandlers } from './audit-log'
 import { authHandlers } from './auth'
 import { tenantHandlers } from './tenants'
 import { teamHandlers } from './teams'
+import { aiHandlers } from './ai'
 
 /**
  * Combined default handlers for all domains.
@@ -27,6 +28,7 @@ export const handlers = [
   ...authHandlers,
   ...tenantHandlers,
   ...teamHandlers,
+  ...aiHandlers,
 ]
 
 // Re-export individual handler arrays for selective use in tests
@@ -47,3 +49,4 @@ export {
   MOCK_TEAM_MEMBERS,
   MOCK_AVAILABLE_USERS,
 } from './teams'
+export { aiHandlers, aiErrorHandlers, MOCK_AI_STATUS } from './ai'

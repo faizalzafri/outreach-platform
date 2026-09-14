@@ -18,6 +18,7 @@ import { Route as SelectTenantRouteImport } from './routes/select-tenant'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAiInsightsIndexRouteImport } from './routes/_authenticated/ai-insights/index'
 import { Route as AuthenticatedAuditLogIndexRouteImport } from './routes/_authenticated/audit-log/index'
 import { Route as AuthenticatedEventsIndexRouteImport } from './routes/_authenticated/events/index'
 import { Route as AuthenticatedEventsEventIdRouteImport } from './routes/_authenticated/events/$eventId'
@@ -75,6 +76,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAiInsightsIndexRoute =
+  AuthenticatedAiInsightsIndexRouteImport.update({
+    id: '/ai-insights/',
+    path: '/ai-insights/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAuditLogIndexRoute =
   AuthenticatedAuditLogIndexRouteImport.update({
     id: '/audit-log/',
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/ai-insights/': typeof AuthenticatedAiInsightsIndexRoute
   '/audit-log/': typeof AuthenticatedAuditLogIndexRoute
   '/events/': typeof AuthenticatedEventsIndexRoute
   '/feedback/': typeof AuthenticatedFeedbackIndexRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByTo {
   '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/ai-insights': typeof AuthenticatedAiInsightsIndexRoute
   '/audit-log': typeof AuthenticatedAuditLogIndexRoute
   '/events': typeof AuthenticatedEventsIndexRoute
   '/feedback': typeof AuthenticatedFeedbackIndexRoute
@@ -206,6 +215,7 @@ export interface FileRoutesById {
   '/_authenticated/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/_authenticated/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/ai-insights/': typeof AuthenticatedAiInsightsIndexRoute
   '/_authenticated/audit-log/': typeof AuthenticatedAuditLogIndexRoute
   '/_authenticated/events/': typeof AuthenticatedEventsIndexRoute
   '/_authenticated/feedback/': typeof AuthenticatedFeedbackIndexRoute
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin/'
+    | '/ai-insights/'
     | '/audit-log/'
     | '/events/'
     | '/feedback/'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin'
+    | '/ai-insights'
     | '/audit-log'
     | '/events'
     | '/feedback'
@@ -275,6 +287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teams/$teamId'
     | '/_authenticated/volunteers/$employeeId'
     | '/_authenticated/admin/'
+    | '/_authenticated/ai-insights/'
     | '/_authenticated/audit-log/'
     | '/_authenticated/events/'
     | '/_authenticated/feedback/'
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ai-insights/': {
+      id: '/_authenticated/ai-insights/'
+      path: '/ai-insights'
+      fullPath: '/ai-insights/'
+      preLoaderRoute: typeof AuthenticatedAiInsightsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/audit-log/': {
@@ -454,6 +474,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTeamsTeamIdRoute: typeof AuthenticatedTeamsTeamIdRoute
   AuthenticatedVolunteersEmployeeIdRoute: typeof AuthenticatedVolunteersEmployeeIdRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAiInsightsIndexRoute: typeof AuthenticatedAiInsightsIndexRoute
   AuthenticatedAuditLogIndexRoute: typeof AuthenticatedAuditLogIndexRoute
   AuthenticatedEventsIndexRoute: typeof AuthenticatedEventsIndexRoute
   AuthenticatedFeedbackIndexRoute: typeof AuthenticatedFeedbackIndexRoute
@@ -473,6 +494,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedVolunteersEmployeeIdRoute:
     AuthenticatedVolunteersEmployeeIdRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAiInsightsIndexRoute: AuthenticatedAiInsightsIndexRoute,
   AuthenticatedAuditLogIndexRoute: AuthenticatedAuditLogIndexRoute,
   AuthenticatedEventsIndexRoute: AuthenticatedEventsIndexRoute,
   AuthenticatedFeedbackIndexRoute: AuthenticatedFeedbackIndexRoute,
