@@ -1,0 +1,2 @@
+Class <com.outreach.platform.notification.entity.NotificationScheduleEntity> is not assignable to com.outreach.platform.common.entity.BaseEntity in (NotificationScheduleEntity.java:0)
+Class <com.outreach.platform.notification.entity.NotificationTemplateEntity> is not assignable to com.outreach.platform.common.entity.BaseEntity in (NotificationTemplateEntity.java:0)

@@ -142,6 +142,43 @@
                     </includes>
                 </configuration>
             </plugin>
+            <!--
+                Publishes ONLY common-lib's architecture-rule test classes (ArchitectureRulesTest
+                and its archunit.properties) as a test-jar, so service modules can depend on it
+                and actually run these ArchUnit rules against their OWN compiled classes. Without
+                this, @AnalyzeClasses scans whatever is on the classpath of whichever module's
+                test run executes it — which, without this test-jar, is only ever common-lib
+                itself. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md) and
+                docs/specs/platform-hardening/requirements.md Finding 2.
+
+                Scoped narrowly to the architecture package (plus the properties file) rather than
+                packaging ALL of common-lib's test classes — a consuming service's Surefire also
+                needs `dependenciesToScan` to discover this dependency's tests at all (see each
+                service's own pom), and that setting can't distinguish "classes I want from this
+                dependency" from "classes I don't" once they're all in one jar. Confirmed by
+                testing: with an unscoped test-jar, event-service's own `mvn test` started
+                re-running (and, for two of them, failing) common-lib's unrelated unit tests
+                (e.g. SmtpHealthIndicatorTest, TenantCacheInvalidationServiceTest) that assume
+                common-lib's own test context, not a consuming service's.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/outreach/platform/common/architecture/**</include>
+                                <include>archunit.properties</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

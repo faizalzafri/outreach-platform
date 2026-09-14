@@ -1,0 +1,2 @@
+Method <com.outreach.platform.notification.service.NotificationScheduleService.cancelSchedule(java.util.UUID)> calls method <com.outreach.platform.notification.repo.NotificationScheduleRepository.findById(java.lang.Object)> in (NotificationScheduleService.java:70)
+Method <com.outreach.platform.notification.service.TemplateService.findEntityOrThrow(java.util.UUID)> calls method <com.outreach.platform.notification.repo.NotificationTemplateRepository.findById(java.lang.Object)> in (TemplateService.java:130)

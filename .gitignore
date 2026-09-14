@@ -121,3 +121,11 @@ coverage/
 .sonar/
 .sourcemaps/
 /LEARNING-GUIDE.md
+
+
+# ==============================================================================
+# Claude Code (local-only planning/tooling artifacts, not shared via git)
+# ==============================================================================
+.claude/
+docs/
+CLAUDE.md
