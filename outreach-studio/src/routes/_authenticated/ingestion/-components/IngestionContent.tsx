@@ -299,7 +299,7 @@ function JobErrorDetails({ jobId }: { jobId: string }) {
           border: '1px solid var(--border-default)',
           borderRadius: 'var(--radius-md)',
           background: 'var(--bg-surface)',
-          color: 'var(--text-danger, #dc2626)',
+          color: 'var(--color-danger-600)',
         }}
       >
         {expanded ? 'Hide Errors' : 'View Errors'}
@@ -308,7 +308,7 @@ function JobErrorDetails({ jobId }: { jobId: string }) {
       {expanded && (
         <div style={{ marginTop: '0.5rem' }}>
           {isLoading && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Loading errors...</p>}
-          {isError && <p style={{ fontSize: '0.8125rem', color: 'var(--text-danger, #dc2626)' }}>Failed to load errors.</p>}
+          {isError && <p style={{ fontSize: '0.8125rem', color: 'var(--color-danger-600)' }}>Failed to load errors.</p>}
           {errors && errors.length > 0 && (
             <table className={styles['errorTable'] ?? ''} style={{ width: '100%', fontSize: '0.8125rem', borderCollapse: 'collapse', marginTop: '0.25rem' }}>
               <thead>
@@ -320,7 +320,7 @@ function JobErrorDetails({ jobId }: { jobId: string }) {
               </thead>
               <tbody>
                 {errors.map((err, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle, #e5e7eb)' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-default)' }}>
                     <td style={{ padding: '0.375rem 0.5rem' }}>{err.rowNumber}</td>
                     <td style={{ padding: '0.375rem 0.5rem' }}>{err.fieldName}</td>
                     <td style={{ padding: '0.375rem 0.5rem' }}>{err.message}</td>

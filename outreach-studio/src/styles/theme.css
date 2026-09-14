@@ -41,24 +41,38 @@
 
   /* Semantic status colors */
   --color-success-50: #f0fdf4;
+  --color-success-100: #d1fae5;
   --color-success-500: #22c55e;
   --color-success-600: #16a34a;
   --color-success-700: #15803d;
+  --color-success-800: #065f46;
 
   --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
   --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
 
   --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
   --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
 
   --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
   --color-info-500: #3b82f6;
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+
+  /* Additional categorical hues — chart series only, not part of the status scales above */
+  --color-amber-500: #eab308;
+  --color-orange-500: #f97316;
 
   /* Semantic mappings */
   --bg-page: var(--color-neutral-50);
@@ -77,6 +91,8 @@
   --accent: var(--color-primary-600);
   --accent-hover: var(--color-primary-700);
   --accent-subtle: var(--color-primary-50);
+  /* Text/spinner color for content that sits on top of --accent (buttons, badges) */
+  --text-on-accent: var(--color-neutral-0);
 
   /* Sidebar — light theme: white/light gray background with subtle border */
   --sidebar-bg: var(--color-neutral-0);
@@ -131,6 +147,8 @@
     --accent: var(--color-primary-400);
     --accent-hover: var(--color-primary-300);
     --accent-subtle: rgba(99, 102, 241, 0.15);
+    /* --accent is lighter in dark mode, so dark text keeps better contrast than white */
+    --text-on-accent: var(--color-neutral-900);
 
     /* Sidebar — dark theme: elevated dark surface */
     --sidebar-bg: var(--color-neutral-800);
@@ -177,6 +195,7 @@
   --accent: var(--color-primary-400);
   --accent-hover: var(--color-primary-300);
   --accent-subtle: rgba(99, 102, 241, 0.15);
+  --text-on-accent: var(--color-neutral-900);
 
   /* Sidebar — dark theme: elevated dark surface */
   --sidebar-bg: var(--color-neutral-800);

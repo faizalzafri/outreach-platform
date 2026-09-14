@@ -26,7 +26,7 @@ function NotFoundPage() {
     >
       <h1>404 — Page Not Found</h1>
       <p>The page you're looking for doesn't exist.</p>
-      <Link to="/" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+      <Link to="/" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
         Back to Dashboard
       </Link>
     </div>

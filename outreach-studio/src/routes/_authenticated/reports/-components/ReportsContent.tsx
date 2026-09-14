@@ -546,7 +546,7 @@ export function ReportsContent() {
                 <Line
                   type="monotone"
                   dataKey="avgScore"
-                  stroke="#22c55e"
+                  stroke="var(--color-success-500)"
                   strokeWidth={2}
                   dot={false}
                   name="Avg Score"
@@ -572,11 +572,11 @@ export function ReportsContent() {
                   <YAxis tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="1" fill="#ef4444" name="Score 1" stackId="a" />
-                  <Bar dataKey="2" fill="#f97316" name="Score 2" stackId="a" />
-                  <Bar dataKey="3" fill="#eab308" name="Score 3" stackId="a" />
-                  <Bar dataKey="4" fill="#22c55e" name="Score 4" stackId="a" />
-                  <Bar dataKey="5" fill="#3b82f6" name="Score 5" stackId="a" />
+                  <Bar dataKey="1" fill="var(--color-danger-500)" name="Score 1" stackId="a" />
+                  <Bar dataKey="2" fill="var(--color-orange-500)" name="Score 2" stackId="a" />
+                  <Bar dataKey="3" fill="var(--color-amber-500)" name="Score 3" stackId="a" />
+                  <Bar dataKey="4" fill="var(--color-success-500)" name="Score 4" stackId="a" />
+                  <Bar dataKey="5" fill="var(--color-info-500)" name="Score 5" stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </section>
