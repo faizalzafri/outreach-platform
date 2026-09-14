@@ -77,12 +77,12 @@ export interface NotificationTemplate {
   id: string;
   name: string;
   type: NotificationType;
-  subject: string;
-  body: string;
+  subjectTemplate: string | null;
+  bodyTemplate: string;
   engine: string;
-  status: string;
+  active: boolean;
   version: number;
-  variables: Array<{ name: string; dataType: string }>;
+  variablesSchema: string | null;
 }
 
 export type DeliveryStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';

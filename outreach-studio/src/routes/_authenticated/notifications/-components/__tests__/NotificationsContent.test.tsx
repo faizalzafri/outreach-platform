@@ -37,10 +37,12 @@ const mockTemplates = {
       id: 'tpl-001',
       name: 'Event Registration Confirmation',
       type: 'EMAIL',
-      subject: 'You are registered for {{eventName}}',
-      engine: 'HANDLEBARS',
-      status: 'ACTIVE',
+      subjectTemplate: 'You are registered for {{eventName}}',
+      bodyTemplate: '<p>You are registered for {{eventName}}.</p>',
+      engine: 'THYMELEAF',
+      active: true,
       version: 3,
+      variablesSchema: JSON.stringify({ type: 'object', properties: { eventName: { type: 'string' } } }),
       createdAt: '2024-01-15T10:00:00Z',
       updatedAt: '2024-05-20T16:00:00Z',
     },
@@ -48,10 +50,12 @@ const mockTemplates = {
       id: 'tpl-002',
       name: 'Event Reminder SMS',
       type: 'SMS',
-      subject: '',
-      engine: 'HANDLEBARS',
-      status: 'DRAFT',
+      subjectTemplate: '',
+      bodyTemplate: 'Reminder: {{eventName}} is tomorrow.',
+      engine: 'THYMELEAF',
+      active: false,
       version: 1,
+      variablesSchema: JSON.stringify({ type: 'object', properties: { eventName: { type: 'string' } } }),
       createdAt: '2024-05-01T08:00:00Z',
       updatedAt: '2024-05-01T08:00:00Z',
     },
@@ -131,7 +135,7 @@ function setupDefaultHandlers() {
     http.get('/api/notifications/history', () => {
       return HttpResponse.json(mockDeliveryRecords);
     }),
-    http.get('/api/notifications/templates/:id/preview', () => {
+    http.post('/api/notifications/templates/:id/preview', () => {
       return HttpResponse.json({
         renderedSubject: 'You are registered for Annual Volunteer Drive',
         renderedBody: '<h1>Hello Anita!</h1><p>You are registered for Annual Volunteer Drive.</p>',
@@ -214,7 +218,7 @@ describe('NotificationsContent', () => {
 
     it('shows error toast and does not open modal on preview failure', async () => {
       server.use(
-        http.get('/api/notifications/templates/:id/preview', () => {
+        http.post('/api/notifications/templates/:id/preview', () => {
           return HttpResponse.json(
             { message: 'Template rendering failed: missing required variable "eventName"' },
             { status: 400 },

@@ -31,7 +31,29 @@ interface TemplateFormData {
   type: NotificationType;
   subject: string;
   body: string;
+  engine: string;
   variables: Array<{ name: string; dataType: string }>;
+}
+
+/** Parses a stored variablesSchema JSON Schema string back into editable {name, dataType} rows. */
+function parseVariablesSchema(schema: string | null): Array<{ name: string; dataType: string }> {
+  if (!schema) return [{ name: '', dataType: 'STRING' }];
+  try {
+    const parsed = JSON.parse(schema) as { properties?: Record<string, { type?: string }> };
+    const entries = Object.entries(parsed.properties ?? {});
+    if (entries.length === 0) return [{ name: '', dataType: 'STRING' }];
+    return entries.map(([name, def]) => ({ name, dataType: (def.type ?? 'string').toUpperCase() }));
+  } catch {
+    return [{ name: '', dataType: 'STRING' }];
+  }
+}
+
+/** Serializes editable {name, dataType} rows into the JSON Schema string the backend expects. */
+function buildVariablesSchema(variables: Array<{ name: string; dataType: string }>): string {
+  const properties = Object.fromEntries(
+    variables.map((v) => [v.name, { type: v.dataType.toLowerCase() }]),
+  );
+  return JSON.stringify({ type: 'object', properties });
 }
 
 interface PreviewResponse {
@@ -55,9 +77,10 @@ function TemplateEditor({
   const [form, setForm] = useState<TemplateFormData>({
     name: template?.name ?? '',
     type: template?.type ?? 'EMAIL',
-    subject: template?.subject ?? '',
-    body: template?.body ?? '',
-    variables: template?.variables ?? [{ name: '', dataType: 'STRING' }],
+    subject: template?.subjectTemplate ?? '',
+    body: template?.bodyTemplate ?? '',
+    engine: template?.engine ?? 'THYMELEAF',
+    variables: parseVariablesSchema(template?.variablesSchema ?? null),
   });
   const [errors, setErrors] = useState<Partial<Record<keyof TemplateFormData, string>>>({});
 
@@ -78,9 +101,10 @@ function TemplateEditor({
       const payload = {
         name: form.name.trim(),
         type: form.type,
-        subject: form.subject.trim(),
-        body: form.body,
-        variables: form.variables.filter((v) => v.name.trim()),
+        subjectTemplate: form.subject.trim(),
+        bodyTemplate: form.body,
+        engine: form.engine,
+        variablesSchema: buildVariablesSchema(form.variables.filter((v) => v.name.trim())),
       };
       if (template) {
         await httpClient.put(`/notifications/templates/${template.id}`, payload);
@@ -155,6 +179,19 @@ function TemplateEditor({
               <option value="EMAIL">Email</option>
               <option value="SMS">SMS</option>
               <option value="PUSH">Push</option>
+            </select>
+          </div>
+
+          <div className={styles['formGroup']}>
+            <label className={styles['formLabel']} htmlFor="tpl-engine">Engine</label>
+            <select
+              id="tpl-engine"
+              className={styles['formSelect']}
+              value={form.engine}
+              onChange={(e) => setForm((prev) => ({ ...prev, engine: e.target.value }))}
+            >
+              <option value="THYMELEAF">Thymeleaf</option>
+              <option value="FREEMARKER">Freemarker</option>
             </select>
           </div>
 
@@ -344,9 +381,14 @@ function TemplatesTab() {
         ],
       },
     },
-    { accessorKey: 'subject', header: 'Subject' },
+    { accessorKey: 'subjectTemplate', header: 'Subject' },
     { accessorKey: 'engine', header: 'Engine', enableColumnFilter: false },
-    { accessorKey: 'status', header: 'Status', enableColumnFilter: false },
+    {
+      accessorKey: 'active',
+      header: 'Status',
+      enableColumnFilter: false,
+      cell: ({ getValue }) => (getValue() ? 'Active' : 'Inactive'),
+    },
     { accessorKey: 'version', header: 'Version', enableColumnFilter: false },
     {
       id: 'actions',
