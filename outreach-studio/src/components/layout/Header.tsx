@@ -8,7 +8,10 @@
  */
 
 import { useUIStore } from '@/stores/ui-store';
+import { useTenantStore } from '@/stores/tenant-store';
 import { useEffect } from 'react';
+import { TenantBadge } from './TenantBadge';
+import { TenantSelector } from '@/components/tenant/TenantSelector';
 import styles from './Header.module.css';
 
 export interface HeaderProps {
@@ -19,6 +22,7 @@ export interface HeaderProps {
 export function Header({ onCreateEvent, onToggleSidebar }: HeaderProps) {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
+  const isPlatformAdmin = useTenantStore((s) => s.isPlatformAdmin);
 
   // Apply data-theme attribute to <html> for CSS variable switching
   useEffect(() => {
@@ -81,6 +85,8 @@ export function Header({ onCreateEvent, onToggleSidebar }: HeaderProps) {
       </div>
 
       <div className={styles.headerRight}>
+        {isPlatformAdmin ? <TenantSelector /> : <TenantBadge />}
+
         <button
           className={styles.themeBtn}
           onClick={cycleTheme}

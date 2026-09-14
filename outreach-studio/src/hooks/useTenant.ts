@@ -43,12 +43,13 @@ export interface TenantListParams {
 }
 
 /** Platform Admin only — paginated, searchable tenant list for the Tenant Selector. */
-export function useTenantList(params: TenantListParams) {
+export function useTenantList(params: TenantListParams, enabled = true) {
   return useQuery<PageResponse<Tenant>>({
     queryKey: queryKeys.tenants.list(params),
     queryFn: async () => {
       const response = await httpClient.get<PageResponse<Tenant>>('/tenants', { params });
       return response.data;
     },
+    enabled,
   });
 }

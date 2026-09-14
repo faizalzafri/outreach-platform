@@ -1,0 +1,177 @@
+.container {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--header-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trigger:hover {
+  background-color: var(--bg-hover);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.triggerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 20ch;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--header-muted);
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+}
+
+.searchInput {
+  margin: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.375rem 0.375rem;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--header-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.option:hover {
+  background-color: var(--bg-hover);
+}
+
+.option[aria-selected='true'] {
+  background-color: var(--bg-hover);
+  font-weight: 600;
+}
+
+.optionName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.active {
+  background-color: var(--color-success-50);
+  color: var(--color-success-700);
+}
+
+.suspended {
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-700);
+}
+
+.deactivated {
+  background-color: var(--color-danger-50);
+  color: var(--color-danger-700);
+}
+
+.stateMessage {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--header-muted);
+}
+
+.retryButton {
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  color: var(--header-text);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.retryButton:hover {
+  background-color: var(--bg-hover);
+}
+
+.spinner {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--header-muted);
+}
