@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { axe } from 'jest-axe';
 
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/server';
@@ -218,6 +219,26 @@ describe('VolunteerListContent', () => {
       expect(requestCount).toBe(countAfterDebounce);
     });
   });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      server.use(
+        http.get('/api/admin/users', () => {
+          return HttpResponse.json(createUserPage([
+            { id: 'u1', username: 'priya_sharma', email: 'priya@co.com', role: 'ROLE_POC', enabled: true },
+          ]));
+        }),
+      );
+
+      const { container } = await renderVolunteerList();
+
+      await waitFor(() => {
+        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -387,6 +408,20 @@ describe('VolunteerDetailContent', () => {
         expect(alert).toBeInTheDocument();
         expect(alert.textContent).toBeTruthy();
       });
+    });
+  });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      setupVolunteerDetailHandlers();
+
+      const { container } = await renderVolunteerDetail();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Anita Desai' })).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
     });
   });
 });

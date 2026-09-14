@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, expect } from 'vitest'
+import { toHaveNoViolations } from 'jest-axe'
 import { server } from './server'
+
+expect.extend(toHaveNoViolations)
 
 // Start MSW server before all tests
 beforeAll(() => {

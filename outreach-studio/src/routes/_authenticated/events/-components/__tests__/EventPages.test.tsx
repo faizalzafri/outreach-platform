@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { axe } from 'jest-axe';
 
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/server';
@@ -164,6 +165,27 @@ describe('EventListContent', () => {
       await waitFor(() => {
         expect(screen.getByText('No events found.')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      const events = [
+        buildEvent({ id: 'e1', eventName: 'Community Cleanup', eventCode: 'CC001', status: 'ACTIVE' }),
+      ];
+      server.use(
+        http.get('/api/events', () => {
+          return HttpResponse.json(createEventPage(events));
+        }),
+      );
+
+      const { container } = await renderEventList();
+
+      await waitFor(() => {
+        expect(screen.getByText('Community Cleanup')).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
     });
   });
 });
@@ -541,6 +563,20 @@ describe('EventDetailContent', () => {
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      setupEventDetailHandler();
+
+      const { container } = await renderEventDetail();
+
+      await waitFor(() => {
+        expect(screen.getByText('Annual Volunteer Drive')).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
     });
   });
 });
