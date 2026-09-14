@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /** JPA entity representing a user's membership and role within a tenant. */
@@ -28,4 +29,12 @@ public class TenantMembership extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private TenantRole role;
+
+    /**
+     * When the user last explicitly chose this tenant via the multi-tenant login flow. Null means
+     * never explicitly selected — token issuance falls back to the first ACTIVE membership found
+     * in that case, matching the pre-existing (arbitrary) behavior for single-tenant users.
+     */
+    @Column(name = "last_selected_at")
+    private Instant lastSelectedAt;
 }

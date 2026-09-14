@@ -11,6 +11,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.outreach.platform.auth.entity.Tenant;
 import com.outreach.platform.auth.entity.TenantMembership;
 import com.outreach.platform.auth.service.TenantMembershipService;
+import com.outreach.platform.auth.util.UserIdentifiers;
 import jakarta.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -49,7 +50,6 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -286,7 +286,7 @@ public class AuthorizationServerConfig {
 
                 // Regular user: resolve tenant membership
                 String username = principal.getName();
-                UUID userId = UUID.nameUUIDFromBytes(username.getBytes(StandardCharsets.UTF_8));
+                UUID userId = UserIdentifiers.fromUsername(username);
 
                 Optional<Tenant> activeTenant = tenantMembershipService.getActiveTenantForUser(userId);
 
@@ -308,6 +308,11 @@ public class AuthorizationServerConfig {
                         .map(m -> m.getRole().name())
                         .toList();
                 claims.put("tenant_roles", tenantRoles);
+
+                // Signals the frontend to redirect to the tenant-selection page instead of
+                // trusting this (arbitrarily-picked) tenant_id — set only until the user makes
+                // an explicit choice via POST /api/auth/select-tenant, never again after.
+                claims.put("tenant_selection_required", tenantMembershipService.isTenantSelectionRequired(userId));
             });
         };
     }
