@@ -98,7 +98,14 @@ jobs:
       - name: Build Docker image for ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
-          context: outreach-platform-parent/${{ matrix.service }}
+          # Every service's Dockerfile COPYs common-lib/ and sibling service poms relative to
+          # outreach-platform-parent/ (multi-module build), so the context has to be the parent
+          # directory, not the service's own subdirectory — the previous context caused every
+          # image build to fail on "src: not found" the first time this job ever got a chance to
+          # run (it was always skipped before, since the job it depended on used to fail earlier
+          # in the pipeline on tests/audits, never on the actual build).
+          context: outreach-platform-parent
+          file: outreach-platform-parent/${{ matrix.service }}/Dockerfile
           push: false
           tags: outreach-platform/${{ matrix.service }}:${{ github.sha }}
           cache-from: type=gha
