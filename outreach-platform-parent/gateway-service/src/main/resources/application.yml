@@ -88,6 +88,13 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: volunteer-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/volunteers/**
+          filters:
+            - StripPrefix=1
+
         - id: ai-service
           uri: lb://ai-service
           predicates:
