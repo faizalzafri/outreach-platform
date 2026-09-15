@@ -13,19 +13,9 @@ import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useExponentialPolling } from '@/hooks/useExponentialPolling';
 import { DataTable } from '@/components/data-table/DataTable';
-import type { ImportJob } from '@/types/domain';
+import type { ImportJob, JobError } from '@/types/domain';
 
 import styles from './IngestionContent.module.css';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface JobError {
-  rowNumber: number;
-  fieldName: string;
-  message: string;
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -42,7 +32,7 @@ const BASE_POLL_INTERVAL = 3000; // 3 seconds initial
 const MAX_POLL_INTERVAL = 30000; // 30 seconds cap
 const MAX_POLL_ATTEMPTS = 60;
 
-const TERMINAL_STATUSES = new Set(['COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED']);
+const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,10 +52,10 @@ function isValidFile(file: File): { valid: boolean; error?: string } {
 function getStatusClass(status: string): string {
   switch (status) {
     case 'PENDING': return styles['statusPending']!;
-    case 'IN_PROGRESS': return styles['statusInProgress']!;
+    case 'RUNNING': return styles['statusInProgress']!;
     case 'COMPLETED': return styles['statusCompleted']!;
-    case 'COMPLETED_WITH_ERRORS': return styles['statusCompletedWithErrors']!;
     case 'FAILED': return styles['statusFailed']!;
+    case 'CANCELLED': return styles['statusFailed']!;
     default: return '';
   }
 }
@@ -219,7 +209,7 @@ const jobColumns: ColumnDef<ImportJob, unknown>[] = [
     },
   },
   {
-    accessorKey: 'filename',
+    accessorKey: 'fileName',
     header: 'Filename',
   },
   {
@@ -237,10 +227,10 @@ const jobColumns: ColumnDef<ImportJob, unknown>[] = [
       filterType: 'select' as const,
       filterOptions: [
         { label: 'Pending', value: 'PENDING' },
-        { label: 'In Progress', value: 'IN_PROGRESS' },
+        { label: 'Running', value: 'RUNNING' },
         { label: 'Completed', value: 'COMPLETED' },
-        { label: 'With Errors', value: 'COMPLETED_WITH_ERRORS' },
         { label: 'Failed', value: 'FAILED' },
+        { label: 'Cancelled', value: 'CANCELLED' },
       ],
     },
   },
@@ -322,8 +312,8 @@ function JobErrorDetails({ jobId }: { jobId: string }) {
                 {errors.map((err, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-default)' }}>
                     <td style={{ padding: '0.375rem 0.5rem' }}>{err.rowNumber}</td>
-                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.fieldName}</td>
-                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.message}</td>
+                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.columnName}</td>
+                    <td style={{ padding: '0.375rem 0.5rem' }}>{err.errorMessage}</td>
                   </tr>
                 ))}
               </tbody>

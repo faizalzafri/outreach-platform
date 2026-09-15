@@ -223,7 +223,7 @@ describe('IngestionContent', () => {
           return HttpResponse.json({
             id: 'test-job-123',
             status: 'COMPLETED',
-            filename: 'test.csv',
+            fileName: 'test.csv',
             progress: 100,
             totalRows: 50,
             errorCount: 0,
@@ -265,8 +265,8 @@ describe('IngestionContent', () => {
         http.get('/api/ingestion/jobs/:jobId', () => {
           return HttpResponse.json({
             id: 'test-job-456',
-            status: 'IN_PROGRESS',
-            filename: 'data.xlsx',
+            status: 'RUNNING',
+            fileName: 'data.xlsx',
             progress: 45,
             totalRows: 100,
             errorCount: 0,
@@ -309,8 +309,8 @@ describe('IngestionContent', () => {
         http.get('/api/ingestion/jobs/:jobId', () => {
           return HttpResponse.json({
             id: 'test-job-timeout',
-            status: 'IN_PROGRESS',
-            filename: 'big-file.csv',
+            status: 'RUNNING',
+            fileName: 'big-file.csv',
             progress: 20,
             totalRows: 10000,
             errorCount: 0,
@@ -355,8 +355,8 @@ describe('IngestionContent', () => {
         http.get('/api/ingestion/jobs/:jobId', () => {
           return HttpResponse.json({
             id: 'test-job-errors',
-            status: 'COMPLETED_WITH_ERRORS',
-            filename: 'data.csv',
+            status: 'COMPLETED',
+            fileName: 'data.csv',
             progress: 100,
             totalRows: 200,
             errorCount: 5,
@@ -383,9 +383,7 @@ describe('IngestionContent', () => {
 
       await waitFor(() => {
         // The component renders "Errors: 5" in the progress info section
-        // Use getAllByText to find the parent span containing "Errors:" text
-        const progressInfo = screen.getByText(/COMPLETED WITH ERRORS/);
-        expect(progressInfo).toBeInTheDocument();
+        expect(screen.getByText('5')).toBeInTheDocument();
         // Verify the View Errors button appears (only shown when errorCount > 0)
         expect(screen.getByRole('button', { name: /view errors/i })).toBeInTheDocument();
       });
@@ -403,7 +401,7 @@ describe('IngestionContent', () => {
           return HttpResponse.json({
             id: 'test-job-done',
             status: 'COMPLETED',
-            filename: 'test.csv',
+            fileName: 'test.csv',
             progress: 100,
             totalRows: 10,
             errorCount: 0,

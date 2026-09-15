@@ -9,6 +9,7 @@ export type {
   FeedbackSubmission,
   ImportJobStatus,
   ImportJob,
+  JobError,
   NotificationType,
   NotificationTemplate,
   DeliveryStatus,

@@ -93,16 +93,24 @@ export interface EventEnrollment {
   attendanceMarkedAt?: string;
 }
 
-export type ImportJobStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'COMPLETED_WITH_ERRORS' | 'FAILED';
+export type ImportJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface ImportJob {
   id: string;
-  filename: string;
+  fileName: string;
   status: ImportJobStatus;
   progress: number;
   totalRows: number;
   errorCount: number;
   createdAt: string;
+}
+
+/** Matches ingestion-service's ValidationError record. */
+export interface JobError {
+  rowNumber: number;
+  columnName: string;
+  errorMessage: string;
+  rejectedValue: string | null;
 }
 
 export type NotificationType = 'EMAIL' | 'SMS' | 'PUSH';
