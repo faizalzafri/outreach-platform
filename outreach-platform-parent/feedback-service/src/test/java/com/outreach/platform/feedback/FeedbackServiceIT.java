@@ -1,5 +1,6 @@
 package com.outreach.platform.feedback;
 
+import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.feedback.model.dto.FeedbackDto;
 import com.outreach.platform.feedback.model.dto.FeedbackSubmitRequest;
 import com.outreach.platform.feedback.model.dto.FeedbackUpdateRequest;
@@ -61,6 +62,18 @@ class FeedbackServiceIT {
 
     @BeforeEach
     void setUp() {
+        // TestRestTemplate's underlying RestTemplate is a shared bean across all test methods in
+        // this class — @BeforeEach runs once per test, so guard against stacking a duplicate
+        // interceptor on every one of the 9 tests. Without a tenant header, TenantEntityListener
+        // throws IllegalStateException on persist (VolunteerFeedbackEntity extends
+        // TenantAwareBaseEntity), so this suite never exercised a real request end-to-end before.
+        if (restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add(TenantConstants.X_TENANT_ID_HEADER, TenantConstants.DEFAULT_TENANT_ID.toString());
+                return execution.execute(request, body);
+            });
+        }
+
         eventId = UUID.randomUUID();
         volunteerId = UUID.randomUUID();
     }

@@ -4,6 +4,7 @@
 --comment: Create volunteer_feedback table for feedback-service integration tests (no FK to external tables)
 CREATE TABLE "volunteer_feedback" (
     "id"            UUID            NOT NULL DEFAULT gen_random_uuid(),
+    "tenant_id"     UUID            NOT NULL,
     "event_id"      UUID            NOT NULL,
     "volunteer_id"  UUID            NOT NULL,
     "score"         INTEGER         NOT NULL,
@@ -20,6 +21,8 @@ CREATE TABLE "volunteer_feedback" (
     "reviewed_by"   VARCHAR(100),
     "created_at"    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     "updated_at"    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    "created_by"    VARCHAR(100)    NOT NULL DEFAULT 'system',
+    "updated_by"    VARCHAR(100),
     "version"       BIGINT          NOT NULL DEFAULT 0,
 
     CONSTRAINT "pk_volunteer_feedback" PRIMARY KEY ("id"),
