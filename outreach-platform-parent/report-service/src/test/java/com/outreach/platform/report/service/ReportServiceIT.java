@@ -1,5 +1,6 @@
 package com.outreach.platform.report.service;
 
+import com.outreach.platform.report.ReportServiceApplication;
 import com.outreach.platform.report.model.CityScoreDto;
 import com.outreach.platform.report.model.DashboardSummaryDto;
 import com.outreach.platform.report.model.EventScoreDto;
@@ -8,15 +9,18 @@ import com.outreach.platform.report.model.ReportQueryParams;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,10 +28,22 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+// Explicit classes=: bare @SpringBootTest auto-detects the nearest @SpringBootConfiguration by
+// walking up from this test's own package, and RabbitMqEventListenerIT's nested TestApp (a
+// minimal @SpringBootApplication for that class's own narrow test) lives in this exact same
+// package — closer than the real ReportServiceApplication one package up — so it was being
+// picked instead, booting the wrong context entirely.
+//
+// Deliberately NOT @TestInstance(PER_CLASS): with PER_CLASS, JUnit creates the single test
+// instance (running TestInstancePostProcessors, including SpringExtension's context-loading
+// one) before @Testcontainers' BeforeAllCallback starts the static containers — so the
+// @DynamicPropertySource supplier calls postgres::getJdbcUrl while the container isn't running
+// yet ("Mapped port can only be obtained after the container is started"). Default PER_METHOD
+// avoids the ordering issue; schemaCreated below still only creates the schema once per method
+// via CREATE TABLE IF NOT EXISTS, so re-running it per test instance is harmless.
+@SpringBootTest(classes = ReportServiceApplication.class)
 @ActiveProfiles("test")
 @Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ReportServiceIT {
 
     @Container
@@ -36,15 +52,40 @@ class ReportServiceIT {
             .withUsername("test")
             .withPassword("test");
 
+    // The app has @RabbitListener beans that start eagerly on context refresh — without a real
+    // broker, they either fail to connect or (worse, if something else is listening on the
+    // default localhost:5672) fail auth against it.
+    @Container
+    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+
+    // Excluding Mongo autoconfig (the previous approach) left ExportJobRepository — a real Mongo
+    // repository the app unconditionally scans via @EnableMongoRepositories — with no
+    // mongoTemplate bean, so the context failed to start once this test began booting the real
+    // ReportServiceApplication instead of the wrong sibling-class config. A real container is
+    // needed instead, same lesson as MongoDbIndexIT in event-service.
+    @Container
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:7.0");
+
+    // ReportService's methods are all @Cacheable, which requires a real RedisConnectionFactory
+    // for RedisCacheConfig's cacheManager bean.
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.data.mongodb.uri", () -> "mongodb://localhost:27017/test_unused");
-        registry.add("spring.autoconfigure.exclude", () ->
-                "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration,"
-                        + "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration");
+        registry.add("spring.data.mongodb.uri", mongodb::getReplicaSetUrl);
+        registry.add("spring.rabbitmq.host", rabbitmq::getHost);
+        registry.add("spring.rabbitmq.port", rabbitmq::getAmqpPort);
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        // application-test.yml excludes RedisAutoConfiguration globally (most tests don't need
+        // real caching) — override back to nothing so RedisCacheConfig's cacheManager bean gets
+        // a real RedisConnectionFactory from the container above.
+        registry.add("spring.autoconfigure.exclude", () -> "");
     }
 
     @Inject
