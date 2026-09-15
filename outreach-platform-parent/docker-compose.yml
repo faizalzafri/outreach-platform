@@ -353,6 +353,7 @@ services:
       JWT_JWK_SET_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      AUTH_SERVICE_TOKEN_URI: http://auth-service:8090/oauth2/token
       INGESTION_INPUT_DIR: /tmp/ingestion
     networks:
       - outreach-net

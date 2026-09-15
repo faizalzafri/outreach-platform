@@ -4,6 +4,7 @@ import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.model.FileMetadataDocument;
 import com.outreach.platform.ingestion.model.JobStatus;
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
+import com.outreach.platform.ingestion.model.ValidationError;
 import com.outreach.platform.ingestion.repo.FileMetadataRepository;
 import com.outreach.platform.ingestion.repo.JobTrackingRepository;
 import jakarta.inject.Inject;
@@ -71,17 +72,9 @@ public class JobTrackingService {
 
     /**
      * Marks a job as RUNNING.
-     *
-     * <p>Not currently called from anywhere in this service — the lifecycle methods below
-     * (startJob/updateProgress/completeJob/failJob) use bare {@code findById} rather than
-     * {@link #findByIdTenantScoped(String)}, frozen in ArchUnit's {@code archunit_store} as a
-     * known, currently-inert gap rather than fixed, since they're not exposed to any tenant-
-     * crossing caller today. If one of these is ever wired up to a real async job processor, give
-     * it the tenant ID at job-creation time (the way {@link #createJob} already does) and route
-     * it through the tenant-scoped lookup before removing it from the freeze baseline.
      */
     public void startJob(String jobId, int totalRows) {
-        jobTrackingRepository.findById(jobId).ifPresent(job -> {
+        findByIdTenantScoped(jobId).ifPresent(job -> {
             job.setStatus(JobStatus.RUNNING);
             job.setTotalRows(totalRows);
             job.setStartedAt(Instant.now());
@@ -95,7 +88,7 @@ public class JobTrackingService {
      * Updates job progress (processed rows and percentage).
      */
     public void updateProgress(String jobId, int processedRows, int totalRows) {
-        jobTrackingRepository.findById(jobId).ifPresent(job -> {
+        findByIdTenantScoped(jobId).ifPresent(job -> {
             job.setProcessedRows(processedRows);
             job.setTotalRows(totalRows);
             int progress = totalRows > 0 ? (processedRows * 100) / totalRows : 0;
@@ -108,8 +101,8 @@ public class JobTrackingService {
     /**
      * Marks a job as COMPLETED.
      */
-    public void completeJob(String jobId, int processedRows, int errorCount, List<String> errors) {
-        jobTrackingRepository.findById(jobId).ifPresent(job -> {
+    public void completeJob(String jobId, int processedRows, int errorCount, List<ValidationError> errors) {
+        findByIdTenantScoped(jobId).ifPresent(job -> {
             job.setStatus(JobStatus.COMPLETED);
             job.setProgress(100);
             job.setProcessedRows(processedRows);
@@ -126,9 +119,9 @@ public class JobTrackingService {
      * Marks a job as FAILED.
      */
     public void failJob(String jobId, String errorMessage) {
-        jobTrackingRepository.findById(jobId).ifPresent(job -> {
+        findByIdTenantScoped(jobId).ifPresent(job -> {
             job.setStatus(JobStatus.FAILED);
-            job.getErrors().add(errorMessage);
+            job.getErrors().add(new ValidationError(0, "_job", errorMessage, null));
             job.setErrorCount(job.getErrors().size());
             job.setCompletedAt(Instant.now());
             job.setUpdatedAt(Instant.now());

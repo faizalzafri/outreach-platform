@@ -43,8 +43,15 @@ public interface EventServiceClient {
     /**
      * Get a volunteer profile by employee ID.
      */
-    @GetMapping("/events/volunteers/{employeeId}/profile")
+    @GetMapping("/volunteers/{employeeId}")
     VolunteerResponse getVolunteerProfile(@PathVariable("employeeId") String employeeId);
+
+    /**
+     * Upserts a volunteer profile by employeeId and enrolls it in the event identified by
+     * eventCode. Idempotent: re-importing an already-enrolled volunteer is a no-op.
+     */
+    @PostMapping("/volunteers/import")
+    VolunteerImportResponse importVolunteer(@RequestBody VolunteerImportRequest request);
 
     // --- Request/Response DTOs ---
 
@@ -102,5 +109,23 @@ public interface EventServiceClient {
             String skills,
             String availability,
             Integer totalEventsParticipated
+    ) {}
+
+    record VolunteerImportRequest(
+            String employeeId,
+            String fullName,
+            String email,
+            String phone,
+            String baseLocation,
+            String department,
+            String designation,
+            String skills,
+            String eventCode
+    ) {}
+
+    record VolunteerImportResponse(
+            UUID volunteerId,
+            UUID eventId,
+            boolean alreadyEnrolled
     ) {}
 }

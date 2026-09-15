@@ -40,7 +40,17 @@ public class FileParserService {
         String extension = getExtension(file.getOriginalFilename());
         validateExtension(extension);
 
-        List<ParsedRow> parsedRows = parseFile(file.getInputStream(), extension);
+        return parseAndValidate(file.getInputStream(), extension);
+    }
+
+    /**
+     * Parse and validate from a raw input stream, given an already-validated extension. Used by
+     * the async import pipeline, which parses from bytes captured up front rather than a
+     * request-scoped {@link MultipartFile} (whose backing temp file isn't guaranteed to survive
+     * past the original request).
+     */
+    public ParseResult parseAndValidate(InputStream inputStream, String extension) throws IOException {
+        List<ParsedRow> parsedRows = parseFile(inputStream, extension);
 
         List<ParsedRow> validRows = new ArrayList<>();
         List<ValidationError> allErrors = new ArrayList<>();

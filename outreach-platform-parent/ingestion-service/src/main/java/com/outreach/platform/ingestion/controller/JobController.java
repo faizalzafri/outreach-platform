@@ -1,6 +1,7 @@
 package com.outreach.platform.ingestion.controller;
 
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
+import com.outreach.platform.ingestion.model.ValidationError;
 import com.outreach.platform.ingestion.service.JobTrackingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -83,17 +84,9 @@ public class JobController {
      */
     @Operation(summary = "Get job errors", description = "Retrieves detailed error information for a job")
     @GetMapping("/{jobId}/errors")
-    public ResponseEntity<Map<String, Object>> getJobErrors(@Parameter(description = "Job ID") @PathVariable String jobId) {
+    public ResponseEntity<List<ValidationError>> getJobErrors(@Parameter(description = "Job ID") @PathVariable String jobId) {
         return jobTrackingService.getJob(jobId)
-                .map(job -> {
-                    List<String> errors = job.getErrors();
-                    Map<String, Object> body = Map.of(
-                            "jobId", jobId,
-                            "errorCount", job.getErrorCount(),
-                            "errors", errors != null ? errors : List.of()
-                    );
-                    return ResponseEntity.ok(body);
-                })
+                .map(job -> ResponseEntity.ok(job.getErrors() != null ? job.getErrors() : List.<ValidationError>of()))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -26,7 +26,7 @@ public class JobTrackingDocument {
     private int totalRows;
     private int processedRows;
     private int errorCount;
-    private List<String> errors = new ArrayList<>();
+    private List<ValidationError> errors = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
@@ -107,11 +107,11 @@ public class JobTrackingDocument {
         this.errorCount = errorCount;
     }
 
-    public List<String> getErrors() {
+    public List<ValidationError> getErrors() {
         return errors;
     }
 
-    public void setErrors(List<String> errors) {
+    public void setErrors(List<ValidationError> errors) {
         this.errors = errors;
     }
 

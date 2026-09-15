@@ -172,3 +172,16 @@ spring.security.oauth2.resourceserver.jwt:
 idp:
   provider: ${IDP_PROVIDER:keycloak}
   jwks-uri: ${IDP_JWKS_URI:http://localhost:8080/realms/outreach/protocol/openid-connect/certs}
+
+# Service-to-service auth: client-credentials token for calling event-service via Feign
+# (see common-lib's FeignAuthAutoConfiguration). Same client-id/secret registered in
+# auth-service's AuthorizationServerConfig.buildServicesClient().
+spring.security.oauth2.client:
+  registration:
+    outreach-services:
+      client-id: outreach-services
+      client-secret: ${AUTH_SERVICE_CLIENT_SECRET:CHANGE_ME_IN_PRODUCTION}
+      authorization-grant-type: client_credentials
+  provider:
+    outreach-services:
+      token-uri: ${AUTH_SERVICE_TOKEN_URI:http://localhost:8090/oauth2/token}

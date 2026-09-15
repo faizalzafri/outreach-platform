@@ -47,5 +47,12 @@ public class EventServiceClientFallbackFactory implements FallbackFactory<EventS
             throw new EventServiceUnavailableException(
                     "Event service unavailable: cannot retrieve volunteer profile " + employeeId, cause);
         }
+
+        @Override
+        public EventServiceClient.VolunteerImportResponse importVolunteer(
+                EventServiceClient.VolunteerImportRequest request) {
+            throw new EventServiceUnavailableException(
+                    "Event service unavailable: cannot import volunteer " + request.employeeId(), cause);
+        }
     }
 }

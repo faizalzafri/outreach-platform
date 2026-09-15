@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /** Writes domain events to the MongoDB outbox collection with PENDING status for later publishing. */
 @Named
@@ -50,13 +52,14 @@ public class DomainEventPublisher {
     }
 
     /**
-     * Publishes a VolunteersImported event.
+     * Publishes a VolunteersImported event for one resolved event, matching the payload shape
+     * notification-service's {@code RabbitMqEventListener.handleVolunteersImported} expects:
+     * {@code {eventId, volunteers: [{email, name}, ...]}}.
      */
-    public void publishVolunteersImported(String jobId, String fileName, int importedCount) {
+    public void publishVolunteersImported(UUID eventId, List<Map<String, String>> volunteers) {
         publish(EVENT_VOLUNTEERS_IMPORTED, Map.of(
-                "jobId", jobId,
-                "fileName", fileName,
-                "importedCount", importedCount
+                "eventId", eventId.toString(),
+                "volunteers", volunteers
         ));
     }
 
