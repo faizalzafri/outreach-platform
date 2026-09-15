@@ -11,7 +11,7 @@
  * - Shows error notification on network/non-validation failure, preserves form data
  */
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -101,12 +101,15 @@ export function FeedbackContent() {
       return response.data;
     },
     onMutate: async (values) => {
+      // Scoped to .lists() rather than .all: the latter also matches this component's own
+      // ['feedback', 'categories'] cache entry (a plain string[], not a PageResponse), and the
+      // updater below crashed trying to spread that array's nonexistent .content property.
       // Cancel any outgoing refetches to avoid overwriting optimistic update
-      await queryClient.cancelQueries({ queryKey: queryKeys.feedback.all });
+      await queryClient.cancelQueries({ queryKey: queryKeys.feedback.lists() });
 
       // Snapshot previous feedback list data for rollback
       const previousData = queryClient.getQueriesData<PageResponse<FeedbackSubmission>>({
-        queryKey: queryKeys.feedback.all,
+        queryKey: queryKeys.feedback.lists(),
       });
 
       // Optimistically add new feedback to all matching list caches
@@ -124,7 +127,7 @@ export function FeedbackContent() {
       };
 
       queryClient.setQueriesData<PageResponse<FeedbackSubmission>>(
-        { queryKey: queryKeys.feedback.all },
+        { queryKey: queryKeys.feedback.lists() },
         (old) => {
           if (!old) return old;
           return {
@@ -143,7 +146,7 @@ export function FeedbackContent() {
       setFieldServerErrors({});
       form.reset();
       // Invalidate to fetch real server data
-      void queryClient.invalidateQueries({ queryKey: queryKeys.feedback.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.feedback.lists() });
     },
     onError: (error: NormalizedError, _variables, context) => {
       // Rollback optimistic update
@@ -186,18 +189,6 @@ export function FeedbackContent() {
       });
     },
   });
-
-  // Determine if form is valid enough to submit
-  const canSubmit = useCallback(() => {
-    const values = form.state.values;
-    const fullResult = feedbackFormSchema.safeParse({
-      ...values,
-      textAnswer3: values.textAnswer3 || undefined,
-    });
-    return fullResult.success;
-  }, [form.state.values]);
-
-  const isFormValid = canSubmit();
 
   return (
     <div className={styles['container']}>
@@ -438,15 +429,28 @@ export function FeedbackContent() {
           )}
         </form.Field>
 
-        {/* Submit button */}
-        <button
-          type="submit"
-          className={styles['submitBtn']}
-          disabled={!isFormValid || submitMutation.isPending}
-        >
-          {submitMutation.isPending && <span className={styles['spinner']} aria-hidden="true" />}
-          {submitMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-        </button>
+        {/* Submit button — wrapped in form.Subscribe so it re-renders on every field change;
+            reading form.state.values directly in the component body (the previous approach)
+            doesn't subscribe to updates, so the button would compute validity once at mount
+            (all fields empty → invalid) and never re-evaluate, staying disabled forever. */}
+        <form.Subscribe selector={(state) => state.values}>
+          {(values) => {
+            const isFormValid = feedbackFormSchema.safeParse({
+              ...values,
+              textAnswer3: values.textAnswer3 || undefined,
+            }).success;
+            return (
+              <button
+                type="submit"
+                className={styles['submitBtn']}
+                disabled={!isFormValid || submitMutation.isPending}
+              >
+                {submitMutation.isPending && <span className={styles['spinner']} aria-hidden="true" />}
+                {submitMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+              </button>
+            );
+          }}
+        </form.Subscribe>
       </form>
     </div>
   );
