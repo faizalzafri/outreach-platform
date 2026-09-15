@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 
@@ -16,7 +16,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import { usePermission } from '@/hooks/usePermission';
 import { eventCreateSchema } from '@/lib/zod-schemas';
-import type { Event, EventStatus, Volunteer, FeedbackSubmission } from '@/types/domain';
+import type { Event, EventStatus, EventEnrollment, FeedbackSubmission } from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
 
@@ -82,24 +82,29 @@ function VolunteersTab({ eventId }: { eventId: string }) {
   const [enrollEmployeeId, setEnrollEmployeeId] = useState('');
   const [enrollError, setEnrollError] = useState<string | null>(null);
   const [enrollSuccess, setEnrollSuccess] = useState(false);
+  const { hasPermission: canManage } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
-  // Fetch enrolled volunteers
-  const { data: volunteersData, isLoading: volunteersLoading } = useQuery<PageResponse<Volunteer>>({
-    queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
+  const enrollmentsQueryKey = [...queryKeys.events.detail(eventId), 'volunteers'];
+
+  // Fetch enrolled volunteers — not paginated, enrollment lists are small
+  // (bounded by the event's maxVolunteers).
+  const { data: enrollments, isLoading: volunteersLoading } = useQuery<EventEnrollment[]>({
+    queryKey: enrollmentsQueryKey,
     queryFn: async () => {
-      const response = await httpClient.get<PageResponse<Volunteer>>(
-        `/events/${eventId}/volunteers`,
-        { params: { page: 1, size: 50 } },
-      );
+      const response = await httpClient.get<EventEnrollment[]>(`/events/${eventId}/volunteers`);
       return response.data;
     },
   });
 
-  // Enroll mutation
   const enrollMutation = useMutation<unknown, NormalizedError, string>({
     mutationFn: async (empId) => {
       const response = await httpClient.post(`/events/${eventId}/volunteers`, {
-        employeeId: empId,
+        employeeIds: [empId],
       });
       return response.data;
     },
@@ -107,23 +112,34 @@ function VolunteersTab({ eventId }: { eventId: string }) {
       setEnrollEmployeeId('');
       setEnrollError(null);
       setEnrollSuccess(true);
-      void queryClient.invalidateQueries({
-        queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
-      });
+      void queryClient.invalidateQueries({ queryKey: enrollmentsQueryKey });
       setTimeout(() => setEnrollSuccess(false), 3000);
     },
     onError: (err) => {
       setEnrollSuccess(false);
-      // Map specific error types
       if (err.message.toLowerCase().includes('duplicate') || err.message.toLowerCase().includes('already enrolled')) {
         setEnrollError('This volunteer is already enrolled in this event.');
       } else if (err.message.toLowerCase().includes('capacity') || err.message.toLowerCase().includes('full')) {
         setEnrollError('Event is at maximum volunteer capacity.');
       } else if (err.message.toLowerCase().includes('status') || err.message.toLowerCase().includes('invalid')) {
         setEnrollError('Cannot enroll volunteers in the current event status.');
+      } else if (err.message.toLowerCase().includes('not found')) {
+        setEnrollError('No volunteer found with that employee ID.');
       } else {
         setEnrollError(err.message || 'Enrollment failed.');
       }
+    },
+  });
+
+  const removeMutation = useMutation<unknown, NormalizedError, string>({
+    mutationFn: async (empId) => {
+      await httpClient.delete(`/events/${eventId}/volunteers/${empId}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: enrollmentsQueryKey });
+    },
+    onError: (err) => {
+      setEnrollError(err.message || 'Failed to remove volunteer.');
     },
   });
 
@@ -140,23 +156,25 @@ function VolunteersTab({ eventId }: { eventId: string }) {
   return (
     <div>
       {/* Enrollment form */}
-      <form className={styles['enrollForm']} onSubmit={handleEnroll}>
-        <input
-          type="text"
-          className={styles['enrollInput']}
-          placeholder="Enter Employee ID to enroll..."
-          value={enrollEmployeeId}
-          onChange={(e) => setEnrollEmployeeId(e.target.value)}
-          aria-label="Employee ID to enroll"
-        />
-        <button
-          type="submit"
-          className={styles['enrollBtn']}
-          disabled={enrollMutation.isPending || !enrollEmployeeId.trim()}
-        >
-          {enrollMutation.isPending ? 'Enrolling...' : 'Enroll'}
-        </button>
-      </form>
+      {canManage && (
+        <form className={styles['enrollForm']} onSubmit={handleEnroll}>
+          <input
+            type="text"
+            className={styles['enrollInput']}
+            placeholder="Enter Employee ID to enroll..."
+            value={enrollEmployeeId}
+            onChange={(e) => setEnrollEmployeeId(e.target.value)}
+            aria-label="Employee ID to enroll"
+          />
+          <button
+            type="submit"
+            className={styles['enrollBtn']}
+            disabled={enrollMutation.isPending || !enrollEmployeeId.trim()}
+          >
+            {enrollMutation.isPending ? 'Enrolling...' : 'Enroll'}
+          </button>
+        </form>
+      )}
       {enrollSuccess && (
         <p className={styles['enrollSuccess']} role="status">Volunteer enrolled successfully.</p>
       )}
@@ -168,23 +186,36 @@ function VolunteersTab({ eventId }: { eventId: string }) {
       {volunteersLoading && (
         <p className={styles['tabPlaceholder']}>Loading volunteers...</p>
       )}
-      {volunteersData && volunteersData.content.length > 0 ? (
+      {enrollments && enrollments.length > 0 ? (
         <table className={styles['volunteerTable']}>
           <thead>
             <tr>
               <th scope="col">Employee ID</th>
               <th scope="col">Name</th>
-              <th scope="col">Department</th>
-              <th scope="col">Availability</th>
+              <th scope="col">Attendance</th>
+              <th scope="col">Registered At</th>
+              {canManage && <th scope="col">Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {volunteersData.content.map((vol) => (
-              <tr key={vol.employeeId}>
-                <td>{vol.employeeId}</td>
-                <td>{vol.name}</td>
-                <td>{vol.department}</td>
-                <td>{vol.availability}</td>
+            {enrollments.map((enrollment) => (
+              <tr key={enrollment.id}>
+                <td>{enrollment.employeeId}</td>
+                <td>{enrollment.volunteerName}</td>
+                <td>{enrollment.attendanceStatus}</td>
+                <td>{new Date(enrollment.registeredAt).toLocaleDateString()}</td>
+                {canManage && (
+                  <td>
+                    <button
+                      type="button"
+                      className={styles['enrollBtn']}
+                      disabled={removeMutation.isPending}
+                      onClick={() => removeMutation.mutate(enrollment.employeeId)}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -210,11 +241,40 @@ function FeedbackTab({ eventId }: { eventId: string }) {
     queryFn: async () => {
       const response = await httpClient.get<PageResponse<FeedbackSubmission>>(
         `/feedback/event/${eventId}`,
-        { params: { page: 1, size: 50 } },
+        // Unlike the app's DataTable-driven lists (which convert their 1-indexed URL page to
+        // TanStack Table's 0-based pageIndex before calling the API), this is a bespoke query
+        // hitting Spring's raw 0-indexed Pageable directly — page 1 here means the *second*
+        // page, which silently looked like "no data" until a real result finally existed to
+        // reveal it.
+        { params: { page: 0, size: 50 } },
       );
       return response.data;
     },
   });
+
+  // Feedback rows only carry a volunteerId (UUID) — resolve display names from the same
+  // event's enrollment list rather than round-tripping through a separate lookup.
+  const { data: enrollments } = useQuery<EventEnrollment[]>({
+    queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
+    queryFn: async () => {
+      const response = await httpClient.get<EventEnrollment[]>(`/events/${eventId}/volunteers`);
+      return response.data;
+    },
+  });
+  const volunteerNames = new Map((enrollments ?? []).map((e) => [e.volunteerId, e.volunteerName]));
+
+  // /feedback renders the submission form only for ROLE_POC (ADMIN/PMO get a read-only list
+  // there instead) — only show this entry point to viewers who'll actually see the form.
+  const { hasPermission: canSubmitFeedback } = usePermission(['ROLE_POC']);
+  const giveFeedbackLink = canSubmitFeedback && (
+    <Link
+      to="/feedback"
+      search={{ eventId, page: 1, size: 10 }}
+      className={styles['enrollBtn']}
+    >
+      Give Feedback
+    </Link>
+  );
 
   if (isLoading) {
     return <p className={styles['tabPlaceholder']}>Loading feedback...</p>;
@@ -232,30 +292,38 @@ function FeedbackTab({ eventId }: { eventId: string }) {
   }
 
   if (!data || data.content.length === 0) {
-    return <p className={styles['tabPlaceholder']}>No feedback submissions yet for this event.</p>;
+    return (
+      <div>
+        {giveFeedbackLink}
+        <p className={styles['tabPlaceholder']}>No feedback submissions yet for this event.</p>
+      </div>
+    );
   }
 
   return (
-    <table className={styles['volunteerTable']}>
-      <thead>
-        <tr>
-          <th scope="col">Employee ID</th>
-          <th scope="col">Score</th>
-          <th scope="col">Category</th>
-          <th scope="col">Submitted At</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.content.map((fb) => (
-          <tr key={fb.id}>
-            <td>{fb.anonymous ? '(anonymous)' : fb.employeeId}</td>
-            <td>{EMOJI_MAP[fb.emojiScore] ?? fb.emojiScore}</td>
-            <td>{fb.category}</td>
-            <td>{new Date(fb.submittedAt).toLocaleString()}</td>
+    <div>
+      {giveFeedbackLink}
+      <table className={styles['volunteerTable']}>
+        <thead>
+          <tr>
+            <th scope="col">Volunteer</th>
+            <th scope="col">Score</th>
+            <th scope="col">Category</th>
+            <th scope="col">Submitted At</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.content.map((fb) => (
+            <tr key={fb.id}>
+              <td>{fb.anonymous ? '(anonymous)' : volunteerNames.get(fb.volunteerId) ?? fb.volunteerId}</td>
+              <td>{EMOJI_MAP[fb.score] ?? fb.score}</td>
+              <td>{fb.category}</td>
+              <td>{new Date(fb.submittedAt).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

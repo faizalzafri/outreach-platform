@@ -174,11 +174,13 @@ export type EventCreateForm = z.infer<typeof eventCreateSchema>;
  * Feedback submission form schema.
  */
 export const feedbackFormSchema = z.object({
-  emojiScore: z.number().int().min(1).max(5),
-  textAnswer1: z.string().min(1).max(500),
-  textAnswer2: z.string().min(1).max(500),
-  textAnswer3: z.string().max(500).optional(),
+  volunteerId: z.string().min(1, 'Please select a volunteer'),
+  score: z.number().int().min(1).max(5),
+  answer1: z.string().min(1).max(500),
+  answer2: z.string().min(1).max(500),
+  answer3: z.string().max(500).optional(),
   category: z.string().min(1),
+  tags: z.string().max(200).optional(),
   anonymous: z.boolean().default(false),
 });
 

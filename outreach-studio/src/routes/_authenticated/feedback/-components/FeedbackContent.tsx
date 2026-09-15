@@ -1,8 +1,14 @@
 /**
  * Feedback Form Content (lazy-loaded)
  *
- * Form for submitting event feedback using TanStack Form + Zod validation.
- * - Emoji score (1-5), text answers, category select, anonymous toggle
+ * Submits feedback for a specific event, on behalf of one of that event's enrolled
+ * volunteers — there's no "current user is a volunteer" identity link in this system, so
+ * whoever is entering feedback (a POC coordinating the event) picks which enrolled
+ * volunteer it's for. Requires `?eventId=` in the URL; without one there's no volunteer
+ * list to populate the picker from, so the form isn't rendered at all.
+ *
+ * - Volunteer picker (populated from the event's enrolled volunteers)
+ * - Emoji score (1-5), text answers, category select, optional tags, anonymous toggle
  * - Validates on blur with inline errors within 200ms
  * - Disables submit until all required fields valid
  * - Shows loading indicator on submit button, prevents duplicate submissions
@@ -14,12 +20,13 @@
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { feedbackFormSchema } from '@/lib/zod-schemas';
 import type { NormalizedError, PageResponse } from '@/types/api';
-import type { FeedbackSubmission } from '@/types/domain';
+import type { EventEnrollment, FeedbackSubmission } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './FeedbackContent.module.css';
@@ -36,21 +43,27 @@ const EMOJI_LABELS = ['😞', '😕', '😐', '🙂', '😄'];
 // Field-level validation helpers
 // ---------------------------------------------------------------------------
 
-function validateEmojiScore(value: number): string | undefined {
-  const result = feedbackFormSchema.shape.emojiScore.safeParse(value);
+function validateVolunteerId(value: string): string | undefined {
+  const result = feedbackFormSchema.shape.volunteerId.safeParse(value);
+  if (!result.success) return result.error.issues[0]?.message ?? 'Please select a volunteer';
+  return undefined;
+}
+
+function validateScore(value: number): string | undefined {
+  const result = feedbackFormSchema.shape.score.safeParse(value);
   if (!result.success) return result.error.issues[0]?.message ?? 'Score is required';
   return undefined;
 }
 
-function validateTextAnswer(value: string, fieldName: 'textAnswer1' | 'textAnswer2'): string | undefined {
+function validateAnswer(value: string, fieldName: 'answer1' | 'answer2'): string | undefined {
   const result = feedbackFormSchema.shape[fieldName].safeParse(value);
   if (!result.success) return result.error.issues[0]?.message ?? 'This field is required';
   return undefined;
 }
 
-function validateTextAnswer3(value: string | undefined): string | undefined {
+function validateAnswer3(value: string | undefined): string | undefined {
   if (value === undefined || value === '') return undefined;
-  const result = feedbackFormSchema.shape.textAnswer3.safeParse(value);
+  const result = feedbackFormSchema.shape.answer3.safeParse(value);
   if (!result.success) return result.error.issues[0]?.message ?? 'Max 500 characters';
   return undefined;
 }
@@ -67,6 +80,7 @@ function validateCategory(value: string): string | undefined {
 
 export function FeedbackContent() {
   const search = Route.useSearch();
+  const eventId = search.eventId;
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldServerErrors, setFieldServerErrors] = useState<Record<string, string>>({});
@@ -85,18 +99,31 @@ export function FeedbackContent() {
 
   const FEEDBACK_CATEGORIES = categories ?? FALLBACK_CATEGORIES;
 
+  // Fetch enrolled volunteers for the event feedback is being submitted for — the picker's
+  // source of truth. Only enabled once an eventId is present.
+  const { data: enrollments, isLoading: enrollmentsLoading } = useQuery<EventEnrollment[]>({
+    queryKey: [...queryKeys.events.detail(eventId ?? ''), 'volunteers'],
+    queryFn: async () => {
+      const response = await httpClient.get<EventEnrollment[]>(`/events/${eventId}/volunteers`);
+      return response.data;
+    },
+    enabled: !!eventId,
+  });
+
   const submitMutation = useMutation({
     mutationFn: async (values: {
-      emojiScore: number;
-      textAnswer1: string;
-      textAnswer2: string;
-      textAnswer3?: string;
+      volunteerId: string;
+      score: number;
+      answer1: string;
+      answer2: string;
+      answer3?: string;
       category: string;
+      tags?: string;
       anonymous: boolean;
     }) => {
       const response = await httpClient.post<FeedbackSubmission>('/feedback', {
         ...values,
-        eventId: search.eventId ?? '',
+        eventId,
       });
       return response.data;
     },
@@ -115,13 +142,15 @@ export function FeedbackContent() {
       // Optimistically add new feedback to all matching list caches
       const optimisticEntry: FeedbackSubmission = {
         id: `temp-${Date.now()}`,
-        eventId: search.eventId ?? '',
-        employeeId: '',
-        emojiScore: values.emojiScore,
-        textAnswer1: values.textAnswer1,
-        textAnswer2: values.textAnswer2,
-        textAnswer3: values.textAnswer3,
+        eventId: eventId ?? '',
+        volunteerId: values.volunteerId,
+        score: values.score,
+        answer1: values.answer1,
+        answer2: values.answer2,
+        answer3: values.answer3,
         category: values.category,
+        tags: values.tags,
+        status: 'SUBMITTED',
         anonymous: values.anonymous,
         submittedAt: new Date().toISOString(),
       };
@@ -172,11 +201,13 @@ export function FeedbackContent() {
 
   const form = useForm({
     defaultValues: {
-      emojiScore: 0,
-      textAnswer1: '',
-      textAnswer2: '',
-      textAnswer3: '',
+      volunteerId: '',
+      score: 0,
+      answer1: '',
+      answer2: '',
+      answer3: '',
       category: '',
+      tags: '',
       anonymous: false,
     },
     onSubmit: ({ value }) => {
@@ -185,10 +216,26 @@ export function FeedbackContent() {
       setSuccessMessage(null);
       submitMutation.mutate({
         ...value,
-        textAnswer3: value.textAnswer3 || undefined,
+        answer3: value.answer3 || undefined,
+        tags: value.tags || undefined,
       });
     },
   });
+
+  if (!eventId) {
+    return (
+      <div className={styles['container']}>
+        <h1 className={styles['pageTitle']}>Submit Feedback</h1>
+        <p>
+          Feedback is submitted for a specific event. Open an event and use "Give Feedback"
+          on its Feedback tab to get here with the right context.
+        </p>
+        <Link to="/events" search={{ page: 1, size: 10 }} className={styles['submitBtn']}>
+          Go to Events
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className={styles['container']}>
@@ -216,16 +263,65 @@ export function FeedbackContent() {
           void form.handleSubmit();
         }}
       >
-        {/* Emoji Score (1-5) */}
+        {/* Volunteer */}
         <form.Field
-          name="emojiScore"
+          name="volunteerId"
           validators={{
-            onBlur: ({ value }) => validateEmojiScore(value),
+            onBlur: ({ value }) => validateVolunteerId(value),
           }}
         >
           {(field) => {
             const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.emojiScore;
+            const hasError = errors.length > 0 || !!fieldServerErrors.volunteerId;
+            return (
+              <div className={styles['field']}>
+                <label htmlFor="volunteerId" className={styles['label']}>
+                  Volunteer<span className={styles['required']}>*</span>
+                </label>
+                <select
+                  id="volunteerId"
+                  className={`${styles['select']} ${hasError ? styles['select--error'] : ''}`}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  disabled={enrollmentsLoading}
+                  aria-describedby={hasError ? 'volunteerId-error' : undefined}
+                  aria-invalid={hasError}
+                >
+                  <option value="">
+                    {enrollmentsLoading ? 'Loading volunteers...' : 'Select a volunteer...'}
+                  </option>
+                  {(enrollments ?? []).map((enrollment) => (
+                    <option key={enrollment.volunteerId} value={enrollment.volunteerId}>
+                      {enrollment.volunteerName} ({enrollment.employeeId})
+                    </option>
+                  ))}
+                </select>
+                {!enrollmentsLoading && enrollments?.length === 0 && (
+                  <span className={styles['charCount']}>
+                    No volunteers are enrolled in this event yet.
+                  </span>
+                )}
+                {hasError && (
+                  <p id="volunteerId-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    {String(errors[0] ?? fieldServerErrors.volunteerId)}
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
+
+        {/* Emoji Score (1-5) */}
+        <form.Field
+          name="score"
+          validators={{
+            onBlur: ({ value }) => validateScore(value),
+          }}
+        >
+          {(field) => {
+            const errors = field.state.meta.errors;
+            const hasError = errors.length > 0 || !!fieldServerErrors.score;
             return (
               <div className={styles['field']}>
                 <span className={styles['label']}>
@@ -253,7 +349,7 @@ export function FeedbackContent() {
                 </div>
                 {hasError && (
                   <p className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.emojiScore ?? 'Please select a score')}
+                    {String(errors[0] ?? fieldServerErrors.score ?? 'Please select a score')}
                   </p>
                 )}
               </div>
@@ -261,36 +357,36 @@ export function FeedbackContent() {
           }}
         </form.Field>
 
-        {/* Text Answer 1 */}
+        {/* Answer 1 */}
         <form.Field
-          name="textAnswer1"
+          name="answer1"
           validators={{
-            onBlur: ({ value }) => validateTextAnswer(value, 'textAnswer1'),
+            onBlur: ({ value }) => validateAnswer(value, 'answer1'),
           }}
         >
           {(field) => {
             const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.textAnswer1;
+            const hasError = errors.length > 0 || !!fieldServerErrors.answer1;
             return (
               <div className={styles['field']}>
-                <label htmlFor="textAnswer1" className={styles['label']}>
+                <label htmlFor="answer1" className={styles['label']}>
                   What went well?<span className={styles['required']}>*</span>
                 </label>
                 <textarea
-                  id="textAnswer1"
+                  id="answer1"
                   className={`${styles['textarea']} ${hasError ? styles['textarea--error'] : ''}`}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   maxLength={500}
                   rows={3}
-                  aria-describedby={hasError ? 'textAnswer1-error' : undefined}
+                  aria-describedby={hasError ? 'answer1-error' : undefined}
                   aria-invalid={hasError}
                 />
                 <span className={styles['charCount']}>{field.state.value.length}/500</span>
                 {hasError && (
-                  <p id="textAnswer1-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.textAnswer1)}
+                  <p id="answer1-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    {String(errors[0] ?? fieldServerErrors.answer1)}
                   </p>
                 )}
               </div>
@@ -298,36 +394,36 @@ export function FeedbackContent() {
           }}
         </form.Field>
 
-        {/* Text Answer 2 */}
+        {/* Answer 2 */}
         <form.Field
-          name="textAnswer2"
+          name="answer2"
           validators={{
-            onBlur: ({ value }) => validateTextAnswer(value, 'textAnswer2'),
+            onBlur: ({ value }) => validateAnswer(value, 'answer2'),
           }}
         >
           {(field) => {
             const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.textAnswer2;
+            const hasError = errors.length > 0 || !!fieldServerErrors.answer2;
             return (
               <div className={styles['field']}>
-                <label htmlFor="textAnswer2" className={styles['label']}>
+                <label htmlFor="answer2" className={styles['label']}>
                   What could be improved?<span className={styles['required']}>*</span>
                 </label>
                 <textarea
-                  id="textAnswer2"
+                  id="answer2"
                   className={`${styles['textarea']} ${hasError ? styles['textarea--error'] : ''}`}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   maxLength={500}
                   rows={3}
-                  aria-describedby={hasError ? 'textAnswer2-error' : undefined}
+                  aria-describedby={hasError ? 'answer2-error' : undefined}
                   aria-invalid={hasError}
                 />
                 <span className={styles['charCount']}>{field.state.value.length}/500</span>
                 {hasError && (
-                  <p id="textAnswer2-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.textAnswer2)}
+                  <p id="answer2-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    {String(errors[0] ?? fieldServerErrors.answer2)}
                   </p>
                 )}
               </div>
@@ -335,36 +431,36 @@ export function FeedbackContent() {
           }}
         </form.Field>
 
-        {/* Text Answer 3 (optional) */}
+        {/* Answer 3 (optional) */}
         <form.Field
-          name="textAnswer3"
+          name="answer3"
           validators={{
-            onBlur: ({ value }) => validateTextAnswer3(value),
+            onBlur: ({ value }) => validateAnswer3(value),
           }}
         >
           {(field) => {
             const errors = field.state.meta.errors;
-            const hasError = errors.length > 0 || !!fieldServerErrors.textAnswer3;
+            const hasError = errors.length > 0 || !!fieldServerErrors.answer3;
             return (
               <div className={styles['field']}>
-                <label htmlFor="textAnswer3" className={styles['label']}>
+                <label htmlFor="answer3" className={styles['label']}>
                   Additional comments (optional)
                 </label>
                 <textarea
-                  id="textAnswer3"
+                  id="answer3"
                   className={`${styles['textarea']} ${hasError ? styles['textarea--error'] : ''}`}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   maxLength={500}
                   rows={3}
-                  aria-describedby={hasError ? 'textAnswer3-error' : undefined}
+                  aria-describedby={hasError ? 'answer3-error' : undefined}
                   aria-invalid={hasError}
                 />
                 <span className={styles['charCount']}>{(field.state.value ?? '').length}/500</span>
                 {hasError && (
-                  <p id="textAnswer3-error" className={styles['fieldError']} role="alert" aria-live="assertive">
-                    {String(errors[0] ?? fieldServerErrors.textAnswer3)}
+                  <p id="answer3-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                    {String(errors[0] ?? fieldServerErrors.answer3)}
                   </p>
                 )}
               </div>
@@ -411,6 +507,27 @@ export function FeedbackContent() {
           }}
         </form.Field>
 
+        {/* Tags (optional) */}
+        <form.Field name="tags">
+          {(field) => (
+            <div className={styles['field']}>
+              <label htmlFor="tags" className={styles['label']}>
+                Tags (optional)
+              </label>
+              <input
+                id="tags"
+                type="text"
+                className={styles['textarea']}
+                placeholder="e.g. positive, organized"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                maxLength={200}
+              />
+            </div>
+          )}
+        </form.Field>
+
         {/* Anonymous toggle */}
         <form.Field name="anonymous">
           {(field) => (
@@ -437,7 +554,8 @@ export function FeedbackContent() {
           {(values) => {
             const isFormValid = feedbackFormSchema.safeParse({
               ...values,
-              textAnswer3: values.textAnswer3 || undefined,
+              answer3: values.answer3 || undefined,
+              tags: values.tags || undefined,
             }).success;
             return (
               <button

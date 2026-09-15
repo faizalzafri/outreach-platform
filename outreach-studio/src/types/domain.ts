@@ -46,17 +46,39 @@ export interface Volunteer {
   averageScore: number | null;
 }
 
+export type FeedbackSentiment = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+export type FeedbackStatus = 'SUBMITTED' | 'REVIEWED' | 'FLAGGED' | 'ARCHIVED';
+
 export interface FeedbackSubmission {
   id: string;
   eventId: string;
-  employeeId: string;
-  emojiScore: number;
-  textAnswer1: string;
-  textAnswer2: string;
-  textAnswer3?: string;
+  volunteerId: string;
+  score: number;
+  answer1: string;
+  answer2: string;
+  answer3?: string;
   category: string;
+  tags?: string;
+  sentiment?: FeedbackSentiment;
+  status: FeedbackStatus;
   anonymous: boolean;
   submittedAt: string;
+}
+
+export type AttendanceStatus = 'REGISTERED' | 'ATTENDED' | 'NOT_ATTENDED' | 'UNREGISTERED';
+export type EmailStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';
+
+/** A volunteer's enrollment record for a specific event (`GET /events/{eventId}/volunteers`). */
+export interface EventEnrollment {
+  id: string;
+  eventId: string;
+  volunteerId: string;
+  employeeId: string;
+  volunteerName: string;
+  attendanceStatus: AttendanceStatus;
+  emailStatus: EmailStatus;
+  registeredAt: string;
+  attendanceMarkedAt?: string;
 }
 
 export type ImportJobStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'COMPLETED_WITH_ERRORS' | 'FAILED';
