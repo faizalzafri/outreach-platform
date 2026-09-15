@@ -16,6 +16,7 @@ import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/hooks/useToast';
+import { usePermission } from '@/hooks/usePermission';
 import type { NormalizedError } from '@/types/api';
 import type { Event, EventStatus } from '@/types/domain';
 
@@ -48,7 +49,10 @@ function StatusBadge({ status }: { status: EventStatus }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-function buildColumns(onDelete: (event: Event) => void): ColumnDef<Event, unknown>[] {
+function buildColumns(
+  onDelete: (event: Event) => void,
+  canManage: boolean,
+): ColumnDef<Event, unknown>[] {
   return [
   {
     accessorKey: 'eventCode',
@@ -132,22 +136,16 @@ function buildColumns(onDelete: (event: Event) => void): ColumnDef<Event, unknow
         >
           View
         </Link>
-        <Link
-          to="/events/$eventId"
-          params={{ eventId: row.original.id }}
-          search={{ tab: 'overview' }}
-          className={styles['actionLink']}
-        >
-          Edit
-        </Link>
-        <button
-          type="button"
-          className={styles['actionBtn']}
-          aria-label={`Delete event ${row.original.eventName}`}
-          onClick={() => onDelete(row.original)}
-        >
-          Delete
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            className={styles['actionBtn']}
+            aria-label={`Delete event ${row.original.eventName}`}
+            onClick={() => onDelete(row.original)}
+          >
+            Delete
+          </button>
+        )}
       </div>
     ),
   },
@@ -164,6 +162,12 @@ export function EventListContent() {
   const debouncedSearch = useDebounce(searchText, 300);
   const queryClient = useQueryClient();
   const { success: toastSuccess, error: toastError } = useToast();
+  const { hasPermission: canManage } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
   const queryKey = useMemo(
     () => queryKeys.events.list({
@@ -193,17 +197,19 @@ export function EventListContent() {
       if (window.confirm(`Delete event "${event.eventName}"? This cannot be undone.`)) {
         deleteMutation.mutate(event.id);
       }
-    }),
-    [deleteMutation],
+    }, canManage),
+    [deleteMutation, canManage],
   );
 
   return (
     <div className={styles['container']}>
       <div className={styles['header']}>
         <h1 className={styles['pageTitle']}>Events</h1>
-        <Link to="/events/create" className={styles['createBtn']}>
-          Create Event
-        </Link>
+        {canManage && (
+          <Link to="/events/create" className={styles['createBtn']}>
+            Create Event
+          </Link>
+        )}
       </div>
 
       {/* Search text filter */}

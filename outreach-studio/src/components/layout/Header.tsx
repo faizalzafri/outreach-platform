@@ -97,14 +97,16 @@ export function Header({ onCreateEvent, onToggleSidebar }: HeaderProps) {
           <span aria-hidden="true">{themeIcon}</span>
         </button>
 
-        <button
-          className={styles.createBtn}
-          onClick={onCreateEvent}
-          type="button"
-          aria-label="Create Event"
-        >
-          + Create Event
-        </button>
+        {onCreateEvent && (
+          <button
+            className={styles.createBtn}
+            onClick={onCreateEvent}
+            type="button"
+            aria-label="Create Event"
+          >
+            + Create Event
+          </button>
+        )}
       </div>
     </header>
   );

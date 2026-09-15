@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,6 +51,7 @@ public class EventController {
     }
 
     @Operation(summary = "Create a new event", description = "Creates a new outreach event in DRAFT status")
+    @PreAuthorize("hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
     @PostMapping
     public ResponseEntity<EventDto> createEvent(@Valid @RequestBody EventCreateRequest request) {
         EventDto created = eventService.createEvent(request);
@@ -79,6 +81,7 @@ public class EventController {
     }
 
     @Operation(summary = "Update event", description = "Updates event metadata")
+    @PreAuthorize("hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
     @PutMapping("/{eventId}")
     public ResponseEntity<EventDto> updateEvent(@Parameter(description = "Event UUID") @PathVariable UUID eventId,
                                                 @Valid @RequestBody EventUpdateRequest request) {
@@ -87,6 +90,7 @@ public class EventController {
     }
 
     @Operation(summary = "Transition event status", description = "Transitions event lifecycle status according to the state machine")
+    @PreAuthorize("hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
     @PatchMapping("/{eventId}/status")
     public ResponseEntity<EventDto> transitionStatus(@Parameter(description = "Event UUID") @PathVariable UUID eventId,
                                                      @Valid @RequestBody StatusTransitionRequest request) {
@@ -95,6 +99,7 @@ public class EventController {
     }
 
     @Operation(summary = "Delete event", description = "Soft-deletes an event by archiving it")
+    @PreAuthorize("hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
     @DeleteMapping("/{eventId}")
     public ResponseEntity<Void> deleteEvent(@Parameter(description = "Event UUID") @PathVariable UUID eventId) {
         eventService.deleteEvent(eventId);

@@ -9,10 +9,13 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from '@tanstack/react-form';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
+import { usePermission } from '@/hooks/usePermission';
+import { eventCreateSchema } from '@/lib/zod-schemas';
 import type { Event, EventStatus, Volunteer, FeedbackSubmission } from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
@@ -257,6 +260,181 @@ function FeedbackTab({ eventId }: { eventId: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Overview Tab — Edit Form
+// ---------------------------------------------------------------------------
+
+function validateEditField(fieldName: string, value: unknown): string | undefined {
+  const shape = eventCreateSchema._def.schema.shape;
+  const fieldSchema = shape[fieldName as keyof typeof shape];
+  if (!fieldSchema) return undefined;
+  const result = fieldSchema.safeParse(value);
+  return result.success ? undefined : result.error.issues[0]?.message;
+}
+
+interface EventEditFormProps {
+  eventId: string;
+  event: Event;
+  onCancel: () => void;
+  onSaved: () => void;
+}
+
+function EventEditForm({ eventId, event, onCancel, onSaved }: EventEditFormProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldServerErrors, setFieldServerErrors] = useState<Record<string, string>>({});
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const response = await httpClient.put<Event>(`/events/${eventId}`, values);
+      return response.data;
+    },
+    onSuccess: () => {
+      onSaved();
+    },
+    onError: (error: NormalizedError) => {
+      if (error.fieldErrors && error.fieldErrors.length > 0) {
+        const mapped: Record<string, string> = {};
+        for (const fe of error.fieldErrors) {
+          mapped[fe.field] = fe.message;
+        }
+        setFieldServerErrors(mapped);
+      } else {
+        setServerError(error.message || 'Failed to update event');
+      }
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      eventName: event.eventName,
+      description: event.description,
+      eventDate: event.eventDate,
+      eventEndDate: event.eventEndDate,
+      city: event.city,
+      venue: event.venue,
+      category: event.category,
+      maxVolunteers: event.maxVolunteers,
+    },
+    onSubmit: ({ value }) => {
+      setServerError(null);
+      setFieldServerErrors({});
+      updateMutation.mutate(value);
+    },
+  });
+
+  return (
+    <form
+      className={styles['detailGrid']}
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void form.handleSubmit();
+      }}
+    >
+      {serverError && (
+        <div className={styles['transitionError']} role="alert">
+          {serverError}
+        </div>
+      )}
+
+      {(
+        [
+          ['eventName', 'Name', 'text'],
+          ['description', 'Description', 'text'],
+          ['eventDate', 'Event Date', 'date'],
+          ['eventEndDate', 'End Date', 'date'],
+          ['city', 'City', 'text'],
+          ['venue', 'Venue', 'text'],
+          ['category', 'Category', 'text'],
+        ] as const
+      ).map(([name, label, type]) => (
+        <form.Field
+          key={name}
+          name={name}
+          validators={{ onBlur: ({ value }) => validateEditField(name, value) }}
+        >
+          {(field) => {
+            const errors = field.state.meta.errors;
+            const hasError = errors.length > 0 || !!fieldServerErrors[name];
+            return (
+              <div className={styles['detailField']}>
+                <label htmlFor={`edit-${name}`} className={styles['detailLabel']}>
+                  {label}
+                </label>
+                <input
+                  id={`edit-${name}`}
+                  type={type}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  aria-invalid={hasError}
+                />
+                {hasError && (
+                  <p className={styles['fieldError']} role="alert">
+                    {String(errors[0] ?? fieldServerErrors[name])}
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
+      ))}
+
+      <form.Field
+        name="maxVolunteers"
+        validators={{ onBlur: ({ value }) => validateEditField('maxVolunteers', value) }}
+      >
+        {(field) => {
+          const errors = field.state.meta.errors;
+          const hasError = errors.length > 0 || !!fieldServerErrors.maxVolunteers;
+          return (
+            <div className={styles['detailField']}>
+              <label htmlFor="edit-maxVolunteers" className={styles['detailLabel']}>
+                Max Volunteers
+              </label>
+              <input
+                id="edit-maxVolunteers"
+                type="number"
+                min={1}
+                max={10000}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(Number(e.target.value))}
+                onBlur={field.handleBlur}
+                aria-invalid={hasError}
+              />
+              {hasError && (
+                <p className={styles['fieldError']} role="alert">
+                  {String(errors[0] ?? fieldServerErrors.maxVolunteers)}
+                </p>
+              )}
+            </div>
+          );
+        }}
+      </form.Field>
+
+      <form.Subscribe selector={(state) => state.values}>
+        {(values) => {
+          const formValid = eventCreateSchema.safeParse(values).success;
+          return (
+            <div className={styles['formActions']}>
+              <button
+                type="submit"
+                className={styles['transitionBtn']}
+                disabled={!formValid || updateMutation.isPending}
+              >
+                {updateMutation.isPending ? 'Saving...' : 'Save'}
+              </button>
+              <button type="button" className={styles['transitionBtn']} onClick={onCancel}>
+                Cancel
+              </button>
+            </div>
+          );
+        }}
+      </form.Subscribe>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -268,6 +446,13 @@ export function EventDetailContent() {
 
   const [optimisticStatus, setOptimisticStatus] = useState<EventStatus | null>(null);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const { hasPermission: canManage } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
   const handleTabChange = useCallback(
     (newTab: EventDetailSearch['tab']) => {
@@ -365,7 +550,18 @@ export function EventDetailContent() {
           <h1 className={styles['pageTitle']}>{event.eventName}</h1>
           <p className={styles['eventCode']}>{event.eventCode}</p>
         </div>
-        <StatusBadge status={displayStatus} pending={optimisticStatus !== null} />
+        <div className={styles['headerActions']}>
+          <StatusBadge status={displayStatus} pending={optimisticStatus !== null} />
+          {canManage && tab === 'overview' && !isEditing && (
+            <button
+              type="button"
+              className={styles['transitionBtn']}
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Transition error */}
@@ -376,7 +572,7 @@ export function EventDetailContent() {
       )}
 
       {/* Lifecycle transition buttons */}
-      {validTransitions.length > 0 && (
+      {canManage && validTransitions.length > 0 && (
         <div className={styles['transitionBar']}>
           {validTransitions.map((target) => (
             <button
@@ -413,7 +609,19 @@ export function EventDetailContent() {
       </nav>
 
       {/* Tab content — Overview (primary) */}
-      {tab === 'overview' && (
+      {tab === 'overview' && isEditing && (
+        <EventEditForm
+          eventId={eventId}
+          event={event}
+          onCancel={() => setIsEditing(false)}
+          onSaved={() => {
+            setIsEditing(false);
+            void queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.events.lists() });
+          }}
+        />
+      )}
+      {tab === 'overview' && !isEditing && (
         <dl className={styles['detailGrid']}>
           <DetailField label="Description" value={event.description} />
           <DetailField label="Status" value={displayStatus} />

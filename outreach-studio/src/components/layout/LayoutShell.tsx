@@ -7,9 +7,10 @@
  */
 
 import { useMemo } from 'react';
-import { useRouterState } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/hooks/usePermission';
 import { filterNavigationByRoles } from '@/lib/navigation-filter';
 import { Sidebar, type NavigationGroup } from './Sidebar';
 import { Header } from './Header';
@@ -185,6 +186,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const { user, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const { hasPermission: canCreateEvent } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
   // Get active route from TanStack Router's state
   const routerState = useRouterState();
@@ -248,7 +256,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
       />
 
       <div className={mainClasses}>
-        <Header onToggleSidebar={toggleSidebar} />
+        <Header
+          onToggleSidebar={toggleSidebar}
+          onCreateEvent={
+            canCreateEvent ? () => void navigate({ to: '/events/create' }) : undefined
+          }
+        />
 
         <main className={styles.main} id="main-content" role="main">
           {children}
