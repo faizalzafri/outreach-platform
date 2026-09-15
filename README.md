@@ -131,6 +131,12 @@ Swagger UI is disabled in the `production` profile.
 
 See `.env.example` in `outreach-platform-parent/` for all configurable values.
 
+## Contributing
+
+See `CONTRIBUTING.md` for development setup, coding conventions, and PR
+guidelines. This project follows the `CODE_OF_CONDUCT.md`. To report a security
+vulnerability, see `SECURITY.md` rather than opening a public issue.
+
 ## License
 
-Internal project — not for public distribution.
+Licensed under the GNU General Public License v3.0 — see `LICENSE`.
