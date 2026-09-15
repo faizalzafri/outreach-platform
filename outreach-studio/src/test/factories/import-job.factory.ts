@@ -6,7 +6,7 @@ export function buildImportJob(overrides: Partial<ImportJob> = {}): ImportJob {
   counter += 1;
   return {
     id: `import-${counter}`,
-    filename: `volunteers_batch_${counter}.csv`,
+    fileName: `volunteers_batch_${counter}.csv`,
     status: 'PENDING',
     progress: 0,
     totalRows: 100,

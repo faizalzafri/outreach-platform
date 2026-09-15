@@ -8,4 +8,13 @@
     <!-- Include changeset SQL files here as they are created -->
     <!-- Example: <include file="db/changelog/20240101-001-initial-schema.sql"/> -->
 
+    <!-- Multi-tenant SaaS: add tenant_id to feedback tables -->
+    <include file="db/changelog/20250120-002-add-tenant-id-to-feedback-tables.sql"/>
+
+    <!-- JPA auditing: add created_by/updated_by to volunteer_feedback for this service's own
+         schema (event-service's equivalent migration already covers the shared live database,
+         but feedback-service's isolated Testcontainers tests run only this changelog against a
+         fresh database and need it too — see the file for why it was never wired in before). -->
+    <include file="db/changelog/20250120-003-add-audit-columns-to-volunteer-feedback.sql"/>
+
 </databaseChangeLog>

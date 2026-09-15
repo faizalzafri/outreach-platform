@@ -20,6 +20,24 @@
             <artifactId>common-lib</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--
+            Pulls in common-lib's ArchitectureRulesTest so it runs against this service's own
+            compiled classes, not just common-lib's. See ADR 0001
+            (docs/adr/0001-archunit-enforcement-scope.md).
+        -->
+        <dependency>
+            <groupId>com.outreach.platform</groupId>
+            <artifactId>common-lib</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.3.0</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -87,6 +105,17 @@
         </dependency>
 
         <!-- Test -->
+        <!--
+            Test-scope only: report-service never runs Liquibase in production (it's read-only
+            by design, schema owned by event-service), but its schema-drift/tenant-isolation
+            tests need Liquibase to build a real schema against Testcontainers Postgres — see
+            db.changelog-test.xml and docs/specs/platform-hardening/ Task 1.5.
+        -->
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
@@ -119,6 +148,33 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+                Surefire's default test discovery only scans this module's own target/test-classes —
+                it does NOT scan test classes arriving via a test-jar dependency (common-lib's
+                ArchitectureRulesTest) even though they're on the test classpath and compile fine.
+                dependenciesToScan explicitly tells Surefire to also treat that dependency as a
+                source of test classes. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.outreach.platform:common-lib</dependency>
+                    </dependenciesToScan>
+                </configuration>
+            </plugin>
+            <!--
+                Declared in the parent's pluginManagement (executions, argLine, DOCKER_HOST) but
+                never actually bound to any service's own build until now — meaning *IT.java
+                classes were never discovered or run by `mvn verify` anywhere in this repo,
+                confirmed by testing: BUILD SUCCESS with zero failsafe report for any of this
+                module's IT classes before this was added.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

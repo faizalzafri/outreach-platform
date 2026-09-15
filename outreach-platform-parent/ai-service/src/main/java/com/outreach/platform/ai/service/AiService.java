@@ -7,35 +7,15 @@ import com.outreach.platform.ai.model.SummarizeRequest;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Abstraction layer for AI provider operations.
- * Implementations can target different providers (OpenAI, Bedrock, Ollama, mock)
- * and are selected via configuration property {@code platform.ai.provider}.
- * All operations are asynchronous, returning CompletableFuture for non-blocking execution.
- */
+/** Abstraction layer for AI provider operations; all operations are async. */
 public interface AiService {
 
-    /**
-     * Summarize feedback text.
-     *
-     * @param request the summarization request containing feedback context
-     * @return async result with AI-generated summary
-     */
+    /** Summarize feedback text. */
     CompletableFuture<AiJobResult> summarize(SummarizeRequest request);
 
-    /**
-     * Detect anomalies in feedback score datasets.
-     *
-     * @param request the anomaly detection request containing score data
-     * @return async result with anomaly analysis
-     */
+    /** Detect anomalies in feedback score datasets. */
     CompletableFuture<AiJobResult> detectAnomalies(AnomalyRequest request);
 
-    /**
-     * Execute a natural language query against feedback data.
-     *
-     * @param request the natural language query request
-     * @return async result with query response
-     */
+    /** Execute a natural language query against feedback data. */
     CompletableFuture<AiJobResult> query(QueryRequest request);
 }

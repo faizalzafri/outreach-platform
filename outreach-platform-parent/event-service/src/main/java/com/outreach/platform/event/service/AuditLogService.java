@@ -1,6 +1,7 @@
 package com.outreach.platform.event.service;
 
 import com.outreach.platform.event.model.AuditLogDocument;
+import com.outreach.platform.event.model.PlatformAdminAuditDocument;
 import com.outreach.platform.event.model.dto.AuditLogEntry;
 import com.outreach.platform.event.model.dto.AuditLogSearchCriteria;
 import jakarta.inject.Inject;
@@ -12,21 +13,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Service for writing and querying audit log entries in the MongoDB audit_logs collection.
- * Called explicitly by service-layer code after mutations for full transparency.
- */
+/** Service for writing and querying audit log entries in MongoDB. */
 @Service
 public class AuditLogService {
 
     private static final Logger log = LoggerFactory.getLogger(AuditLogService.class);
     private static final String COLLECTION_AUDIT_LOGS = "audit_logs";
+    private static final String COLLECTION_PLATFORM_ADMIN_AUDIT = "platform_admin_audit_logs";
 
     private final MongoTemplate mongoTemplate;
 
@@ -36,13 +36,34 @@ public class AuditLogService {
     }
 
     /**
+     * Logs a Platform_Admin cross-tenant access event asynchronously.
+     *
+     * @param adminUserId    the admin user performing access
+     * @param targetTenantId the tenant being accessed (or null for all)
+     * @param action         the action performed
+     * @param endpoint       the REST endpoint accessed
+     * @param metadata       additional context (nullable)
+     */
+    @Async
+    public void logCrossTenantAccess(String adminUserId, String targetTenantId,
+                                     String action, String endpoint,
+                                     Map<String, Object> metadata) {
+        PlatformAdminAuditDocument doc = new PlatformAdminAuditDocument(
+                adminUserId, targetTenantId, action, endpoint, metadata
+        );
+        mongoTemplate.save(doc, COLLECTION_PLATFORM_ADMIN_AUDIT);
+        log.info("Platform_Admin cross-tenant access: admin={}, targetTenant={}, action={}, endpoint={}",
+                adminUserId, targetTenantId, action, endpoint);
+    }
+
+    /**
      * Logs an audit entry for a mutation operation.
      *
      * @param userId       the user who performed the action
-     * @param action       the action performed (e.g., "CREATE_EVENT", "UPDATE_STATUS")
-     * @param resourceType the type of resource affected (e.g., "Event", "Volunteer")
+     * @param action       the action performed
+     * @param resourceType the type of resource affected
      * @param resourceId   the identifier of the affected resource
-     * @param details      additional context about the action (nullable)
+     * @param details      additional context (nullable)
      */
     public void log(String userId, String action, String resourceType,
                     String resourceId, Map<String, Object> details) {
@@ -55,7 +76,7 @@ public class AuditLogService {
     /**
      * Queries audit log entries with optional filters and pagination.
      *
-     * @param criteria search filters (all optional)
+     * @param criteria search filters
      * @param pageable pagination parameters
      * @return paginated audit log entries
      */
@@ -76,8 +97,8 @@ public class AuditLogService {
     /**
      * Exports audit log entries matching the criteria as a CSV string.
      *
-     * @param criteria search filters (all optional)
-     * @return CSV-formatted string of matching audit log entries
+     * @param criteria search filters
+     * @return CSV-formatted string
      */
     public String exportAuditLogCsv(AuditLogSearchCriteria criteria) {
         Query query = buildQuery(criteria);

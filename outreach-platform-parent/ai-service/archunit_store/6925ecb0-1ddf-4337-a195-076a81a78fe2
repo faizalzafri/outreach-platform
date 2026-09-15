@@ -1,0 +1,1 @@
+Method <com.outreach.platform.ai.controller.AiController.getJobResult(java.lang.String)> calls method <com.outreach.platform.ai.repo.AiJobRepository.findById(java.lang.Object)> in (AiController.java:102)

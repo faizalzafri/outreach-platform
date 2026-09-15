@@ -2,37 +2,32 @@ package com.outreach.platform.event.entity;
 
 import com.outreach.platform.common.pii.AesEncryptionConverter;
 import com.outreach.platform.common.pii.PiiField;
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.event.model.UserRole;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Platform user account with role-based access.
+ *
+ * <p>See {@link EventEntity} for why the audit columns are overridden rather than renamed.
+ * Unlike most other entities in this service, {@code created_by} already matched
+ * {@code BaseEntity}'s default column name, so only {@code createdDate}/{@code lastModifiedDate}/
+ * {@code lastModifiedBy} need overriding.
  */
 @Entity
 @Table(name = "users")
-@EntityListeners(AuditingEntityListener.class)
-public class UserEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class UserEntity extends TenantAwareBaseEntity {
 
     @Column(name = "username", nullable = false, unique = true, length = 100)
     private String username;
@@ -67,30 +62,7 @@ public class UserEntity {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
-    @Version
-    @Column(name = "version")
-    private Long version;
-
     public UserEntity() {
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public String getUsername() {
@@ -173,35 +145,6 @@ public class UserEntity {
         this.lastLoginAt = lastLoginAt;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
+    // id, tenantId, createdDate/lastModifiedDate/createdBy/lastModifiedBy, and version
+    // are inherited — see the class-level @AttributeOverrides.
 }

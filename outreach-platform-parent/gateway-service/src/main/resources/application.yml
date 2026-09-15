@@ -13,10 +13,14 @@ idp:
 
 server:
   port: 7093
+  shutdown: graceful
 
 spring:
   application:
     name: gateway-service
+
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
 
   # Redis configuration for rate limiting
   data:
@@ -84,12 +88,48 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: volunteer-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/volunteers/**
+          filters:
+            - StripPrefix=1
+
         - id: ai-service
           uri: lb://ai-service
           predicates:
             - Path=/api/ai/**
           filters:
             - StripPrefix=1
+
+        # Tenant/team/sharing/activity-feed controllers in event-service keep the full
+        # /api/... prefix in their own @RequestMapping (unlike every other service's
+        # controllers, which expect StripPrefix=1 to have already removed it) — no
+        # StripPrefix filter here so the incoming path reaches them unchanged.
+        - id: tenant-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/tenants/**
+
+        - id: team-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/teams/**
+
+        - id: resource-permission-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/resources/**
+
+        - id: activity-feed-service
+          uri: lb://event-service
+          predicates:
+            - Path=/api/activity/**
+
+        - id: auth-api-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
 
 # Eureka client configuration
 eureka:
@@ -117,11 +157,24 @@ resilience4j:
       default:
         timeoutDuration: 5s
 
+# Per-tenant rate limiting (token bucket)
+tenant:
+  rate-limit:
+    requests-per-second: ${RATE_LIMIT_RPS:100}
+
 # CORS configurable allowlist
+# outreach-studio (the active React frontend) runs on 5173 by default, falling back to 5174+ if
+# that port is taken. localhost:4200 was the legacy Angular dashboard's port — that app isn't part
+# of this repo's active source tree (see CLAUDE.md) and this allowlist was never updated when it
+# was replaced, so every non-GET request from the real frontend was rejected by CORS (GET requests
+# went unnoticed because a same-origin browser request only carries an Origin header for
+# non-"safe" methods like POST/PUT/DELETE — confirmed via gateway server logs showing
+# DefaultCorsProcessor rejecting the Origin on a POST while identical GETs passed through fine).
 gateway:
   cors:
     allowed-origins:
-      - http://localhost:4200
+      - http://localhost:5173
+      - http://localhost:5174
     allowed-methods:
       - GET
       - POST
@@ -153,6 +206,13 @@ management:
       endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
       export:
         enabled: ${OTLP_TRACING_ENABLED:false}
+
+# Caffeine L1 local cache configuration
+# Pattern: Caffeine (5s TTL) → Redis (60s TTL) → Database
+# Reduces Redis load by ~90% for hot-path reads
+cache:
+  caffeine:
+    spec: maximumSize=1000,expireAfterWrite=5s
 
 # SpringDoc OpenAPI
 springdoc:

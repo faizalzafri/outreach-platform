@@ -2,6 +2,9 @@ spring:
   application:
     name: event-service
 
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
   # PostgreSQL datasource
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
@@ -9,9 +12,12 @@ spring:
     password: ${DATABASE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      connection-timeout: 5000
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      connection-timeout: 3000
+      idle-timeout: 600000
+      leak-detection-threshold: 30000
+      connection-init-sql: SET statement_timeout = '30s'
 
   # JPA / Hibernate
   jpa:

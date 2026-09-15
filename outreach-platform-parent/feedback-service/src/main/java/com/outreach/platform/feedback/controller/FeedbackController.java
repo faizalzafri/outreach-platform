@@ -36,10 +36,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * REST controller for managing volunteer feedback operations.
- * Provides endpoints for CRUD, search, export, and metadata queries.
- */
+/** REST controller for volunteer feedback CRUD, search, and export operations. */
 @RestController
 @RequestMapping("/feedback")
 @Tag(name = "Feedback Management", description = "Volunteer feedback submission, search, export, and metadata operations")

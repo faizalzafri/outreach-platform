@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.entity.NotificationScheduleEntity;
 import com.outreach.platform.notification.model.ScheduleStatus;
 import com.outreach.platform.notification.model.dto.ScheduleCreateRequest;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -61,7 +63,12 @@ public class NotificationScheduleService {
      */
     @Transactional
     public void cancelSchedule(UUID id) {
-        NotificationScheduleEntity entity = scheduleRepository.findById(id)
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<NotificationScheduleEntity> scheduleLookup = TenantContext.isPresent()
+                ? scheduleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
+                : scheduleRepository.findById(id);
+        NotificationScheduleEntity entity = scheduleLookup
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + id));
 
         if (entity.getStatus() == ScheduleStatus.CANCELLED) {
@@ -84,7 +91,7 @@ public class NotificationScheduleService {
                 entity.getScheduledAt(),
                 entity.getStatus(),
                 entity.getRecipientFilter(),
-                entity.getCreatedAt(),
+                entity.getCreatedDate(),
                 entity.getCreatedBy()
         );
     }

@@ -70,7 +70,13 @@ interface TrendsResponse {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PIE_COLORS = ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#6366f1'];
+const PIE_COLORS = [
+  'var(--color-danger-500)',
+  'var(--color-warning-500)',
+  'var(--color-amber-500)',
+  'var(--color-success-500)',
+  'var(--color-primary-500)',
+];
 
 const REQUIRED_ROLES = ['ROLE_ADMIN', 'ROLE_PMO'];
 

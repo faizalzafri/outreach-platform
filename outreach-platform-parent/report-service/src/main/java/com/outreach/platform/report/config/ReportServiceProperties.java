@@ -6,18 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * Type-safe configuration properties for the Report Service.
- *
- * <p>Bound from the {@code report-service} prefix in application.yml:</p>
- * <pre>
- * report-service:
- *   default-page-size: 20
- *   max-page-size: 100
- *   cache-ttl-minutes: 10
- *   snapshot-retention-days: 365
- * </pre>
- */
+/** Type-safe configuration properties for the Report Service, bound from the "report-service" prefix. */
 @ConfigurationProperties(prefix = "report-service")
 @Validated
 public record ReportServiceProperties(

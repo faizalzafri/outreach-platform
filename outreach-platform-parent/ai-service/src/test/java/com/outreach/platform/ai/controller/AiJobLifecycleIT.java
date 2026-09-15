@@ -178,8 +178,10 @@ class AiJobLifecycleIT {
                         .content(requestBody))
                 .andExpect(status().isAccepted());
 
-        // Verify the job was saved with correct type and PENDING status
-        AiJobDocument capturedJob = jobCaptor.getValue();
+        // Two save() calls happen here now: job creation (PENDING), then completeJob's save once
+        // the (already-completed, in this test) future resolves — so assert against the first
+        // captured value, the state at creation time, not getValue()'s last-call semantics.
+        AiJobDocument capturedJob = jobCaptor.getAllValues().get(0);
         assertThat(capturedJob.getJobType()).isEqualTo(AiJobType.SUMMARIZE);
         assertThat(capturedJob.getStatus()).isEqualTo(AiJobStatus.PENDING);
         assertThat(capturedJob.getRequest()).containsKey("context");
@@ -187,6 +189,7 @@ class AiJobLifecycleIT {
 
     private AiJobDocument createPendingJob(String jobId) {
         AiJobDocument job = new AiJobDocument(
+                java.util.UUID.randomUUID(),
                 AiJobType.SUMMARIZE,
                 Map.of("context", "test", "maxLength", 500),
                 Instant.now().plusSeconds(86400)

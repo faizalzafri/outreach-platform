@@ -1,57 +1,51 @@
 /**
  * Route Prefetch Hook
  *
- * Provides a prefetch mechanism for route code chunks and initial data queries.
- * Triggers on hover with a 150ms delay to avoid unnecessary prefetching on
- * mouse pass-through. Cancels if the user moves away before the delay elapses.
+ * Prefetches a route's code chunk on hover with a 150ms delay to avoid
+ * unnecessary prefetching on mouse pass-through. Cancels if the user moves
+ * away before the delay elapses.
+ *
+ * This deliberately does not also prefetch each route's initial data query:
+ * a prior version seeded the query cache with a stub `queryFn` that always
+ * resolved to `null` under the same query key the route's real query uses.
+ * Since a normal click is preceded by a mouseenter, that stub reliably won
+ * the race against the real fetch — the page's query saw fresh (if stale-far)
+ * cached `null` data and never called its real queryFn, landing on an empty
+ * or error state until something (a manual retry, staleTime elapsing)
+ * triggered a real fetch. Only prefetch what's actually correct: the chunk.
  */
 
 import { useCallback, useRef } from 'react';
 import { useRouter } from '@tanstack/react-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
 
 /**
- * Maps route paths to their corresponding chunk import and initial query key.
- * This enables prefetching both the code chunk and initial API data on hover.
+ * Maps route paths to their corresponding code chunk import, for prefetching
+ * on hover.
  */
-const ROUTE_PREFETCH_MAP: Record<
-  string,
-  {
-    chunk: () => Promise<unknown>;
-    queryKey?: readonly unknown[];
-  }
-> = {
+const ROUTE_PREFETCH_MAP: Record<string, { chunk: () => Promise<unknown> }> = {
   '/dashboard': {
     chunk: () => import('@/routes/_authenticated/-components/DashboardContent'),
-    queryKey: queryKeys.reports.dashboard({}),
   },
   '/events': {
     chunk: () => import('@/routes/_authenticated/events/-components/EventListContent'),
-    queryKey: queryKeys.events.lists(),
   },
   '/volunteers': {
     chunk: () => import('@/routes/_authenticated/volunteers/-components/VolunteerListContent'),
-    queryKey: queryKeys.volunteers.lists(),
   },
   '/feedback': {
     chunk: () => import('@/routes/_authenticated/feedback/-components/FeedbackContent'),
-    queryKey: queryKeys.feedback.list({}),
   },
   '/ingestion': {
     chunk: () => import('@/routes/_authenticated/ingestion/-components/IngestionContent'),
-    queryKey: queryKeys.ingestion.jobs(),
   },
   '/notifications': {
     chunk: () => import('@/routes/_authenticated/notifications/-components/NotificationsContent'),
-    queryKey: queryKeys.notifications.templates(),
   },
   '/reports': {
     chunk: () => import('@/routes/_authenticated/reports/-components/ReportsContent'),
   },
   '/admin': {
     chunk: () => import('@/routes/_authenticated/admin/-components/AdminContent'),
-    queryKey: queryKeys.admin.users(),
   },
   '/audit-log': {
     chunk: () => import('@/routes/_authenticated/audit-log/-components/AuditLogContent'),
@@ -68,7 +62,6 @@ export function usePrefetch() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefetchedRef = useRef<Set<string>>(new Set());
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const handleMouseEnter = useCallback(
     (href: string) => {
@@ -89,19 +82,10 @@ export function usePrefetch() {
           void routeConfig.chunk().catch(() => {
             // Silently ignore chunk prefetch failures
           });
-
-          // Prefetch initial data query if configured
-          if (routeConfig.queryKey) {
-            void queryClient.prefetchQuery({
-              queryKey: routeConfig.queryKey as unknown[],
-              queryFn: () => Promise.resolve(null),
-              staleTime: 30_000,
-            });
-          }
         }
       }, PREFETCH_DELAY_MS);
     },
-    [router, queryClient]
+    [router]
   );
 
   const handleMouseLeave = useCallback(() => {

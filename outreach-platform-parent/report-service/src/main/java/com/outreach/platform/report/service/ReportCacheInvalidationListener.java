@@ -22,11 +22,7 @@ public class ReportCacheInvalidationListener {
         this.reportService = reportService;
     }
 
-    /**
-     * Handles ImportJobCompleted events by evicting all report caches.
-     * The event can originate from inter-service messaging (e.g., via a message listener
-     * that publishes a local Spring ApplicationEvent).
-     */
+    /** Handles ImportJobCompleted events by evicting all report caches. */
     @EventListener
     public void onImportJobCompleted(ImportJobCompletedEvent event) {
         log.info("ImportJobCompleted event received (jobId={}). Evicting report caches.", event.jobId());

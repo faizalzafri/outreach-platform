@@ -5,6 +5,7 @@ import com.outreach.platform.ai.entity.AiJobDocument;
 import com.outreach.platform.ai.model.*;
 import com.outreach.platform.ai.repo.AiJobRepository;
 import com.outreach.platform.ai.service.AiService;
+import com.outreach.platform.common.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,12 +20,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * REST controller for AI-powered operations.
- * All endpoints require ROLE_ADMIN (enforced via SecurityConfig).
- * Operations are async: they return 202 Accepted with a jobId.
- * Results are retrieved via GET /ai/jobs/{jobId}.
- */
+/** REST controller for async AI operations (summarize, anomaly detection, NL queries). */
 @RestController
 @RequestMapping("/ai")
 @Tag(name = "AI Operations", description = "AI-powered summarization, anomaly detection, and natural language queries (ROLE_ADMIN only)")
@@ -43,9 +39,6 @@ public class AiController {
         this.properties = properties;
     }
 
-    /**
-     * Submit a summarization job.
-     */
     @Operation(summary = "Summarize feedback", description = "Submits a feedback summarization job (async, returns 202 with jobId)")
     @PostMapping("/summarize")
     public ResponseEntity<?> summarize(@Valid @RequestBody SummarizeRequest request) {
@@ -58,14 +51,11 @@ public class AiController {
                 "maxLength", request.maxLength() != null ? request.maxLength() : 500
         ));
 
-        aiService.summarize(request).thenAccept(result -> completeJob(job.getId(), result));
+        aiService.summarize(request).thenAccept(result -> completeJob(job, result));
 
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Submit an anomaly detection job.
-     */
     @Operation(summary = "Detect anomalies", description = "Submits an anomaly detection job on feedback dataset (async, returns 202 with jobId)")
     @PostMapping("/anomalies")
     public ResponseEntity<?> detectAnomalies(@Valid @RequestBody AnomalyRequest request) {
@@ -78,14 +68,11 @@ public class AiController {
                 "threshold", request.threshold() != null ? request.threshold() : 0.5
         ));
 
-        aiService.detectAnomalies(request).thenAccept(result -> completeJob(job.getId(), result));
+        aiService.detectAnomalies(request).thenAccept(result -> completeJob(job, result));
 
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Submit a natural language query job.
-     */
     @Operation(summary = "Natural language query", description = "Submits a natural language query job (async, returns 202 with jobId)")
     @PostMapping("/query")
     public ResponseEntity<?> query(@Valid @RequestBody QueryRequest request) {
@@ -98,30 +85,31 @@ public class AiController {
                 "context", request.context() != null ? request.context() : ""
         ));
 
-        aiService.query(request).thenAccept(result -> completeJob(job.getId(), result));
+        aiService.query(request).thenAccept(result -> completeJob(job, result));
 
         return acceptedResponse(job.getId());
     }
 
-    /**
-     * Retrieve AI job status and result.
-     */
     @Operation(summary = "Get job result", description = "Retrieves AI job status and result by job ID")
     @GetMapping("/jobs/{jobId}")
     public ResponseEntity<AiJobResponse> getJobResult(@Parameter(description = "Job ID") @PathVariable String jobId) {
-        return aiJobRepository.findById(jobId)
-                .map(job -> ResponseEntity.ok(new AiJobResponse(
-                        job.getId(),
-                        job.getStatus().name(),
-                        job.getResult(),
-                        job.getCreatedAt()
+        // findById() alone would let any caller read any tenant's job result by ID — see
+        // docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls back to
+        // the unscoped lookup only for the PLATFORM_ADMIN case (TenantContextFilter leaves it empty
+        // when no X-Tenant-ID header is sent).
+        var job = TenantContext.isPresent()
+                ? aiJobRepository.findByIdAndTenantId(jobId, TenantContext.getCurrentTenantId())
+                : aiJobRepository.findById(jobId);
+        return job
+                .map(j -> ResponseEntity.ok(new AiJobResponse(
+                        j.getId(),
+                        j.getStatus().name(),
+                        j.getResult(),
+                        j.getCreatedAt()
                 )))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * AI service health and capabilities status.
-     */
     @Operation(summary = "AI status", description = "Returns AI service health and feature capabilities status")
     @GetMapping("/status")
     public ResponseEntity<AiStatusResponse> status() {
@@ -141,22 +129,23 @@ public class AiController {
 
     private AiJobDocument createJob(AiJobType jobType, Map<String, Object> requestData) {
         Instant ttlExpires = Instant.now().plus(properties.jobResultTtlHours(), ChronoUnit.HOURS);
-        AiJobDocument job = new AiJobDocument(jobType, requestData, ttlExpires);
+        AiJobDocument job = new AiJobDocument(TenantContext.getCurrentTenantId(), jobType, requestData, ttlExpires);
         return aiJobRepository.save(job);
     }
 
-    private void completeJob(String jobId, AiJobResult result) {
-        aiJobRepository.findById(jobId).ifPresent(job -> {
-            if (result.success()) {
-                job.setStatus(AiJobStatus.COMPLETED);
-                job.setResult(result.content());
-            } else {
-                job.setStatus(AiJobStatus.FAILED);
-                job.setResult(result.errorMessage());
-            }
-            job.setCompletedAt(Instant.now());
-            aiJobRepository.save(job);
-        });
+    private void completeJob(AiJobDocument job, AiJobResult result) {
+        // Takes the AiJobDocument createJob() already returned rather than re-fetching by ID —
+        // avoids a second, unscoped findById() call on a repository that (as of Task 0.5.7) is
+        // tenant-scoped, and this way there's no tenant check to get right in the first place.
+        if (result.success()) {
+            job.setStatus(AiJobStatus.COMPLETED);
+            job.setResult(result.content());
+        } else {
+            job.setStatus(AiJobStatus.FAILED);
+            job.setResult(result.errorMessage());
+        }
+        job.setCompletedAt(Instant.now());
+        aiJobRepository.save(job);
     }
 
     private ResponseEntity<?> featureDisabledResponse(String feature) {

@@ -6,6 +6,7 @@ import {
   decodeJwtPayload,
   extractRoles,
   isTokenExpiringSoon,
+  hasValidTenantClaims,
 } from '@/lib/auth';
 
 // Helper: create a minimal JWT token with given claims
@@ -179,6 +180,26 @@ describe('Auth Module - Token Decoding and Role Extraction', () => {
         iat: nowSeconds - 310,
       });
       expect(isTokenExpiringSoon(token, 60)).toBe(true);
+    });
+  });
+
+  describe('hasValidTenantClaims', () => {
+    const base = { sub: 'user-001', exp: 9999999999, iat: 1717000000 };
+
+    it('is valid for a regular user with a tenant_id', () => {
+      expect(hasValidTenantClaims({ ...base, tenant_id: 'tenant-123' })).toBe(true);
+    });
+
+    it('is valid for a Platform Admin with no tenant_id', () => {
+      expect(hasValidTenantClaims({ ...base, platform_admin: true })).toBe(true);
+    });
+
+    it('is invalid when neither tenant_id nor platform_admin is present', () => {
+      expect(hasValidTenantClaims({ ...base })).toBe(false);
+    });
+
+    it('is invalid when platform_admin is explicitly false and tenant_id is missing', () => {
+      expect(hasValidTenantClaims({ ...base, platform_admin: false })).toBe(false);
     });
   });
 });

@@ -2,9 +2,11 @@ package com.outreach.platform.ingestion;
 
 import com.outreach.platform.common.messaging.DomainEventMessage;
 import com.outreach.platform.common.messaging.RabbitMqConstants;
+import com.outreach.platform.ingestion.client.EventServiceClient;
 import com.outreach.platform.ingestion.config.TestSecurityConfig;
 import com.outreach.platform.ingestion.model.DomainEventDocument;
 import com.outreach.platform.ingestion.model.EventStatus;
+import com.outreach.platform.ingestion.model.JobStatus;
 import com.outreach.platform.ingestion.repo.DomainEventRepository;
 import com.outreach.platform.ingestion.repo.FileMetadataRepository;
 import com.outreach.platform.ingestion.repo.JobTrackingRepository;
@@ -24,6 +26,7 @@ import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfigurati
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
@@ -42,13 +45,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * End-to-end integration test verifying the full domain event flow:
@@ -112,6 +120,9 @@ class EndToEndEventFlowIT {
     @Inject
     private TestMessageCapture testMessageCapture;
 
+    @MockitoBean
+    private EventServiceClient eventServiceClient;
+
     @BeforeEach
     void setUp() {
         domainEventRepository.deleteAll();
@@ -163,7 +174,8 @@ class EndToEndEventFlowIT {
     @Test
     void volunteersImported_eventPublishedToNotificationQueue() throws InterruptedException {
         // Given: a VolunteersImported event is written to the outbox
-        domainEventPublisher.publishVolunteersImported("e2e-job-2", "team.xlsx", 25);
+        UUID eventId = UUID.randomUUID();
+        domainEventPublisher.publishVolunteersImported(eventId, List.of(Map.of("email", "a@b.com", "name", "Alice")));
 
         // When: the outbox poller runs
         domainEventOutboxPoller.pollAndPublish();
@@ -174,9 +186,8 @@ class EndToEndEventFlowIT {
 
         DomainEventMessage notifMsg = testMessageCapture.notificationMessages.get(0);
         assertThat(notifMsg.eventType()).isEqualTo("VolunteersImported");
-        assertThat(notifMsg.payload()).containsEntry("jobId", "e2e-job-2");
-        assertThat(notifMsg.payload()).containsEntry("fileName", "team.xlsx");
-        assertThat(notifMsg.payload()).containsEntry("importedCount", 25);
+        assertThat(notifMsg.payload()).containsEntry("eventId", eventId.toString());
+        assertThat(notifMsg.payload()).containsKey("volunteers");
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -185,8 +196,12 @@ class EndToEndEventFlowIT {
 
     @Test
     void fullJourney_uploadFile_jobTracked_eventsPublishedToQueues() throws Exception {
-        // Given: a valid Excel file
+        // Given: a valid Excel file, and event-service (mocked — the real Feign boundary) ready
+        // to accept both rows into the same resolved event
         byte[] excelBytes = createValidExcelFile();
+        UUID eventId = UUID.randomUUID();
+        when(eventServiceClient.importVolunteer(any()))
+                .thenReturn(new EventServiceClient.VolunteerImportResponse(UUID.randomUUID(), eventId, false));
 
         // Step 1: Upload the file via REST endpoint
         ResponseEntity<Map> uploadResponse = uploadFile("e2e-volunteers.xlsx", excelBytes);
@@ -203,10 +218,16 @@ class EndToEndEventFlowIT {
         assertThat(jobOpt).isPresent();
         assertThat(jobOpt.get().getFileName()).isEqualTo("e2e-volunteers.xlsx");
 
-        // Step 3: Simulate the import completion (publishing domain events as the processor would)
-        domainEventPublisher.publishVolunteersImported(jobId, "e2e-volunteers.xlsx", 2);
-        domainEventPublisher.publishImportJobCompleted(
-                jobId, "e2e-volunteers.xlsx", "COMPLETED", 2, 2, 0);
+        // Step 3: Wait for the real (async) import pipeline to run both rows through the
+        // (mocked) event-service call and complete the job — this replaces the old hand-written
+        // domainEventPublisher.publish...() calls, which were faking the exact step this pipeline
+        // now actually performs.
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            var job = jobTrackingRepository.findById(jobId);
+            assertThat(job).isPresent();
+            assertThat(job.get().getStatus()).isEqualTo(JobStatus.COMPLETED);
+        });
+        assertThat(jobTrackingRepository.findById(jobId).get().getProcessedRows()).isEqualTo(2);
 
         // Verify both events are in the outbox as PENDING
         List<DomainEventDocument> pendingEvents = domainEventRepository.findByStatus(EventStatus.PENDING);
@@ -232,8 +253,8 @@ class EndToEndEventFlowIT {
         // Verify notification message contents
         DomainEventMessage notifMsg = testMessageCapture.notificationMessages.get(0);
         assertThat(notifMsg.eventType()).isEqualTo("VolunteersImported");
-        assertThat(notifMsg.payload()).containsEntry("jobId", jobId);
-        assertThat(notifMsg.payload()).containsEntry("importedCount", 2);
+        assertThat(notifMsg.payload()).containsEntry("eventId", eventId.toString());
+        assertThat((List<?>) notifMsg.payload().get("volunteers")).hasSize(2);
 
         // Step 6: Verify all outbox events are marked PUBLISHED
         List<DomainEventDocument> stillPending = domainEventRepository.findByStatus(EventStatus.PENDING);

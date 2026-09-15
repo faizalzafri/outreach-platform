@@ -1,10 +1,12 @@
 package com.outreach.platform.event.integration;
 
+import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.event.model.AuditLogDocument;
 import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.StatusTransitionRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +61,21 @@ class AuditLogIT {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
+    @BeforeEach
+    void setUp() {
+        // TestRestTemplate's underlying RestTemplate is a shared bean across all test methods in
+        // this class — guard against stacking a duplicate interceptor. Without a tenant header,
+        // TenantEntityListener throws IllegalStateException on persist, which the controller
+        // turns into a 500 that this suite never noticed because it was never actually run before
+        // the failsafe-plugin wiring fix (same root cause as EventServiceIT).
+        if (restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add(TenantConstants.X_TENANT_ID_HEADER, TenantConstants.DEFAULT_TENANT_ID.toString());
+                return execution.execute(request, body);
+            });
+        }
+    }
 
     @Test
     void createEvent_shouldWriteAuditLogEntry() {

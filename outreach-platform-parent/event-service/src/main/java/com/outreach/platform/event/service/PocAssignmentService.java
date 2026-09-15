@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.EventEntity;
 import com.outreach.platform.event.entity.PocAssignmentEntity;
 import com.outreach.platform.event.entity.UserEntity;
@@ -50,9 +51,16 @@ public class PocAssignmentService {
      */
     @Transactional
     public PocAssignmentDto assignPoc(UUID eventId, PocAssignRequest request) {
-        EventEntity event = eventRepository.findById(eventId)
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        UUID currentTenantId = TenantContext.isPresent() ? TenantContext.getCurrentTenantId() : null;
+        EventEntity event = (currentTenantId != null
+                ? eventRepository.findByIdAndTenantId(eventId, currentTenantId)
+                : eventRepository.findById(eventId))
                 .orElseThrow(() -> new NoSuchElementException("Event not found: " + eventId));
-        UserEntity user = userRepository.findById(request.userId())
+        UserEntity user = (currentTenantId != null
+                ? userRepository.findByIdAndTenantId(request.userId(), currentTenantId)
+                : userRepository.findById(request.userId()))
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + request.userId()));
 
         if (pocAssignmentRepository.existsByEventIdAndUserId(eventId, request.userId())) {

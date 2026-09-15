@@ -5,10 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Request body for updating an existing scheduled report configuration.
- * All fields are optional — only provided fields will be updated.
- */
+/** Request body for updating an existing scheduled report; all fields are optional. */
 @Schema(description = "Request for updating a scheduled report. All fields are optional.")
 public record ScheduledReportUpdateRequest(
         @Schema(description = "Updated report name", example = "Monthly Feedback Summary")

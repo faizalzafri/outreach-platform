@@ -106,8 +106,8 @@ type ExportFormat = 'PDF' | 'CSV' | 'EXCEL';
 
 interface ExportJobStatus {
   jobId: string;
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
-  downloadUrl?: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  fileName?: string;
 }
 
 const EXPORT_FORMAT_OPTIONS: { value: ExportFormat; label: string }[] = [
@@ -237,6 +237,7 @@ export function ReportsContent() {
   // --- Export state ---
   const [exportStatus, setExportStatus] = useState<'idle' | 'polling' | 'completed' | 'failed' | 'timeout'>('idle');
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadFileName, setDownloadFileName] = useState<string | null>(null);
   const [showFormatMenu, setShowFormatMenu] = useState(false);
   const exportPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exportStartRef = useRef<number>(0);
@@ -254,7 +255,9 @@ export function ReportsContent() {
   const startExport = useCallback(async (format: ExportFormat) => {
     setShowFormatMenu(false);
     setExportStatus('polling');
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
+    setDownloadFileName(null);
     exportStartRef.current = Date.now();
 
     try {
@@ -285,20 +288,31 @@ export function ReportsContent() {
         }
 
         try {
-          const statusRes = await httpClient.get<ExportJobStatus>(`/reports/export/${jobId}/status`);
-          const job = statusRes.data;
+          // The status endpoint doubles as the download endpoint: while the job is
+          // pending/running it returns the ExportJobDto as JSON; once COMPLETED it
+          // returns the raw file bytes with a Content-Disposition header instead.
+          const statusRes = await httpClient.get<Blob>(`/reports/export/${jobId}`, {
+            responseType: 'blob',
+          });
+          const contentType = String(statusRes.headers['content-type'] ?? '');
 
-          if (job.status === 'COMPLETED') {
+          if (contentType.includes('application/json')) {
+            const job = JSON.parse(await statusRes.data.text()) as ExportJobStatus;
+            if (job.status === 'FAILED') {
+              if (exportPollRef.current) clearInterval(exportPollRef.current);
+              exportPollRef.current = null;
+              setExportStatus('failed');
+              toastError('Export failed. Please try again.');
+            }
+          } else {
             if (exportPollRef.current) clearInterval(exportPollRef.current);
             exportPollRef.current = null;
+            const disposition = String(statusRes.headers['content-disposition'] ?? '');
+            const fileNameMatch = /filename="?([^"]+)"?/.exec(disposition);
+            setDownloadFileName(fileNameMatch?.[1] ?? `report.${format.toLowerCase()}`);
+            setDownloadUrl(URL.createObjectURL(statusRes.data));
             setExportStatus('completed');
-            setDownloadUrl(job.downloadUrl ?? null);
             toastSuccess('Export completed successfully.');
-          } else if (job.status === 'FAILED') {
-            if (exportPollRef.current) clearInterval(exportPollRef.current);
-            exportPollRef.current = null;
-            setExportStatus('failed');
-            toastError('Export failed. Please try again.');
           }
         } catch {
           if (exportPollRef.current) clearInterval(exportPollRef.current);
@@ -311,7 +325,7 @@ export function ReportsContent() {
       setExportStatus('failed');
       toastError('Failed to start export.');
     }
-  }, [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user, toastSuccess, toastError]);
+  }, [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user, toastSuccess, toastError, downloadUrl]);
 
   return (
     <div className={styles['container']}>
@@ -466,9 +480,7 @@ export function ReportsContent() {
           <a
             href={downloadUrl}
             className={styles['downloadLink']}
-            target="_blank"
-            rel="noopener noreferrer"
-            download
+            download={downloadFileName ?? undefined}
           >
             Download Report
           </a>
@@ -546,7 +558,7 @@ export function ReportsContent() {
                 <Line
                   type="monotone"
                   dataKey="avgScore"
-                  stroke="#22c55e"
+                  stroke="var(--color-success-500)"
                   strokeWidth={2}
                   dot={false}
                   name="Avg Score"
@@ -572,11 +584,11 @@ export function ReportsContent() {
                   <YAxis tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="1" fill="#ef4444" name="Score 1" stackId="a" />
-                  <Bar dataKey="2" fill="#f97316" name="Score 2" stackId="a" />
-                  <Bar dataKey="3" fill="#eab308" name="Score 3" stackId="a" />
-                  <Bar dataKey="4" fill="#22c55e" name="Score 4" stackId="a" />
-                  <Bar dataKey="5" fill="#3b82f6" name="Score 5" stackId="a" />
+                  <Bar dataKey="1" fill="var(--color-danger-500)" name="Score 1" stackId="a" />
+                  <Bar dataKey="2" fill="var(--color-orange-500)" name="Score 2" stackId="a" />
+                  <Bar dataKey="3" fill="var(--color-amber-500)" name="Score 3" stackId="a" />
+                  <Bar dataKey="4" fill="var(--color-success-500)" name="Score 4" stackId="a" />
+                  <Bar dataKey="5" fill="var(--color-info-500)" name="Score 5" stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </section>

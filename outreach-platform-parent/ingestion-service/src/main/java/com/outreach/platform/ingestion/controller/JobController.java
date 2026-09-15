@@ -1,6 +1,7 @@
 package com.outreach.platform.ingestion.controller;
 
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
+import com.outreach.platform.ingestion.model.ValidationError;
 import com.outreach.platform.ingestion.service.JobTrackingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -9,6 +10,7 @@ import jakarta.inject.Inject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @RequestMapping("/ingestion/jobs")
 @Tag(name = "Job Tracking", description = "Ingestion job status, progress, error details, and cancellation")
+@PreAuthorize("hasAnyRole('TENANT_ADMIN', 'ADMIN', 'PLATFORM_ADMIN')")
 public class JobController {
 
     private final JobTrackingService jobTrackingService;
@@ -81,17 +84,9 @@ public class JobController {
      */
     @Operation(summary = "Get job errors", description = "Retrieves detailed error information for a job")
     @GetMapping("/{jobId}/errors")
-    public ResponseEntity<Map<String, Object>> getJobErrors(@Parameter(description = "Job ID") @PathVariable String jobId) {
+    public ResponseEntity<List<ValidationError>> getJobErrors(@Parameter(description = "Job ID") @PathVariable String jobId) {
         return jobTrackingService.getJob(jobId)
-                .map(job -> {
-                    List<String> errors = job.getErrors();
-                    Map<String, Object> body = Map.of(
-                            "jobId", jobId,
-                            "errorCount", job.getErrorCount(),
-                            "errors", errors != null ? errors : List.of()
-                    );
-                    return ResponseEntity.ok(body);
-                })
+                .map(job -> ResponseEntity.ok(job.getErrors() != null ? job.getErrors() : List.<ValidationError>of()))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

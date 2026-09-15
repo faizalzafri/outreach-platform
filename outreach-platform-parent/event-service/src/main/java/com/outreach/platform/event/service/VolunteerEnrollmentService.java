@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.EventEnrollmentEntity;
 import com.outreach.platform.event.entity.EventEntity;
 import com.outreach.platform.event.entity.VolunteerEntity;
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -61,8 +63,9 @@ public class VolunteerEnrollmentService {
      */
     @Transactional
     public List<EnrollmentDto> enrollVolunteers(UUID eventId, List<String> employeeIds) {
-        EventEntity event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new NoSuchElementException("Event not found: " + eventId));
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        EventEntity event = findEventOrThrow(eventId);
 
         List<EnrollmentDto> results = new ArrayList<>();
         for (String employeeId : employeeIds) {
@@ -110,11 +113,23 @@ public class VolunteerEnrollmentService {
         enrollmentRepository.delete(enrollment);
 
         // Decrement registered count
-        eventRepository.findById(eventId).ifPresent(event -> {
-            int current = event.getRegisteredCount() != null ? event.getRegisteredCount() : 0;
-            event.setRegisteredCount(Math.max(0, current - 1));
-            eventRepository.save(event);
-        });
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        (TenantContext.isPresent()
+                ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
+                : eventRepository.findById(eventId))
+                .ifPresent(event -> {
+                    int current = event.getRegisteredCount() != null ? event.getRegisteredCount() : 0;
+                    event.setRegisteredCount(Math.max(0, current - 1));
+                    eventRepository.save(event);
+                });
+    }
+
+    private EventEntity findEventOrThrow(UUID eventId) {
+        Optional<EventEntity> event = TenantContext.isPresent()
+                ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
+                : eventRepository.findById(eventId);
+        return event.orElseThrow(() -> new NoSuchElementException("Event not found: " + eventId));
     }
 
     /**

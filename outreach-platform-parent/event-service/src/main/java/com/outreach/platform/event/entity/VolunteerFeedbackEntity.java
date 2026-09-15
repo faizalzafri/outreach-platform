@@ -1,42 +1,34 @@
 package com.outreach.platform.event.entity;
 
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.event.model.FeedbackSentiment;
 import com.outreach.platform.event.model.FeedbackStatus;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.Version;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Volunteer feedback for a specific event including score and freeform answers.
+ *
+ * <p>See {@link EventEntity} for why the audit columns are overridden rather than renamed.
  */
 @Entity
 @Table(name = "volunteer_feedback", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "volunteer_id"})
 })
-@EntityListeners(AuditingEntityListener.class)
-public class VolunteerFeedbackEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class VolunteerFeedbackEntity extends TenantAwareBaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -84,27 +76,7 @@ public class VolunteerFeedbackEntity {
     @Column(name = "reviewed_by", length = 100)
     private String reviewedBy;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @Version
-    @Column(name = "version")
-    private Long version;
-
     public VolunteerFeedbackEntity() {
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public EventEntity getEvent() {
@@ -219,27 +191,6 @@ public class VolunteerFeedbackEntity {
         this.reviewedBy = reviewedBy;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
+    // id, tenantId, createdDate/lastModifiedDate/createdBy/lastModifiedBy, and version
+    // are inherited — see the class-level @AttributeOverrides.
 }

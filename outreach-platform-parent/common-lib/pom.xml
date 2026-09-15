@@ -33,8 +33,24 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <!-- Feign (optional — activates the service-to-service auth RequestInterceptor when a
+             consuming service declares spring-cloud-starter-openfeign itself) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Actuator (health indicators, probes) -->
@@ -76,6 +92,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Caffeine Local Cache (optional — activates L1 cache layer when present) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Structured JSON Logging -->
         <dependency>
             <groupId>net.logstash.logback</groupId>
@@ -89,6 +112,12 @@
             <artifactId>micrometer-tracing-bridge-otel</artifactId>
         </dependency>
 
+        <!-- Hypersistence Utils: JSONB columns, PostgreSQL enum types for Hibernate 6.3+ -->
+        <dependency>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-63</artifactId>
+        </dependency>
+
         <!-- OpenAPI annotations (@Schema, @ExampleObject) for shared DTOs -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
@@ -98,6 +127,14 @@
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+
+        <!-- ArchUnit: automated architecture rule enforcement -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.3.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -120,6 +157,43 @@
                         <include>**/*IT.java</include>
                     </includes>
                 </configuration>
+            </plugin>
+            <!--
+                Publishes ONLY common-lib's architecture-rule test classes (ArchitectureRulesTest
+                and its archunit.properties) as a test-jar, so service modules can depend on it
+                and actually run these ArchUnit rules against their OWN compiled classes. Without
+                this, @AnalyzeClasses scans whatever is on the classpath of whichever module's
+                test run executes it — which, without this test-jar, is only ever common-lib
+                itself. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md) and
+                docs/specs/platform-hardening/requirements.md Finding 2.
+
+                Scoped narrowly to the architecture package (plus the properties file) rather than
+                packaging ALL of common-lib's test classes — a consuming service's Surefire also
+                needs `dependenciesToScan` to discover this dependency's tests at all (see each
+                service's own pom), and that setting can't distinguish "classes I want from this
+                dependency" from "classes I don't" once they're all in one jar. Confirmed by
+                testing: with an unscoped test-jar, event-service's own `mvn test` started
+                re-running (and, for two of them, failing) common-lib's unrelated unit tests
+                (e.g. SmtpHealthIndicatorTest, TenantCacheInvalidationServiceTest) that assume
+                common-lib's own test context, not a consuming service's.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/outreach/platform/common/architecture/**</include>
+                                <include>archunit.properties</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

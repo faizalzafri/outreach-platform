@@ -4,6 +4,7 @@ import com.outreach.platform.ingestion.model.FileUploadResponse;
 import com.outreach.platform.ingestion.model.ParseResult;
 import com.outreach.platform.ingestion.model.ValidationResult;
 import com.outreach.platform.ingestion.service.FileParserService;
+import com.outreach.platform.ingestion.service.ImportProcessingService;
 import com.outreach.platform.ingestion.service.JobTrackingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,6 +38,7 @@ import java.util.UUID;
 @CrossOrigin(origins = "*")
 @RequestMapping("/ingestion")
 @Tag(name = "File Ingestion", description = "File upload, validation, and template download for data import")
+@PreAuthorize("hasAnyRole('TENANT_ADMIN', 'ADMIN', 'PLATFORM_ADMIN')")
 public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
@@ -47,12 +50,15 @@ public class IngestionController {
 
     private final FileParserService fileParserService;
     private final JobTrackingService jobTrackingService;
+    private final ImportProcessingService importProcessingService;
 
     @Inject
     public IngestionController(FileParserService fileParserService,
-                               JobTrackingService jobTrackingService) {
+                               JobTrackingService jobTrackingService,
+                               ImportProcessingService importProcessingService) {
         this.fileParserService = fileParserService;
         this.jobTrackingService = jobTrackingService;
+        this.importProcessingService = importProcessingService;
     }
 
     /**
@@ -77,6 +83,11 @@ public class IngestionController {
                 extension,
                 file.getSize()
         );
+
+        // Captured synchronously — the MultipartFile's backing temp file isn't guaranteed to
+        // survive past this request, but the @Async processing below runs on a separate thread.
+        byte[] fileBytes = file.getBytes();
+        importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
 
         FileUploadResponse response = new FileUploadResponse(
                 jobId,
@@ -112,6 +123,9 @@ public class IngestionController {
                     extension,
                     file.getSize()
             );
+
+            byte[] fileBytes = file.getBytes();
+            importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
 
             responses.add(new FileUploadResponse(
                     jobId,

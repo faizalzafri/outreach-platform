@@ -435,9 +435,7 @@ public class ReportService {
         }, args.toArray());
     }
 
-    /**
-     * Evicts all report cache entries. Called when ImportJobCompleted events are received.
-     */
+    /** Evicts all report cache entries. */
     @CacheEvict(value = "reportCache", allEntries = true)
     public void evictAllCaches() {
         // Cache eviction handled by Spring annotation

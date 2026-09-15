@@ -31,44 +31,86 @@ export interface Event {
   createdBy: string;
 }
 
-export type VolunteerAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'ON_LEAVE';
+export type VolunteerAvailability = 'AVAILABLE' | 'BUSY' | 'ON_LEAVE';
 
 export interface Volunteer {
+  id: string;
   employeeId: string;
-  name: string;
+  fullName: string;
   email: string;
+  phone: string;
+  baseLocation: string;
   department: string;
-  location: string;
-  skills: string[];
-  joinDate: string;
+  designation: string;
+  skills: string;
   availability: VolunteerAvailability;
-  totalEvents: number;
-  averageScore: number | null;
+  totalEventsParticipated: number;
+  avgFeedbackScore: number | null;
 }
+
+export interface VolunteerHistoryEntry {
+  eventId: string;
+  eventName: string;
+  eventCode: string;
+  eventDate: string;
+  city: string;
+  attendanceStatus: AttendanceStatus;
+  registeredAt: string;
+}
+
+export type FeedbackSentiment = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+export type FeedbackStatus = 'SUBMITTED' | 'REVIEWED' | 'FLAGGED' | 'ARCHIVED';
 
 export interface FeedbackSubmission {
   id: string;
   eventId: string;
-  employeeId: string;
-  emojiScore: number;
-  textAnswer1: string;
-  textAnswer2: string;
-  textAnswer3?: string;
+  volunteerId: string;
+  score: number;
+  answer1: string;
+  answer2: string;
+  answer3?: string;
   category: string;
+  tags?: string;
+  sentiment?: FeedbackSentiment;
+  status: FeedbackStatus;
   anonymous: boolean;
   submittedAt: string;
 }
 
-export type ImportJobStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'COMPLETED_WITH_ERRORS' | 'FAILED';
+export type AttendanceStatus = 'REGISTERED' | 'ATTENDED' | 'NOT_ATTENDED' | 'UNREGISTERED';
+export type EmailStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';
+
+/** A volunteer's enrollment record for a specific event (`GET /events/{eventId}/volunteers`). */
+export interface EventEnrollment {
+  id: string;
+  eventId: string;
+  volunteerId: string;
+  employeeId: string;
+  volunteerName: string;
+  attendanceStatus: AttendanceStatus;
+  emailStatus: EmailStatus;
+  registeredAt: string;
+  attendanceMarkedAt?: string;
+}
+
+export type ImportJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface ImportJob {
   id: string;
-  filename: string;
+  fileName: string;
   status: ImportJobStatus;
   progress: number;
   totalRows: number;
   errorCount: number;
   createdAt: string;
+}
+
+/** Matches ingestion-service's ValidationError record. */
+export interface JobError {
+  rowNumber: number;
+  columnName: string;
+  errorMessage: string;
+  rejectedValue: string | null;
 }
 
 export type NotificationType = 'EMAIL' | 'SMS' | 'PUSH';
@@ -77,12 +119,12 @@ export interface NotificationTemplate {
   id: string;
   name: string;
   type: NotificationType;
-  subject: string;
-  body: string;
+  subjectTemplate: string | null;
+  bodyTemplate: string;
   engine: string;
-  status: string;
+  active: boolean;
   version: number;
-  variables: Array<{ name: string; dataType: string }>;
+  variablesSchema: string | null;
 }
 
 export type DeliveryStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';

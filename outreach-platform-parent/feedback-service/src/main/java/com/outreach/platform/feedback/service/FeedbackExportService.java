@@ -11,10 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service responsible for exporting feedback data as CSV.
- * Uses streaming output to handle large datasets without excessive memory usage.
- */
+/** Exports feedback data as CSV using streaming output. */
 @Service
 public class FeedbackExportService {
 
@@ -28,9 +25,7 @@ public class FeedbackExportService {
         this.feedbackService = feedbackService;
     }
 
-    /**
-     * Writes feedback data for the given event as CSV to the provided output stream.
-     */
+    /** Writes feedback for the given event as CSV to the output stream. */
     public void exportToCsv(UUID eventId, OutputStream outputStream) throws IOException {
         List<VolunteerFeedbackEntity> feedbackList = feedbackService.listAllByEvent(eventId);
 

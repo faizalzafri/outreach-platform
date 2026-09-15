@@ -12,11 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Mock AI provider implementation for testing and development environments.
- * Returns canned responses and simulates provider latency.
- * Activated when {@code platform.ai.provider=mock}.
- */
+/** Mock AI provider returning canned responses for testing and development. */
 @Service
 @ConditionalOnProperty(name = "platform.ai.provider", havingValue = "mock")
 public class MockAiService implements AiService {

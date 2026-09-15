@@ -10,6 +10,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { z } from 'zod';
 import { PageSkeleton } from '@/components/feedback/PageSkeleton';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
 const AdminContent = lazy(() =>
   import('./-components/AdminContent').then((mod) => ({
@@ -34,8 +35,10 @@ export const Route = createFileRoute('/_authenticated/admin/')({
 
 function AdminPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="User Administration" />}>
-      <AdminContent />
-    </Suspense>
+    <ProtectedRoute requiredRoles={['ROLE_ADMIN']}>
+      <Suspense fallback={<PageSkeleton title="User Administration" />}>
+        <AdminContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

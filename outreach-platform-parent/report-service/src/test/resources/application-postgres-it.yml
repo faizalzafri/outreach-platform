@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: report-service
+
+  # application.yml's main datasource config sets hikari.read-only: true (this service is
+  # read-only-by-design in production) — HikariCP actually enforces that at the JDBC connection
+  # level, so Liquibase's schema-creation DDL would fail here too unless explicitly overridden.
+  datasource:
+    hikari:
+      read-only: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  # Real Postgres via Testcontainers (datasource URL/credentials set dynamically) with a
+  # test-only Liquibase changelog enabled — unlike application-test.yml (static, non-Testcontainers
+  # datasource, Liquibase disabled entirely since this service never owns its schema in
+  # production), this profile exists specifically to prove ReportScheduleEntity's mapping matches
+  # a real engine (docs/specs/platform-hardening/, Task 1.5).
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-test.xml
+    enabled: true
+
+  # RedisCacheConfig (this service's own @Configuration) unconditionally requires a
+  # RedisConnectionFactory bean, unlike application-test.yml's tests which never boot a full
+  # ApplicationContext. Lettuce connects lazily, so pointing at a plausible host/port without a
+  # real Redis running is enough to satisfy bean creation for this repository-layer test.
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/test_report_postgres_it
+    redis:
+      host: localhost
+      port: 6379
+
+  cache:
+    type: simple
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9999/not-used
+
+  cloud:
+    discovery:
+      enabled: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+
+eureka:
+  client:
+    enabled: false
+
+report-service:
+  default-page-size: 20
+  max-page-size: 100
+  cache-ttl-minutes: 10
+  snapshot-retention-days: 365

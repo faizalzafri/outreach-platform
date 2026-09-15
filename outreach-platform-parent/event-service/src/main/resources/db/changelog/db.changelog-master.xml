@@ -34,4 +34,35 @@
     <!-- 5. Seed data (idempotent, skipped if data exists) -->
     <include file="db/changelog/20240102-001-seed-data.sql"/>
 
+    <!-- 6. Multi-tenant SaaS: add tenant_id to all event-service tables -->
+    <include file="db/changelog/20250120-002-add-tenant-id-to-event-tables.sql"/>
+
+    <!-- 7. Multi-tenant SaaS: add tenant_id to report_schedules (report-service has Liquibase disabled) -->
+    <include file="db/changelog/20250120-003-add-tenant-id-to-report-schedules.sql"/>
+
+    <!-- 8. Team and workspace model: teams and team_memberships tables -->
+    <include file="db/changelog/20250122-001-create-teams-tables.sql"/>
+
+    <!-- 9. Fine-grained resource permissions -->
+    <include file="db/changelog/20250122-002-create-resource-permissions-table.sql"/>
+
+    <!-- 10. Add tenant_id to team_memberships (backfill for a gap in the original teams migration) -->
+    <include file="db/changelog/20250122-003-add-tenant-id-to-team-memberships.sql"/>
+
+    <!-- 11. Add missing audit/version columns so all remaining entities can extend TenantAwareBaseEntity
+         without a Hibernate "Multiple @FilterDef" conflict — see docs/specs/platform-hardening/ -->
+    <include file="db/changelog/20250122-004-add-missing-audit-columns.sql"/>
+
+    <!-- 12. Ensure tenant_memberships exists in this service's own schema (owned by auth-service,
+         but TenantMembershipEntity maps to it here too — needed for this service's own isolated tests) -->
+    <include file="db/changelog/20250122-005-ensure-tenant-memberships-table-exists.sql"/>
+
+    <!-- 13. Add missing audit/version columns to report_schedules so ReportScheduleEntity can extend
+         TenantAwareBaseEntity — owned here since report-service itself has Liquibase disabled -->
+    <include file="db/changelog/20250122-006-add-audit-columns-to-report-schedules.sql"/>
+
+    <!-- 14. Fix seed users/volunteers whose PII columns were inserted as plaintext instead of
+         AES-256-GCM ciphertext, breaking JPA decryption for every list/read of those rows -->
+    <include file="db/changelog/20260914-001-fix-plaintext-seed-pii.sql"/>
+
 </databaseChangeLog>

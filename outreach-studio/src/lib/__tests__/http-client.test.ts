@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/server';
 import { normalizeError, setToastHandler, httpClient } from '@/lib/http-client';
+import { useTenantStore } from '@/stores/tenant-store';
 import type { AxiosError } from 'axios';
 import type { NormalizedError, ToastPayload } from '@/types/api';
 
@@ -369,5 +370,62 @@ describe('HTTP Client - Request Interceptor', () => {
 
     // Since no token is set in auth module during tests, authorization header should be absent
     expect(capturedHeaders['authorization']).toBeUndefined();
+  });
+
+  describe('Admin tenant override', () => {
+    afterEach(() => {
+      useTenantStore.getState().setAdminSelectedTenant(null);
+    });
+
+    it('attaches X-Admin-Tenant-ID query param when an admin tenant override is set', async () => {
+      useTenantStore.getState().setAdminSelectedTenant('tenant-override-123');
+      let capturedUrl = '';
+
+      server.use(
+        http.get('/api/test-admin-tenant', ({ request }) => {
+          capturedUrl = request.url;
+          return HttpResponse.json({ data: 'ok' });
+        }),
+      );
+
+      await httpClient.get('/test-admin-tenant');
+
+      const params = new URL(capturedUrl).searchParams;
+      expect(params.get('X-Admin-Tenant-ID')).toBe('tenant-override-123');
+    });
+
+    it('does not attach X-Admin-Tenant-ID when no admin tenant override is set', async () => {
+      let capturedUrl = '';
+
+      server.use(
+        http.get('/api/test-no-admin-tenant', ({ request }) => {
+          capturedUrl = request.url;
+          return HttpResponse.json({ data: 'ok' });
+        }),
+      );
+
+      await httpClient.get('/test-no-admin-tenant');
+
+      const params = new URL(capturedUrl).searchParams;
+      expect(params.has('X-Admin-Tenant-ID')).toBe(false);
+    });
+
+    it('removes a stale X-Admin-Tenant-ID once the override is cleared', async () => {
+      useTenantStore.getState().setAdminSelectedTenant('tenant-override-123');
+      useTenantStore.getState().setAdminSelectedTenant(null);
+      let capturedUrl = '';
+
+      server.use(
+        http.get('/api/test-cleared-admin-tenant', ({ request }) => {
+          capturedUrl = request.url;
+          return HttpResponse.json({ data: 'ok' });
+        }),
+      );
+
+      await httpClient.get('/test-cleared-admin-tenant');
+
+      const params = new URL(capturedUrl).searchParams;
+      expect(params.has('X-Admin-Tenant-ID')).toBe(false);
+    });
   });
 });

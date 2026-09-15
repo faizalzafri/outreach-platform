@@ -4,9 +4,12 @@ export type {
   Event,
   VolunteerAvailability,
   Volunteer,
+  AttendanceStatus,
+  VolunteerHistoryEntry,
   FeedbackSubmission,
   ImportJobStatus,
   ImportJob,
+  JobError,
   NotificationType,
   NotificationTemplate,
   DeliveryStatus,
@@ -43,3 +46,35 @@ export type {
   ApiErrorResponse,
   ToastPayload,
 } from './api';
+
+export type {
+  AiFeatureName,
+  AiStatus,
+  AiJobStatus,
+  AiJob,
+  SubmitJobResponse,
+  SummarizeRequest,
+  AnomalyRequest,
+  QueryRequest,
+} from './ai';
+
+export type {
+  TenantStatus,
+  Tenant,
+  TenantMembership,
+  Team,
+  TeamMember,
+  Visibility,
+  PermissionLevel,
+  ResourcePermission,
+  ResourcePermissions,
+  ActivityActionType,
+  ActivityResourceType,
+  ActivityEvent,
+  ActivityFeedResponse,
+  TenantSelectionResponse,
+  TenantJwtClaims,
+  TeamListParams,
+  TeamMemberListParams,
+  ActivityFilters,
+} from './tenant';

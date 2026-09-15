@@ -28,7 +28,7 @@ const pulseKeyframes = `
 `;
 
 const skeletonBarStyle: CSSProperties = {
-  background: '#e5e7eb',
+  background: 'var(--bg-muted)',
   borderRadius: '4px',
   animation: 'pulse 1.5s ease-in-out infinite',
 };

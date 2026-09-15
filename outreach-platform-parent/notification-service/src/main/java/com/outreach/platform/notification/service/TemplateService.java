@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.entity.NotificationTemplateEntity;
 import com.outreach.platform.notification.model.dto.TemplateCreateRequest;
 import com.outreach.platform.notification.model.dto.TemplateDto;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -42,9 +44,7 @@ public class TemplateService {
 
     @Transactional(readOnly = true)
     public TemplateDto getTemplate(UUID id) {
-        NotificationTemplateEntity entity = templateRepository.findById(id)
-                .orElseThrow(() -> new TemplateNotFoundException(id));
-        return toDto(entity);
+        return toDto(findEntityOrThrow(id));
     }
 
     @Transactional
@@ -64,8 +64,7 @@ public class TemplateService {
 
     @Transactional
     public TemplateDto updateTemplate(UUID id, TemplateUpdateRequest request) {
-        NotificationTemplateEntity entity = templateRepository.findById(id)
-                .orElseThrow(() -> new TemplateNotFoundException(id));
+        NotificationTemplateEntity entity = findEntityOrThrow(id);
 
         if (request.name() != null) {
             entity.setName(request.name());
@@ -95,16 +94,17 @@ public class TemplateService {
 
     @Transactional
     public void deleteTemplate(UUID id) {
-        if (!templateRepository.existsById(id)) {
-            throw new TemplateNotFoundException(id);
-        }
-        templateRepository.deleteById(id);
+        // deleteById() is even more dangerous than findById() here: Spring Data JPA's default
+        // SimpleJpaRepository.deleteById() implementation internally calls findById() and then
+        // removes the result — so this was not just a cross-tenant read risk but a cross-tenant
+        // delete risk. Route through the same tenant-scoped lookup and an explicit delete(entity)
+        // call instead. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        templateRepository.delete(findEntityOrThrow(id));
     }
 
     @Transactional(readOnly = true)
     public TemplatePreviewResponse previewTemplate(UUID templateId, TemplatePreviewRequest request) {
-        NotificationTemplateEntity entity = templateRepository.findById(templateId)
-                .orElseThrow(() -> new TemplateNotFoundException(templateId));
+        NotificationTemplateEntity entity = findEntityOrThrow(templateId);
 
         // Validate variables against schema
         List<String> validationErrors = validationService.validate(
@@ -122,6 +122,15 @@ public class TemplateService {
         return new TemplatePreviewResponse(renderedSubject, renderedBody);
     }
 
+    private NotificationTemplateEntity findEntityOrThrow(UUID id) {
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<NotificationTemplateEntity> entity = TenantContext.isPresent()
+                ? templateRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
+                : templateRepository.findById(id);
+        return entity.orElseThrow(() -> new TemplateNotFoundException(id));
+    }
+
     private TemplateDto toDto(NotificationTemplateEntity entity) {
         return new TemplateDto(
                 entity.getId(),
@@ -133,8 +142,8 @@ public class TemplateService {
                 entity.getVariablesSchema(),
                 entity.isActive(),
                 entity.getVersion(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt(),
+                entity.getCreatedDate(),
+                entity.getLastModifiedDate(),
                 entity.getCreatedBy()
         );
     }

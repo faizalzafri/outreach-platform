@@ -98,27 +98,6 @@ services:
   # Platform Infrastructure Services
   # ─────────────────────────────────────────────────────────────────────────────
 
-  config-server:
-    build:
-      context: .
-      dockerfile: config-server/Dockerfile
-    container_name: outreach-config-server
-    ports:
-      - "8888:8888"
-    environment:
-      EUREKA_URI: http://discovery-service:8761/eureka
-    networks:
-      - outreach-net
-    volumes:
-      - ./config:/config:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
-    stop_grace_period: 15s
-
   discovery-service:
     build:
       context: .
@@ -130,9 +109,6 @@ services:
       EUREKA_URI: http://discovery-service:8761/eureka
     networks:
       - outreach-net
-    depends_on:
-      config-server:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
       interval: 15s
@@ -181,6 +157,9 @@ services:
       AUTH_DB_URL: jdbc:postgresql://postgres:5432/outreachfeedbackdb
       AUTH_DB_USER: outreach
       AUTH_DB_PASSWORD: outreach_secret
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: redis_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       IDP_PROVIDER: spring
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
@@ -188,6 +167,8 @@ services:
       - outreach-net
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
@@ -263,6 +244,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: redis_secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWKS_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
@@ -272,9 +257,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       discovery-service:
+        condition: service_healthy
+      # event-service owns the shared schema (creates volunteer_feedback etc.) — this service's
+      # own migrations ALTER those tables, so they must not race event-service's own migration run.
+      event-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9001/actuator/health || exit 1"]
@@ -296,6 +289,9 @@ services:
       DATABASE_USERNAME: outreach
       DATABASE_PASSWORD: outreach_secret
       MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: redis_secret
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: outreach
@@ -306,6 +302,8 @@ services:
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
       SMTP_HOST: mailhog
       SMTP_PORT: "1025"
+      SMTP_AUTH_ENABLED: "false"
+      SMTP_STARTTLS_ENABLED: "false"
     networks:
       - outreach-net
     depends_on:
@@ -313,11 +311,18 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
       mailhog:
+        condition: service_healthy
+      # event-service owns the shared schema (creates notification_templates/notification_schedules)
+      # — this service's own migrations ALTER/ensure those tables, so they must not race
+      # event-service's own migration run.
+      event-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9002/actuator/health/liveness || exit 1"]
@@ -339,15 +344,18 @@ services:
       DATABASE_USERNAME: outreach
       DATABASE_PASSWORD: outreach_secret
       MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: redis_secret
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: outreach
       RABBITMQ_PASSWORD: outreach_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWT_JWK_SET_URI: http://auth-service:8090/oauth2/jwks
-      JWT_ISSUER_URI: http://auth-service:8090
       IDP_PROVIDER: keycloak
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      AUTH_SERVICE_TOKEN_URI: http://auth-service:8090/oauth2/token
       INGESTION_INPUT_DIR: /tmp/ingestion
     networks:
       - outreach-net
@@ -355,6 +363,8 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -421,6 +431,9 @@ services:
       - "9006:9006"
     environment:
       MONGODB_URI: mongodb://mongodb:27017/outreach_nosql
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: redis_secret
       EUREKA_URI: http://discovery-service:8761/eureka
       JWKS_URI: http://auth-service:8090/oauth2/jwks
       IDP_PROVIDER: keycloak
@@ -430,6 +443,8 @@ services:
       - outreach-net
     depends_on:
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       discovery-service:
         condition: service_healthy

@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/reports/scheduled")
 @Tag(name = "Scheduled Reports", description = "CRUD operations for cron-based scheduled report configurations")
+@PreAuthorize("hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
 public class ScheduledReportController {
 
     private final ScheduledReportService scheduledReportService;
@@ -39,18 +41,12 @@ public class ScheduledReportController {
         this.scheduledReportService = scheduledReportService;
     }
 
-    /**
-     * Lists all scheduled report configurations.
-     */
     @GetMapping
     public ResponseEntity<List<ScheduledReportDto>> listScheduledReports() {
         List<ScheduledReportDto> reports = scheduledReportService.listScheduledReports();
         return ResponseEntity.ok(reports);
     }
 
-    /**
-     * Creates a new scheduled report configuration.
-     */
     @PostMapping
     public ResponseEntity<ScheduledReportDto> createScheduledReport(
             @Valid @RequestBody ScheduledReportCreateRequest request) {
@@ -58,9 +54,6 @@ public class ScheduledReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * Updates an existing scheduled report configuration.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ScheduledReportDto> updateScheduledReport(
             @PathVariable UUID id,
@@ -70,9 +63,6 @@ public class ScheduledReportController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Deletes a scheduled report configuration.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteScheduledReport(@PathVariable UUID id) {
         if (scheduledReportService.deleteScheduledReport(id)) {

@@ -13,6 +13,12 @@ export interface AuthState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /**
+   * True when the token's `tenant_selection_required` claim is set — the user belongs to
+   * multiple tenants and hasn't explicitly chosen one yet. Route guards use this to redirect to
+   * `/select-tenant` rather than trusting the token's (arbitrarily-picked) tenant_id.
+   */
+  tenantSelectionRequired: boolean;
 }
 
 export interface AuthModule {
@@ -37,6 +43,10 @@ export interface JwtClaims {
   };
   exp: number;
   iat: number;
+  tenant_id?: string;
+  tenant_roles?: string[];
+  platform_admin?: boolean;
+  tenant_selection_required?: boolean;
 }
 
 export interface TokenResponse {

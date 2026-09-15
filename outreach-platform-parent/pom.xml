@@ -30,7 +30,6 @@
     <modules>
         <module>common-lib</module>
         <module>gateway-service</module>
-        <module>config-server</module>
         <module>discovery-service</module>
         <module>auth-service</module>
         <module>feedback-service</module>
@@ -74,6 +73,12 @@
 
         <!-- Testing -->
         <testcontainers.version>1.21.4</testcontainers.version>
+
+        <!-- Hypersistence Utils (PostgreSQL-specific JPA types: JSONB, PostgreSQL enums) -->
+        <hypersistence-utils.version>3.9.0</hypersistence-utils.version>
+
+        <!-- Caching -->
+        <caffeine.version>3.1.8</caffeine.version>
 
         <!-- Observability / Tracing -->
         <micrometer-tracing.version>1.4.2</micrometer-tracing.version>
@@ -210,6 +215,20 @@
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-exporter-otlp</artifactId>
                 <version>${opentelemetry.version}</version>
+            </dependency>
+
+            <!-- Hypersistence Utils: JSONB, PostgreSQL enum types for Hibernate 6.3+ -->
+            <dependency>
+                <groupId>io.hypersistence</groupId>
+                <artifactId>hypersistence-utils-hibernate-63</artifactId>
+                <version>${hypersistence-utils.version}</version>
+            </dependency>
+
+            <!-- Caffeine Local Cache -->
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
 
             <!-- RabbitMQ (Testcontainers) -->

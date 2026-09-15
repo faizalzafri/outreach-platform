@@ -7,11 +7,13 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
- * Main application entry point for the Report Service.
+ * Read-only analytics aggregation, dashboard data, and report generation service.
  *
- * <p>Provides read-only analytics aggregation, dashboard data, and report
- * generation. This service does not write to PostgreSQL and therefore does
- * not enable JPA auditing or Liquibase migrations.</p>
+ * <p>{@code @EnableJpaAuditing} lives in a separate {@code JpaAuditingConfig} class (see
+ * {@code config/JpaAuditingConfig.java}), not here — putting it directly on this
+ * {@code @SpringBootApplication} class breaks {@code @WebMvcTest} slices with "JPA metamodel
+ * must not be empty", since the root configuration class is always included in a web slice but
+ * standalone {@code @Configuration} classes are correctly excluded from it.
  */
 @SpringBootApplication(scanBasePackages = "com.outreach.platform")
 @EnableFeignClients

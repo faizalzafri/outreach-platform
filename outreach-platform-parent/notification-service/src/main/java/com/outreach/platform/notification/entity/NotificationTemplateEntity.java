@@ -1,39 +1,26 @@
 package com.outreach.platform.notification.entity;
 
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.notification.model.NotificationType;
 import com.outreach.platform.notification.model.TemplateEngine;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.Instant;
-import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 
 /**
- * JPA entity mapped to the notification_templates table.
- * Stores reusable notification templates with Thymeleaf/Freemarker body content.
+ * JPA entity representing a reusable notification template.
  */
 @Entity
 @Table(name = "notification_templates")
-@EntityListeners(AuditingEntityListener.class)
-public class NotificationTemplateEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class NotificationTemplateEntity extends TenantAwareBaseEntity {
 
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
@@ -59,33 +46,14 @@ public class NotificationTemplateEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
-    @Version
-    @Column(name = "version", nullable = false)
-    private int version = 1;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
     public NotificationTemplateEntity() {
     }
 
     // --- Getters and Setters ---
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    // id/tenantId/createdDate(→created_at)/lastModifiedDate(→updated_at)/createdBy/
+    // lastModifiedBy(→updated_by)/version are inherited from TenantAwareBaseEntity/BaseEntity —
+    // see the class-level @AttributeOverrides for the column-name mapping. Callers previously
+    // using getCreatedAt()/getUpdatedAt() must switch to getCreatedDate()/getLastModifiedDate().
 
     public String getName() {
         return name;
@@ -141,37 +109,5 @@ public class NotificationTemplateEntity {
 
     public void setActive(boolean active) {
         this.active = active;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
     }
 }

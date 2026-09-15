@@ -2,6 +2,9 @@ spring:
   application:
     name: report-service
 
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
   # PostgreSQL datasource (READ-ONLY access)
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
@@ -9,9 +12,12 @@ spring:
     password: ${DATABASE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      connection-timeout: 5000
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      connection-timeout: 3000
+      idle-timeout: 600000
+      leak-detection-threshold: 30000
+      connection-init-sql: SET statement_timeout = '30s'
       read-only: true
 
   # JPA / Hibernate (read-only, no schema management)
@@ -159,3 +165,14 @@ management:
 idp:
   provider: ${IDP_PROVIDER:keycloak}
   jwks-uri: ${IDP_JWKS_URI:http://localhost:8080/realms/outreach/protocol/openid-connect/certs}
+
+# Service-to-service auth for calling event-service via Feign: common-lib's
+# FeignAuthAutoConfiguration is available whenever this service actually needs a
+# client-credentials-authenticated Feign call. Not wired up here yet — its EventServiceClient
+# has no real call sites in production code, same as ingestion-service's had until this session
+# — and enabling it turned out to have a real side effect: the mere presence of
+# spring.security.oauth2.client.registration.* properties changes @WebMvcTest slices' default
+# security behavior (unauthenticated requests 302-redirect to a login page instead of 401),
+# which is what broke ReportControllerTest.unauthenticatedRequest_returns401 here. Add this
+# registration back (mirroring ingestion-service's application.yml) only once there's a real
+# caller, and account for that test-slice effect when you do.

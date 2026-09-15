@@ -8,7 +8,6 @@ import java.util.Map;
 
 /**
  * Consistent error response format for all platform services.
- * Contains timestamp, HTTP status, error type, message, correlation ID, and field-level errors.
  *
  * @param timestamp   when the error occurred
  * @param status      HTTP status code

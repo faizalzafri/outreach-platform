@@ -62,7 +62,7 @@ function validateField(fieldName: string, value: unknown): string | undefined {
   return undefined;
 }
 
-function isFormValid(values: { username: string; email: string; role: string }): boolean {
+function isFormValid(values: { username: string; email: string; password: string; role: string }): boolean {
   return userCreateSchema.safeParse(values).success;
 }
 
@@ -148,7 +148,7 @@ export function AdminContent() {
   // --- Mutations ---
 
   const createUserMutation = useMutation({
-    mutationFn: async (values: { username: string; email: string; role: string }) => {
+    mutationFn: async (values: { username: string; email: string; password: string; role: string }) => {
       const response = await httpClient.post<User>('/admin/users', values);
       return response.data;
     },
@@ -189,7 +189,9 @@ export function AdminContent() {
 
   const changeStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: UserStatus }) => {
-      const response = await httpClient.patch<User>(`/admin/users/${userId}/status`, { status });
+      const response = await httpClient.patch<User>(`/admin/users/${userId}/status`, {
+        enabled: status === 'ENABLED',
+      });
       return response.data;
     },
     onSuccess: () => {
@@ -339,6 +341,7 @@ export function AdminContent() {
     defaultValues: {
       username: '',
       email: '',
+      password: '',
       role: 'ROLE_POC' as string,
     },
     onSubmit: ({ value }) => {
@@ -447,6 +450,44 @@ export function AdminContent() {
                     {hasError && (
                       <p id="create-email-error" className={styles['fieldError']} role="alert" aria-live="assertive">
                         {String(errors[0] ?? fieldServerErrors.email)}
+                      </p>
+                    )}
+                  </div>
+                );
+              }}
+            </form.Field>
+
+            {/* Password */}
+            <form.Field
+              name="password"
+              validators={{
+                onBlur: ({ value }) => validateField('password', value),
+              }}
+            >
+              {(field) => {
+                const errors = field.state.meta.errors;
+                const hasError = errors.length > 0 || !!fieldServerErrors.password;
+                return (
+                  <div className={styles['fieldGroup']}>
+                    <label htmlFor="create-password" className={styles['label']}>
+                      Password
+                    </label>
+                    <input
+                      id="create-password"
+                      type="password"
+                      className={styles['input']}
+                      placeholder="8-128 characters"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      maxLength={128}
+                      autoComplete="new-password"
+                      aria-describedby={hasError ? 'create-password-error' : undefined}
+                      aria-invalid={hasError}
+                    />
+                    {hasError && (
+                      <p id="create-password-error" className={styles['fieldError']} role="alert" aria-live="assertive">
+                        {String(errors[0] ?? fieldServerErrors.password)}
                       </p>
                     )}
                   </div>

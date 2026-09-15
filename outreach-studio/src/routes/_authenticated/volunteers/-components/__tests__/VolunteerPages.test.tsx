@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { axe } from 'jest-axe';
 
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/server';
@@ -56,17 +57,6 @@ vi.mock('@/hooks/useAuth', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock recharts to avoid rendering issues in test
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
-  LineChart: ({ children }: { children: React.ReactNode }) => <div data-testid="line-chart">{children}</div>,
-  Line: () => <div data-testid="line" />,
-  XAxis: () => <div data-testid="x-axis" />,
-  YAxis: () => <div data-testid="y-axis" />,
-  CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip: () => <div data-testid="tooltip" />,
-}));
-
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------
@@ -84,17 +74,20 @@ const adminUser = {
   logout: vi.fn(),
 };
 
-function createUserPage(users: Array<Record<string, unknown>>, page = 0, size = 10) {
-  return {
-    content: users,
-    totalElements: users.length,
-    totalPages: Math.ceil(users.length / size),
-    page,
-    size,
-  };
-}
+const pocUser = {
+  user: {
+    sub: 'poc-001',
+    name: 'POC User',
+    email: 'poc@outreach.dev',
+    roles: ['ROLE_POC'],
+  },
+  isAuthenticated: true,
+  isLoading: false,
+  login: vi.fn(),
+  logout: vi.fn(),
+};
 
-function _createVolunteerPage(volunteers: Volunteer[], page = 0, size = 10): PageResponse<Volunteer> {
+function createVolunteerPage(volunteers: Volunteer[], page = 0, size = 10): PageResponse<Volunteer> {
   return {
     content: volunteers,
     totalElements: volunteers.length,
@@ -125,11 +118,9 @@ describe('VolunteerListContent', () => {
       let requestCount = 0;
 
       server.use(
-        http.get('/api/admin/users', () => {
+        http.get('/api/volunteers', () => {
           requestCount++;
-          return HttpResponse.json(createUserPage([
-            { id: 'u1', username: 'priya_sharma', email: 'priya@co.com', role: 'ROLE_POC', enabled: true },
-          ]));
+          return HttpResponse.json(createVolunteerPage([buildVolunteer({ employeeId: 'EMP001', fullName: 'Priya Sharma' })]));
         }),
       );
 
@@ -141,7 +132,7 @@ describe('VolunteerListContent', () => {
       });
 
       const initialCount = requestCount;
-      const searchInput = screen.getByLabelText('Search users');
+      const searchInput = screen.getByLabelText('Search volunteers');
       await user.type(searchInput, 'priya');
 
       // Immediately after typing, no additional request should have fired
@@ -154,11 +145,9 @@ describe('VolunteerListContent', () => {
       let requestCount = 0;
 
       server.use(
-        http.get('/api/admin/users', () => {
+        http.get('/api/volunteers', () => {
           requestCount++;
-          return HttpResponse.json(createUserPage([
-            { id: 'u1', username: 'priya_sharma', email: 'priya@co.com', role: 'ROLE_POC', enabled: true },
-          ]));
+          return HttpResponse.json(createVolunteerPage([buildVolunteer({ employeeId: 'EMP001', fullName: 'Priya Sharma' })]));
         }),
       );
 
@@ -170,7 +159,7 @@ describe('VolunteerListContent', () => {
       });
 
       const countAfterLoad = requestCount;
-      const searchInput = screen.getByLabelText('Search users');
+      const searchInput = screen.getByLabelText('Search volunteers');
       await user.type(searchInput, 'anita');
 
       // After debounce delay (300ms), a new request should be triggered
@@ -184,11 +173,9 @@ describe('VolunteerListContent', () => {
       let requestCount = 0;
 
       server.use(
-        http.get('/api/admin/users', () => {
+        http.get('/api/volunteers', () => {
           requestCount++;
-          return HttpResponse.json(createUserPage([
-            { id: 'u1', username: 'vikram_singh', email: 'vikram@co.com', role: 'ROLE_POC', enabled: true },
-          ]));
+          return HttpResponse.json(createVolunteerPage([buildVolunteer({ employeeId: 'EMP001', fullName: 'Vikram Singh' })]));
         }),
       );
 
@@ -200,7 +187,7 @@ describe('VolunteerListContent', () => {
       });
 
       const countAfterLoad = requestCount;
-      const searchInput = screen.getByLabelText('Search users');
+      const searchInput = screen.getByLabelText('Search volunteers');
 
       // Type several characters quickly (within debounce window)
       await user.type(searchInput, 'vikram');
@@ -218,6 +205,24 @@ describe('VolunteerListContent', () => {
       expect(requestCount).toBe(countAfterDebounce);
     });
   });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      server.use(
+        http.get('/api/volunteers', () => {
+          return HttpResponse.json(createVolunteerPage([buildVolunteer({ employeeId: 'EMP001', fullName: 'Priya Sharma' })]));
+        }),
+      );
+
+      const { container } = await renderVolunteerList();
+
+      await waitFor(() => {
+        expect(screen.getByText('Priya Sharma')).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -233,21 +238,21 @@ describe('VolunteerDetailContent', () => {
   function setupVolunteerDetailHandlers(volunteer?: Partial<Volunteer>) {
     const defaultVolunteer = buildVolunteer({
       employeeId: 'EMP001',
-      name: 'Anita Desai',
+      fullName: 'Anita Desai',
       email: 'anita@company.com',
       department: 'Engineering',
-      location: 'Mumbai',
-      skills: ['JavaScript', 'React'],
+      baseLocation: 'Mumbai',
+      skills: 'JavaScript,React',
       availability: 'AVAILABLE',
-      totalEvents: 12,
+      totalEventsParticipated: 12,
       ...volunteer,
     });
 
     server.use(
-      http.get('/api/events/volunteers/EMP001', () => {
+      http.get('/api/volunteers/EMP001', () => {
         return HttpResponse.json(defaultVolunteer);
       }),
-      http.get('/api/events/volunteers/EMP001/history', () => {
+      http.get('/api/volunteers/EMP001/history', () => {
         return HttpResponse.json({
           content: [],
           totalElements: 0,
@@ -255,9 +260,6 @@ describe('VolunteerDetailContent', () => {
           page: 0,
           size: 5,
         });
-      }),
-      http.get('/api/events/volunteers/EMP001/score-trend', () => {
-        return HttpResponse.json([]);
       }),
     );
 
@@ -272,26 +274,18 @@ describe('VolunteerDetailContent', () => {
   describe('availability optimistic update', () => {
     it('updates availability badge immediately on selection change', async () => {
       const user = userEvent.setup();
-      setupVolunteerDetailHandlers({ availability: 'AVAILABLE' });
+      const defaultVolunteer = setupVolunteerDetailHandlers({ availability: 'AVAILABLE' });
 
       let mutationCalled = false;
       server.use(
-        http.put('/api/events/volunteers/EMP001/availability', async ({ request }) => {
+        http.put('/api/volunteers/EMP001', async ({ request }) => {
           mutationCalled = true;
           // Simulate a slightly delayed response
           await new Promise((resolve) => setTimeout(resolve, 200));
           const body = (await request.json()) as Record<string, unknown>;
           return HttpResponse.json({
-            employeeId: 'EMP001',
-            name: 'Anita Desai',
-            email: 'anita@company.com',
-            department: 'Engineering',
-            location: 'Mumbai',
-            skills: ['JavaScript', 'React'],
+            ...defaultVolunteer,
             availability: body.availability,
-            totalEvents: 12,
-            averageScore: 4.5,
-            joinDate: '2022-03-15T00:00:00Z',
           });
         }),
       );
@@ -308,7 +302,7 @@ describe('VolunteerDetailContent', () => {
       expect(select).toHaveValue('AVAILABLE');
 
       // Change availability
-      await user.selectOptions(select, 'UNAVAILABLE');
+      await user.selectOptions(select, 'BUSY');
 
       // The mutation should be called and select should reflect the new value
       await waitFor(() => {
@@ -317,7 +311,7 @@ describe('VolunteerDetailContent', () => {
 
       // After mutation completes, the select should show the updated value
       await waitFor(() => {
-        expect(select).toHaveValue('UNAVAILABLE');
+        expect(select).toHaveValue('BUSY');
       });
     });
 
@@ -327,7 +321,7 @@ describe('VolunteerDetailContent', () => {
 
       // Override with error response
       server.use(
-        http.put('/api/events/volunteers/EMP001/availability', () => {
+        http.put('/api/volunteers/EMP001', () => {
           return HttpResponse.json(
             { error: 'Bad Request', message: 'Invalid availability value' },
             { status: 400, headers: { 'X-Correlation-ID': 'test-corr-id' } },
@@ -364,7 +358,7 @@ describe('VolunteerDetailContent', () => {
       setupVolunteerDetailHandlers({ availability: 'AVAILABLE' });
 
       server.use(
-        http.put('/api/events/volunteers/EMP001/availability', () => {
+        http.put('/api/volunteers/EMP001', () => {
           return HttpResponse.json(
             { error: 'Bad Request', message: 'Invalid availability value' },
             { status: 400, headers: { 'X-Correlation-ID': 'test-corr-id' } },
@@ -379,7 +373,7 @@ describe('VolunteerDetailContent', () => {
       });
 
       const select = screen.getByLabelText('Update availability');
-      await user.selectOptions(select, 'UNAVAILABLE');
+      await user.selectOptions(select, 'BUSY');
 
       // Error message should appear
       await waitFor(() => {
@@ -387,6 +381,36 @@ describe('VolunteerDetailContent', () => {
         expect(alert).toBeInTheDocument();
         expect(alert.textContent).toBeTruthy();
       });
+    });
+  });
+
+  describe('permission gating', () => {
+    it('shows a read-only badge with no availability select for POC users', async () => {
+      mockUseAuth.mockReturnValue(pocUser);
+      setupVolunteerDetailHandlers({ availability: 'AVAILABLE' });
+
+      await renderVolunteerDetail();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Anita Desai' })).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Available')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Update availability')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('accessibility', () => {
+    it('has no axe violations once loaded', async () => {
+      setupVolunteerDetailHandlers();
+
+      const { container } = await renderVolunteerDetail();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Anita Desai' })).toBeInTheDocument();
+      });
+
+      expect(await axe(container)).toHaveNoViolations();
     });
   });
 });

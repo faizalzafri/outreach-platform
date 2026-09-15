@@ -15,15 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Scheduled poller that consumes domain events from MongoDB and triggers
- * the appropriate notification workflows.
- *
- * Handles:
- *  - SendFeedbackEmails: triggers batch email dispatch for feedback collection
- *  - EventStatusChanged: triggers event lifecycle notifications
- *  - VolunteersImported: triggers welcome/confirmation emails
- */
+/** Polls MongoDB for unprocessed domain events and triggers notification workflows. */
 @Service
 public class DomainEventConsumer {
 
@@ -52,10 +44,7 @@ public class DomainEventConsumer {
         this.emailDispatchService = emailDispatchService;
     }
 
-    /**
-     * Polls MongoDB for unprocessed domain events every 10 seconds and dispatches
-     * them to the appropriate handler.
-     */
+    /** Polls for unprocessed domain events and dispatches them to the appropriate handler. */
     @Scheduled(fixedDelayString = "${notification-service.event-poll-interval-ms:10000}")
     public void pollDomainEvents() {
         List<DomainEventDocument> events = domainEventRepository
@@ -86,10 +75,6 @@ public class DomainEventConsumer {
         }
     }
 
-    /**
-     * Handles SendFeedbackEmails events by creating delivery records for each recipient
-     * and dispatching them via the email service.
-     */
     @SuppressWarnings("unchecked")
     private void handleSendFeedbackEmails(DomainEventDocument event) {
         Map<String, Object> payload = event.getPayload();
@@ -114,10 +99,6 @@ public class DomainEventConsumer {
         }
     }
 
-    /**
-     * Handles EventStatusChanged events by sending lifecycle notifications
-     * (e.g., event published, cancelled, completed).
-     */
     private void handleEventStatusChanged(DomainEventDocument event) {
         Map<String, Object> payload = event.getPayload();
         String eventId = (String) payload.getOrDefault("eventId", "");
@@ -140,9 +121,6 @@ public class DomainEventConsumer {
         emailDispatchService.dispatchEmail(saved);
     }
 
-    /**
-     * Handles VolunteersImported events by sending welcome emails to new volunteers.
-     */
     @SuppressWarnings("unchecked")
     private void handleVolunteersImported(DomainEventDocument event) {
         Map<String, Object> payload = event.getPayload();

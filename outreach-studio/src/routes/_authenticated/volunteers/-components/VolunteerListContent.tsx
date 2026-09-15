@@ -1,34 +1,38 @@
 /**
  * Volunteer List Content (lazy-loaded)
  *
- * Displays registered volunteers (users with POC role) from the /admin/users endpoint
- * filtered by role=POC. These are platform users who serve as Points of Contact for events.
- *
- * Includes a full-text search bar with 300ms debounce.
+ * Displays the volunteer directory from the /volunteers endpoint.
+ * Includes a full-text search bar (searches skills, base location, and
+ * department) with 300ms debounce.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/data-table/DataTable';
 import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
-import type { User } from '@/types/domain';
+import type { Volunteer, VolunteerAvailability } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './VolunteerListContent.module.css';
 
 // ---------------------------------------------------------------------------
-// Status badge
+// Availability badge
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ enabled }: { enabled: boolean }) {
-  const variant = enabled ? 'enabled' : 'disabled';
-  const label = enabled ? 'Active' : 'Disabled';
+const AVAILABILITY_LABEL: Record<VolunteerAvailability, string> = {
+  AVAILABLE: 'Available',
+  BUSY: 'Busy',
+  ON_LEAVE: 'On Leave',
+};
+
+function AvailabilityBadge({ availability }: { availability: VolunteerAvailability }) {
+  const variant = availability.toLowerCase();
   return (
     <span className={`${styles['availabilityBadge']} ${styles[`availabilityBadge--${variant}`]}`}>
-      {label}
+      {AVAILABILITY_LABEL[availability]}
     </span>
   );
 }
@@ -37,34 +41,31 @@ function StatusBadge({ enabled }: { enabled: boolean }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-const columns: ColumnDef<User, unknown>[] = [
+const columns: ColumnDef<Volunteer, unknown>[] = [
   {
-    accessorKey: 'username',
+    accessorKey: 'employeeId',
+    header: 'Employee ID',
+    enableSorting: true,
+    enableColumnFilter: false,
+  },
+  {
+    accessorKey: 'fullName',
     header: 'Name',
     enableSorting: true,
     enableColumnFilter: false,
   },
   {
-    accessorKey: 'email',
-    header: 'Email',
+    accessorKey: 'department',
+    header: 'Department',
     enableSorting: true,
     enableColumnFilter: false,
   },
   {
-    accessorKey: 'enabled',
-    header: 'Status',
+    accessorKey: 'availability',
+    header: 'Availability',
     enableSorting: true,
-    enableColumnFilter: true,
-    meta: {
-      filterType: 'select',
-      filterOptions: [
-        { label: 'Active', value: 'true' },
-        { label: 'Disabled', value: 'false' },
-      ],
-    },
-    cell: ({ row }) => (
-      <StatusBadge enabled={row.original.enabled} />
-    ),
+    enableColumnFilter: false,
+    cell: ({ row }) => <AvailabilityBadge availability={row.original.availability} />,
   },
   {
     id: 'actions',
@@ -76,7 +77,7 @@ const columns: ColumnDef<User, unknown>[] = [
       <div className={styles['actions']}>
         <Link
           to="/volunteers/$employeeId"
-          params={{ employeeId: row.original.id }}
+          params={{ employeeId: row.original.employeeId }}
           className={styles['actionLink']}
         >
           View
@@ -104,33 +105,32 @@ export function VolunteerListContent() {
     [search.page, search.size, debouncedSearch],
   );
 
+  const endpoint = debouncedSearch
+    ? `/volunteers?search=${encodeURIComponent(debouncedSearch)}`
+    : '/volunteers';
+
   return (
     <div className={styles['container']}>
       <div className={styles['header']}>
         <h1 className={styles['pageTitle']}>Volunteers</h1>
       </div>
 
-      {/* Info note about volunteer context */}
-      <p className={styles['infoNote'] ?? ''} style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-        Registered volunteers (POC users) who serve as Points of Contact for events.
-      </p>
-
       {/* Full-text search bar */}
       <div className={styles['searchBar']}>
         <input
           type="text"
           className={styles['searchInput']}
-          placeholder="Search by name or email..."
+          placeholder="Search by skills, location, or department..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           aria-label="Search volunteers"
         />
       </div>
 
-      <DataTable<User>
+      <DataTable<Volunteer>
         columns={columns}
         queryKey={queryKey}
-        endpoint="/admin/users?role=POC"
+        endpoint={endpoint}
         defaultPageSize={search.size}
         emptyMessage="No volunteers found."
       />

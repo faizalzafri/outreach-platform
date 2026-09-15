@@ -20,11 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * OpenAI-backed implementation of the AI service with resilience patterns.
- * Wraps Spring AI ChatClient calls with Resilience4j circuit breaker and retry.
- * Active by default when {@code platform.ai.provider=openai} (or when provider is not specified).
- */
+/** OpenAI-backed implementation with Resilience4j circuit breaker and retry. */
 @Service
 @ConditionalOnProperty(name = "platform.ai.provider", havingValue = "openai", matchIfMissing = true)
 public class OpenAiServiceImpl implements AiService {

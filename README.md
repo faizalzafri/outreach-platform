@@ -1,6 +1,29 @@
 # Outreach Platform
 
-Corporate volunteer outreach management system. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights.
+[![CI Pipeline](https://github.com/faizalzafri/outreach-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/faizalzafri/outreach-platform/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+[![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](outreach-platform-parent/pom.xml)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F?logo=springboot&logoColor=white)](outreach-platform-parent/pom.xml)
+[![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2024.0-6DB33F?logo=spring&logoColor=white)](outreach-platform-parent/pom.xml)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](outreach-studio/package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](outreach-studio/package.json)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Keycloak](https://img.shields.io/badge/Keycloak-26-4D4D4D?logo=keycloak&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+
+Multi-tenant SaaS platform for corporate volunteer outreach management. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights — with complete data isolation between tenant organizations.
+
+## Multi-Tenancy
+
+The platform supports multiple organizations (NGOs, corporates, schools) on a shared deployment. Tenant isolation is enforced at every layer:
+- **Database:** Shared schema with `tenant_id` column on all tables; Hibernate filters scope all queries
+- **Gateway:** Extracts tenant from JWT, forwards `X-Tenant-ID` header to downstream services
+- **Caching:** Redis keys prefixed with tenant ID
+- **Messaging:** RabbitMQ messages carry `x-tenant-id` header
 
 ## Functional Overview
 
@@ -31,7 +54,6 @@ Corporate volunteer outreach management system. Manages community events, volunt
 
 | Service | Port | Responsibility |
 |---------|------|---------------|
-| config-server | 8888 | Centralized configuration |
 | discovery-service | 8761 | Eureka service registry |
 | gateway-service | 7093 | API gateway, JWT validation, rate limiting |
 | auth-service | 8090 | OAuth2/OIDC identity provider |
@@ -90,9 +112,11 @@ Services start in dependency order (infra → platform → business). Full stack
 
 | Role | Access |
 |------|--------|
-| Admin | Full access — users, events, reports, AI, audit |
-| PMO | Events, reports, feedback, volunteers |
-| POC | Assigned events, enrolled volunteers, attendance |
+| Platform Admin | Cross-tenant operations, tenant lifecycle, support access to all data |
+| Tenant Admin | Manage users and roles within their tenant |
+| Admin | Full access within tenant — events, reports, AI, audit |
+| PMO | Events, reports, feedback, volunteers within tenant |
+| POC | Assigned events, enrolled volunteers, attendance within tenant |
 
 ## API Access
 
@@ -122,6 +146,12 @@ Swagger UI is disabled in the `production` profile.
 
 See `.env.example` in `outreach-platform-parent/` for all configurable values.
 
+## Contributing
+
+See `CONTRIBUTING.md` for development setup, coding conventions, and PR
+guidelines. This project follows the `CODE_OF_CONDUCT.md`. To report a security
+vulnerability, see `SECURITY.md` rather than opening a public issue.
+
 ## License
 
-Internal project — not for public distribution.
+Licensed under the GNU General Public License v3.0 — see `LICENSE`.

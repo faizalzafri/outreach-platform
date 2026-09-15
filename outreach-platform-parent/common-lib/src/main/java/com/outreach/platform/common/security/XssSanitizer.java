@@ -3,9 +3,7 @@ package com.outreach.platform.common.security;
 import java.util.regex.Pattern;
 
 /**
- * Utility class for XSS (Cross-Site Scripting) input sanitization.
- * Strips HTML tags, decodes entities, and removes potentially dangerous content
- * before persistence or rendering.
+ * Utility class for XSS input sanitization that strips HTML tags, event handlers, and dangerous protocols.
  */
 public final class XssSanitizer {
 
@@ -32,11 +30,10 @@ public final class XssSanitizer {
             Pattern.compile("(?i)data\\s*:[^,]*;base64", Pattern.CASE_INSENSITIVE);
 
     /**
-     * Sanitizes the input string by removing all HTML tags, event handlers,
-     * JavaScript protocols, and decoding HTML entities.
+     * Sanitizes the input by removing HTML tags, event handlers, and JavaScript protocols.
      *
      * @param input the potentially unsafe user input
-     * @return sanitized string safe for storage and display, or null if input is null
+     * @return sanitized string, or null if input is null
      */
     public static String sanitize(String input) {
         if (input == null) {
@@ -70,10 +67,7 @@ public final class XssSanitizer {
     }
 
     /**
-     * Checks if the input contains potentially dangerous XSS content.
-     *
-     * @param input the string to check
-     * @return true if the input contains potentially dangerous content
+     * @return true if the input contains potentially dangerous XSS content
      */
     public static boolean containsXss(String input) {
         if (input == null || input.isEmpty()) {

@@ -20,6 +20,19 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<EventEntity, UUID> {
 
+    /**
+     * Tenant-scoped primary-key lookup. {@link #findById(Object)} (inherited from
+     * {@code JpaRepository}) compiles to {@code EntityManager.find()}, which Hibernate's
+     * {@code @Filter} mechanism does NOT apply to — a session-level filter only affects
+     * HQL/JPQL/Criteria queries, not direct identifier loads. Derived query methods like this one
+     * <em>do</em> compile to JPQL and are correctly filtered, so this explicit tenant condition —
+     * not the inherited filter — is what actually enforces isolation here. Use this instead of
+     * {@code findById} for every tenant-scoped lookup; see
+     * {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0 for the
+     * regression test that proved {@code findById} alone lets a cross-tenant read through.
+     */
+    Optional<EventEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+
     Page<EventEntity> findByStatus(EventStatus status, Pageable pageable);
 
     Optional<EventEntity> findByEventCode(String eventCode);

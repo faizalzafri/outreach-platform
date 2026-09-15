@@ -10,6 +10,15 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
       - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Blank so IdpHealthIndicator (a plain @Component, unaffected by the autoconfig
+          # exclusion above) reports UNKNOWN instead of trying to reach a real auth-service and
+          # dragging /actuator/health to DOWN — HealthEndpointIT only asserts on db/mongo/redis.
+          jwk-set-uri: ""
+
   # JPA - validate schema created by Liquibase
   jpa:
     hibernate:

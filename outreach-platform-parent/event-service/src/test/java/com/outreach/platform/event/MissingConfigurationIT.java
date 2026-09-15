@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,8 +23,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Validates that missing or unreachable database configuration causes descriptive startup failure.
  */
 @Tag("integration")
+@Testcontainers
 @DisplayName("Missing Configuration Startup Failure Tests")
 class MissingConfigurationIT {
+
+    // Only used by shouldFailStartupWhenMongoDbUriIsInvalid — that test needs a real, working
+    // Postgres so JPA beans like UserRepository (required unconditionally by AdminService) start
+    // up fine, isolating the induced failure to the deliberately-unreachable Mongo URI. Excluding
+    // DataSourceAutoConfiguration/HibernateJpaAutoConfiguration entirely (the previous approach)
+    // left UserRepository with no bean at all, failing before Mongo was ever reached.
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("event_test")
+            .withUsername("test")
+            .withPassword("test");
 
     @Test
     @DisplayName("Application fails to start when PostgreSQL is unreachable")
@@ -61,24 +76,26 @@ class MissingConfigurationIT {
         assertThatThrownBy(() -> {
             SpringApplication app = new SpringApplication(EventServiceApplication.class);
             app.setWebApplicationType(WebApplicationType.NONE);
-            Map<String, Object> props = new HashMap<>();
-            props.put("spring.datasource.url", "jdbc:postgresql://localhost:5432/nonexistent");
-            props.put("spring.datasource.username", "postgres");
-            props.put("spring.datasource.password", "postgres");
-            props.put("spring.data.mongodb.uri", "mongodb://unreachable-mongo-host:27017/test");
-            props.put("spring.data.mongodb.auto-index-creation", "true");
-            props.put("spring.liquibase.enabled", "false");
-            props.put("spring.jpa.hibernate.ddl-auto", "none");
-            props.put("spring.cloud.discovery.enabled", "false");
-            props.put("eureka.client.enabled", "false");
-            props.put("spring.autoconfigure.exclude",
-                    "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,"
-                            + "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration,"
-                            + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-                            + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-                            + "org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration");
-            app.setDefaultProperties(props);
-            ConfigurableApplicationContext ctx = app.run();
+            // Command-line args, not setDefaultProperties: application.yml's own
+            // spring.datasource.username/password (${DB_USERNAME:postgres} etc.) resolve to a
+            // concrete value and outrank the SpringApplication default-properties source, so a
+            // defaultProperties override here is silently ignored — this test is the only one of
+            // the three that actually needs its datasource override to win (the other two only
+            // need the connection to fail, which happens before auth either way).
+            ConfigurableApplicationContext ctx = app.run(
+                    "--spring.datasource.url=" + postgres.getJdbcUrl(),
+                    "--spring.datasource.username=" + postgres.getUsername(),
+                    "--spring.datasource.password=" + postgres.getPassword(),
+                    "--spring.data.mongodb.uri=mongodb://unreachable-mongo-host:27017/test",
+                    "--spring.data.mongodb.auto-index-creation=true",
+                    "--spring.liquibase.enabled=true",
+                    "--spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.xml",
+                    "--spring.jpa.hibernate.ddl-auto=validate",
+                    "--spring.cloud.discovery.enabled=false",
+                    "--eureka.client.enabled=false",
+                    "--spring.autoconfigure.exclude="
+                            + "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,"
+                            + "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration");
             // Force MongoDB connection to be established
             ctx.getBean(org.springframework.data.mongodb.core.MongoTemplate.class)
                     .getCollectionNames();

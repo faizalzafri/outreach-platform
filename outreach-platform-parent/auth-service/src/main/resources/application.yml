@@ -15,10 +15,14 @@ idp:
 
 server:
   port: 8090
+  shutdown: graceful
 
 spring:
   application:
     name: auth-service
+
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
 
   # PostgreSQL datasource
   datasource:
@@ -27,9 +31,12 @@ spring:
     password: ${AUTH_DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      connection-timeout: 30000
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      connection-timeout: 3000
+      idle-timeout: 600000
+      leak-detection-threshold: 30000
+      connection-init-sql: SET statement_timeout = '30s'
 
   # JPA configuration
   jpa:
@@ -100,6 +107,11 @@ management:
       endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
       export:
         enabled: ${OTLP_TRACING_ENABLED:false}
+
+# Tenant migration configuration
+tenant:
+  grace-period-days: 30
+  migration-start-date: ${TENANT_MIGRATION_START_DATE:2025-01-20}
 
 # Logging
 logging:

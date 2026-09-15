@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,6 +38,9 @@ import java.util.List;
 @Tag(name = "Report Analytics", description = "Aggregation, analytics, KPIs, trends, and comparison endpoints")
 public class ReportController {
 
+    private static final String PMO_OR_ADMIN =
+            "hasAnyRole('PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')";
+
     private final ReportService reportService;
 
     @Inject
@@ -44,6 +48,7 @@ public class ReportController {
         this.reportService = reportService;
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/by-event")
     public List<EventScoreDto> aggregateByEvent(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -56,6 +61,7 @@ public class ReportController {
         return reportService.aggregateByEvent(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/by-beneficiary")
     public List<BeneficiaryScoreDto> aggregateByBeneficiary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -68,6 +74,7 @@ public class ReportController {
         return reportService.aggregateByBeneficiary(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/by-city")
     public List<CityScoreDto> aggregateByCity(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -80,6 +87,7 @@ public class ReportController {
         return reportService.aggregateByCity(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/by-poc")
     public List<PocScoreDto> aggregateByPoc(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -128,6 +136,7 @@ public class ReportController {
         return reportService.getKpis(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/time-series")
     public List<TimeSeriesDataPoint> getTimeSeries(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -140,6 +149,7 @@ public class ReportController {
         return reportService.getTimeSeries(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/comparison")
     public ComparisonResultDto getComparison(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -152,6 +162,7 @@ public class ReportController {
         return reportService.getComparison(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/heatmap")
     public List<HeatmapEntry> getHeatmap(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -164,6 +175,7 @@ public class ReportController {
         return reportService.getHeatmap(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/sentiment")
     public SentimentBreakdownDto getSentiment(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -176,6 +188,7 @@ public class ReportController {
         return reportService.getSentiment(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/participation-rate")
     public ParticipationRateDto getParticipationRate(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -188,6 +201,7 @@ public class ReportController {
         return reportService.getParticipationRate(buildParams(dateFrom, dateTo, eventIds, cities, beneficiaryIds, pocIds, granularity));
     }
 
+    @PreAuthorize(PMO_OR_ADMIN)
     @GetMapping("/nps")
     public List<NpsResultDto> getNps(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,

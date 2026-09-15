@@ -19,6 +19,26 @@
     </properties>
 
     <dependencies>
+        <!-- Platform Common Library (BaseEntity, shared infrastructure) -->
+        <dependency>
+            <groupId>com.outreach.platform</groupId>
+            <artifactId>common-lib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.outreach.platform</groupId>
+            <artifactId>common-lib</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.3.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Spring Authorization Server (OAuth2/OIDC) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -120,6 +140,24 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+                Surefire's default test discovery only scans this module's own target/test-classes —
+                it does NOT scan test classes arriving via a test-jar dependency (common-lib's
+                ArchitectureRulesTest) even though they're on the test classpath and compile fine.
+                dependenciesToScan explicitly tells Surefire to also treat that dependency as a
+                source of test classes. Without this, common-lib's ArchUnit rules silently never
+                run here — confirmed by testing: BUILD SUCCESS with zero surefire report for
+                ArchitectureRulesTest before this was added. See ADR 0001.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.outreach.platform:common-lib</dependency>
+                    </dependenciesToScan>
+                </configuration>
             </plugin>
         </plugins>
     </build>

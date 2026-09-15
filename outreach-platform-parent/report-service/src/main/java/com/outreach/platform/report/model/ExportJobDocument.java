@@ -9,8 +9,15 @@ import java.util.Map;
 
 /**
  * MongoDB document tracking the lifecycle of an asynchronous report export job.
+ *
+ * <p>Collection name is deliberately {@code export_job_tracking}, not {@code job_tracking} —
+ * that name collides with ingestion-service's unrelated {@code JobTrackingDocument}, which shares
+ * the same MongoDB database. The collision was discovered when ingestion-service's own job
+ * inserts started failing with a duplicate-key error on this class's unique {@code jobId} index:
+ * both document types were landing in the same physical collection, and ingestion-service's
+ * documents (which have no {@code jobId} field at all) collided with each other under it.
  */
-@Document("job_tracking")
+@Document("export_job_tracking")
 public class ExportJobDocument {
 
     @Id

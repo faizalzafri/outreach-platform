@@ -17,6 +17,7 @@ import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axio
 import { v4 as uuidv4 } from 'uuid';
 
 import { authModule } from '@/lib/auth';
+import { useTenantStore } from '@/stores/tenant-store';
 import type { NormalizedError, ToastPayload } from '@/types/api';
 
 // --- Keycloak endpoint detection ---
@@ -185,6 +186,19 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   // Attach correlation ID for request tracing
   config.headers['X-Correlation-ID'] = uuidv4();
+
+  // Platform Admin tenant override: when set, every outbound request carries the admin's chosen
+  // tenant as a query param so the gateway can scope the request to it instead of (or in addition
+  // to) the admin's own JWT tenant_id. Explicitly removed when not set, rather than left stale
+  // from a previous request's config object.
+  const { adminSelectedTenantId } = useTenantStore.getState();
+  const params = { ...config.params };
+  if (adminSelectedTenantId) {
+    params['X-Admin-Tenant-ID'] = adminSelectedTenantId;
+  } else {
+    delete params['X-Admin-Tenant-ID'];
+  }
+  config.params = params;
 
   return config;
 });

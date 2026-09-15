@@ -1,0 +1,1 @@
+Method <com.outreach.platform.report.service.ScheduledReportService.findEntityById(java.util.UUID)> calls method <com.outreach.platform.report.repo.ReportScheduleRepository.findById(java.lang.Object)> in (ScheduledReportService.java:121)

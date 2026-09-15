@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * OpenAPI 3.1 configuration for the Notification Service.
- * Exposes /v3/api-docs in all environments and Swagger UI in non-production.
  */
 @Configuration
 public class OpenApiConfig {

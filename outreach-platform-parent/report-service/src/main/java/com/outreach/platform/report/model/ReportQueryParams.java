@@ -26,9 +26,6 @@ public record ReportQueryParams(
         String granularity
 ) {
 
-    /**
-     * Returns the granularity or defaults to "month" if not specified.
-     */
     public String effectiveGranularity() {
         if (granularity == null || granularity.isBlank()) {
             return "month";

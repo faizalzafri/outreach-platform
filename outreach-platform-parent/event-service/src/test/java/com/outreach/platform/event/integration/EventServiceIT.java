@@ -1,5 +1,6 @@
 package com.outreach.platform.event.integration;
 
+import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
@@ -17,10 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -30,6 +33,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for Event Service REST endpoints.
  * Uses Testcontainers for PostgreSQL and MongoDB backing stores.
+ *
+ * <p>Every request carries the seeded default tenant's {@code X-Tenant-ID} header via a
+ * {@code TestRestTemplate} interceptor — {@code TenantFilterAspect} throws
+ * {@code IllegalStateException} on any JPA repository call made with no tenant context, and this
+ * suite previously sent no tenant header at all, which meant it had never actually exercised a
+ * single successful request end-to-end (discovered while adding a tenant-isolation regression
+ * test, see {@code docs/specs/platform-hardening/}). The default tenant ID matches the row
+ * seeded by {@code 20250120-002-add-tenant-id-to-event-tables.sql} — required, since
+ * {@code events.tenant_id} has a foreign key to {@code tenants(id)}.</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -45,12 +57,21 @@ class EventServiceIT {
     @Container
     static MongoDBContainer mongo = new MongoDBContainer("mongo:7.0");
 
+    // getEvent() is @Cacheable — without a real Redis to back RedisCacheManager, every GET
+    // request 500s trying to reach the default localhost:6379 (see CacheBehaviorIT, which
+    // already provisions one for the same reason).
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.data.mongodb.uri", mongo::getReplicaSetUrl);
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
 
     @Autowired
@@ -60,6 +81,16 @@ class EventServiceIT {
 
     @BeforeEach
     void setUp() {
+        // TestRestTemplate's underlying RestTemplate is a shared bean across all test methods in
+        // this class — @BeforeEach runs once per test, so guard against stacking a duplicate
+        // interceptor on every one of the 13 tests.
+        if (restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add(TenantConstants.X_TENANT_ID_HEADER, TenantConstants.DEFAULT_TENANT_ID.toString());
+                return execution.execute(request, body);
+            });
+        }
+
         validCreateRequest = new EventCreateRequest(
                 "Community Cleanup Drive",
                 "Annual community cleanup event",

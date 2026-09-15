@@ -115,6 +115,25 @@ export const auditLogSearchSchema = z.object({
 export type AuditLogSearch = z.infer<typeof auditLogSearchSchema>;
 
 /**
+ * Team list search params — pagination only (teams have no server-side sort/search yet).
+ */
+export const teamListSearchSchema = z.object({
+  page: z.number().int().positive().default(1).catch(1),
+  size: z.number().int().positive().default(20).catch(20),
+});
+
+export type TeamListSearch = z.infer<typeof teamListSearchSchema>;
+
+/**
+ * Team detail search params — `edit=true` opens the edit form immediately.
+ */
+export const teamDetailSearchSchema = z.object({
+  edit: z.boolean().optional().default(false).catch(false),
+});
+
+export type TeamDetailSearch = z.infer<typeof teamDetailSearchSchema>;
+
+/**
  * Ingestion job list search params.
  */
 export const ingestionSearchSchema = z.object({
@@ -155,11 +174,13 @@ export type EventCreateForm = z.infer<typeof eventCreateSchema>;
  * Feedback submission form schema.
  */
 export const feedbackFormSchema = z.object({
-  emojiScore: z.number().int().min(1).max(5),
-  textAnswer1: z.string().min(1).max(500),
-  textAnswer2: z.string().min(1).max(500),
-  textAnswer3: z.string().max(500).optional(),
+  volunteerId: z.string().min(1, 'Please select a volunteer'),
+  score: z.number().int().min(1).max(5),
+  answer1: z.string().min(1).max(500),
+  answer2: z.string().min(1).max(500),
+  answer3: z.string().max(500).optional(),
   category: z.string().min(1),
+  tags: z.string().max(200).optional(),
   anonymous: z.boolean().default(false),
 });
 
@@ -171,10 +192,21 @@ export type FeedbackForm = z.infer<typeof feedbackFormSchema>;
 export const userCreateSchema = z.object({
   username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/),
   email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
   role: z.enum(['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC']),
 });
 
 export type UserCreateForm = z.infer<typeof userCreateSchema>;
+
+/**
+ * Team creation/edit form schema.
+ */
+export const teamFormSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  description: z.string().max(500).optional().default(''),
+});
+
+export type TeamFormValues = z.infer<typeof teamFormSchema>;
 
 /**
  * Cron expression validation (5-field format).

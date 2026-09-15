@@ -55,11 +55,25 @@ public class AdaptiveRateLimitFilter implements GlobalFilter, Ordered {
                                 .then(chain.filter(exchange));
                     }
                     if (count > UNAUTHENTICATED_RATE_LIMIT) {
-                        exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Limit",
-                                String.valueOf(UNAUTHENTICATED_RATE_LIMIT));
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", "0");
-                        return exchange.getResponse().setComplete();
+                        // exchange.getPrincipal() completing empty doesn't only mean "no token at
+                        // all" — an expired/invalid JWT lands here too, and Spring Security's own
+                        // filter chain can independently reject and commit a 401 for that same
+                        // exchange around the same time (its rejection and this Redis round-trip
+                        // race on separate threads). Writing to an already-committed response's
+                        // now-read-only headers throws UnsupportedOperationException and crashes
+                        // the whole exchange instead of the 401 the client should have seen.
+                        if (exchange.getResponse().isCommitted()) {
+                            return Mono.empty();
+                        }
+                        try {
+                            exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+                            exchange.getResponse().getHeaders().add("X-RateLimit-Limit",
+                                    String.valueOf(UNAUTHENTICATED_RATE_LIMIT));
+                            exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", "0");
+                            return exchange.getResponse().setComplete();
+                        } catch (UnsupportedOperationException e) {
+                            return Mono.empty();
+                        }
                     }
                     return chain.filter(exchange);
                 });

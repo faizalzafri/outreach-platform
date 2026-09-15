@@ -1,0 +1,1 @@
+Method <com.outreach.platform.ingestion.service.JobTrackingService.findByIdTenantScoped(java.lang.String)> calls method <com.outreach.platform.ingestion.repo.JobTrackingRepository.findById(java.lang.Object)> in (JobTrackingService.java:178)

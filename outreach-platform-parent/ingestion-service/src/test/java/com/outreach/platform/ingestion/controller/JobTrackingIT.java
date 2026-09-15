@@ -5,6 +5,7 @@ import com.outreach.platform.ingestion.model.DomainEventDocument;
 import com.outreach.platform.ingestion.model.EventStatus;
 import com.outreach.platform.ingestion.model.JobStatus;
 import com.outreach.platform.ingestion.model.JobTrackingDocument;
+import com.outreach.platform.ingestion.model.ValidationError;
 import com.outreach.platform.ingestion.repo.DomainEventRepository;
 import com.outreach.platform.ingestion.repo.FileMetadataRepository;
 import com.outreach.platform.ingestion.repo.JobTrackingRepository;
@@ -34,6 +35,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -104,14 +106,15 @@ class JobTrackingIT {
         assertThat(running.get().getTotalRows()).isEqualTo(100);
         assertThat(running.get().getStartedAt()).isNotNull();
 
-        jobTrackingService.completeJob("job-lifecycle-1", 95, 5, List.of("Row 10: invalid email"));
+        ValidationError rowError = new ValidationError(10, "email", "invalid email", "not-an-email");
+        jobTrackingService.completeJob("job-lifecycle-1", 95, 5, List.of(rowError));
         Optional<JobTrackingDocument> completed = jobTrackingRepository.findById("job-lifecycle-1");
         assertThat(completed).isPresent();
         assertThat(completed.get().getStatus()).isEqualTo(JobStatus.COMPLETED);
         assertThat(completed.get().getProgress()).isEqualTo(100);
         assertThat(completed.get().getProcessedRows()).isEqualTo(95);
         assertThat(completed.get().getErrorCount()).isEqualTo(5);
-        assertThat(completed.get().getErrors()).contains("Row 10: invalid email");
+        assertThat(completed.get().getErrors()).contains(rowError);
         assertThat(completed.get().getCompletedAt()).isNotNull();
     }
 
@@ -125,7 +128,8 @@ class JobTrackingIT {
         Optional<JobTrackingDocument> failed = jobTrackingRepository.findById("job-fail-1");
         assertThat(failed).isPresent();
         assertThat(failed.get().getStatus()).isEqualTo(JobStatus.FAILED);
-        assertThat(failed.get().getErrors()).contains("Corrupted file at row 25");
+        assertThat(failed.get().getErrors())
+                .anySatisfy(error -> assertThat(error.errorMessage()).isEqualTo("Corrupted file at row 25"));
         assertThat(failed.get().getCompletedAt()).isNotNull();
     }
 
@@ -148,7 +152,8 @@ class JobTrackingIT {
 
     @Test
     void domainEventPublishing_writesToOutboxCollection() {
-        domainEventPublisher.publishVolunteersImported("job-event-1", "volunteers.xlsx", 50);
+        UUID eventId = UUID.randomUUID();
+        domainEventPublisher.publishVolunteersImported(eventId, List.of(Map.of("email", "a@b.com", "name", "Alice")));
 
         List<DomainEventDocument> events = domainEventRepository.findByStatus(EventStatus.PENDING);
         assertThat(events).hasSize(1);
@@ -156,9 +161,8 @@ class JobTrackingIT {
         DomainEventDocument event = events.get(0);
         assertThat(event.getEventType()).isEqualTo("VolunteersImported");
         assertThat(event.getStatus()).isEqualTo(EventStatus.PENDING);
-        assertThat(event.getPayload()).containsEntry("jobId", "job-event-1");
-        assertThat(event.getPayload()).containsEntry("fileName", "volunteers.xlsx");
-        assertThat(event.getPayload()).containsEntry("importedCount", 50);
+        assertThat(event.getPayload()).containsEntry("eventId", eventId.toString());
+        assertThat(event.getPayload()).containsKey("volunteers");
         assertThat(event.getCreatedAt()).isNotNull();
     }
 

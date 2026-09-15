@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  # Backend: Maven dependencies (root parent POM covers all service modules)
+  - package-ecosystem: "maven"
+    directory: "/outreach-platform-parent"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+
+  # Frontend: npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/outreach-studio"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  # CI: keep GitHub Actions themselves patched (supply-chain hygiene for the
+  # workflow runner actions, not just application dependencies)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"

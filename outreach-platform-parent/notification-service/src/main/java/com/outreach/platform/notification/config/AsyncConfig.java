@@ -8,8 +8,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.Executor;
 
 /**
- * Async configuration for email dispatch.
- * Provides a dedicated thread pool for non-blocking email sending operations.
+ * Async configuration providing a dedicated thread pool for email dispatch.
  */
 @Configuration
 @EnableAsync

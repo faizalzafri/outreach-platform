@@ -84,14 +84,14 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       return; // Error toasts persist until manual close.
     }
 
-    timerRef.current = setTimeout(handleDismiss, AUTO_DISMISS_MS);
+    timerRef.current = setTimeout(handleDismiss, toast.durationMs ?? AUTO_DISMISS_MS);
 
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [toast.severity, handleDismiss]);
+  }, [toast.severity, toast.durationMs, handleDismiss]);
 
   const severityClass = styles[toast.severity] ?? '';
 

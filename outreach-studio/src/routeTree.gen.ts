@@ -13,9 +13,12 @@ import { Route as R404RouteImport } from './routes/404'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NoTenantRouteImport } from './routes/no-tenant'
+import { Route as SelectTenantRouteImport } from './routes/select-tenant'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAiInsightsIndexRouteImport } from './routes/_authenticated/ai-insights/index'
 import { Route as AuthenticatedAuditLogIndexRouteImport } from './routes/_authenticated/audit-log/index'
 import { Route as AuthenticatedEventsIndexRouteImport } from './routes/_authenticated/events/index'
 import { Route as AuthenticatedEventsEventIdRouteImport } from './routes/_authenticated/events/$eventId'
@@ -24,6 +27,8 @@ import { Route as AuthenticatedFeedbackIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedIngestionIndexRouteImport } from './routes/_authenticated/ingestion/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports/index'
+import { Route as AuthenticatedTeamsIndexRouteImport } from './routes/_authenticated/teams/index'
+import { Route as AuthenticatedTeamsTeamIdRouteImport } from './routes/_authenticated/teams/$teamId'
 import { Route as AuthenticatedVolunteersIndexRouteImport } from './routes/_authenticated/volunteers/index'
 import { Route as AuthenticatedVolunteersEmployeeIdRouteImport } from './routes/_authenticated/volunteers/$employeeId'
 
@@ -46,6 +51,16 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NoTenantRoute = NoTenantRouteImport.update({
+  id: '/no-tenant',
+  path: '/no-tenant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelectTenantRoute = SelectTenantRouteImport.update({
+  id: '/select-tenant',
+  path: '/select-tenant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,6 +76,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAiInsightsIndexRoute =
+  AuthenticatedAiInsightsIndexRouteImport.update({
+    id: '/ai-insights/',
+    path: '/ai-insights/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAuditLogIndexRoute =
   AuthenticatedAuditLogIndexRouteImport.update({
     id: '/audit-log/',
@@ -109,6 +130,17 @@ const AuthenticatedReportsIndexRoute =
     path: '/reports/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTeamsIndexRoute = AuthenticatedTeamsIndexRouteImport.update({
+  id: '/teams/',
+  path: '/teams/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTeamsTeamIdRoute =
+  AuthenticatedTeamsTeamIdRouteImport.update({
+    id: '/teams/$teamId',
+    path: '/teams/$teamId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedVolunteersIndexRoute =
   AuthenticatedVolunteersIndexRouteImport.update({
     id: '/volunteers/',
@@ -127,35 +159,45 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/events/create': typeof AuthenticatedEventsCreateRoute
+  '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/ai-insights/': typeof AuthenticatedAiInsightsIndexRoute
   '/audit-log/': typeof AuthenticatedAuditLogIndexRoute
   '/events/': typeof AuthenticatedEventsIndexRoute
   '/feedback/': typeof AuthenticatedFeedbackIndexRoute
   '/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/teams/': typeof AuthenticatedTeamsIndexRoute
   '/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/': typeof AuthenticatedIndexRoute
   '/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/events/create': typeof AuthenticatedEventsCreateRoute
+  '/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/ai-insights': typeof AuthenticatedAiInsightsIndexRoute
   '/audit-log': typeof AuthenticatedAuditLogIndexRoute
   '/events': typeof AuthenticatedEventsIndexRoute
   '/feedback': typeof AuthenticatedFeedbackIndexRoute
   '/ingestion': typeof AuthenticatedIngestionIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/teams': typeof AuthenticatedTeamsIndexRoute
   '/volunteers': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRoutesById {
@@ -164,18 +206,23 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/callback': typeof CallbackRoute
   '/login': typeof LoginRoute
+  '/no-tenant': typeof NoTenantRoute
+  '/select-tenant': typeof SelectTenantRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/events/$eventId': typeof AuthenticatedEventsEventIdRoute
   '/_authenticated/events/create': typeof AuthenticatedEventsCreateRoute
+  '/_authenticated/teams/$teamId': typeof AuthenticatedTeamsTeamIdRoute
   '/_authenticated/volunteers/$employeeId': typeof AuthenticatedVolunteersEmployeeIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/ai-insights/': typeof AuthenticatedAiInsightsIndexRoute
   '/_authenticated/audit-log/': typeof AuthenticatedAuditLogIndexRoute
   '/_authenticated/events/': typeof AuthenticatedEventsIndexRoute
   '/_authenticated/feedback/': typeof AuthenticatedFeedbackIndexRoute
   '/_authenticated/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/_authenticated/teams/': typeof AuthenticatedTeamsIndexRoute
   '/_authenticated/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
 export interface FileRouteTypes {
@@ -185,35 +232,45 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/dashboard'
     | '/events/$eventId'
     | '/events/create'
+    | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin/'
+    | '/ai-insights/'
     | '/audit-log/'
     | '/events/'
     | '/feedback/'
     | '/ingestion/'
     | '/notifications/'
     | '/reports/'
+    | '/teams/'
     | '/volunteers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/404'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/dashboard'
     | '/'
     | '/events/$eventId'
     | '/events/create'
+    | '/teams/$teamId'
     | '/volunteers/$employeeId'
     | '/admin'
+    | '/ai-insights'
     | '/audit-log'
     | '/events'
     | '/feedback'
     | '/ingestion'
     | '/notifications'
     | '/reports'
+    | '/teams'
     | '/volunteers'
   id:
     | '__root__'
@@ -221,18 +278,23 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/callback'
     | '/login'
+    | '/no-tenant'
+    | '/select-tenant'
     | '/_authenticated/dashboard'
     | '/_authenticated/'
     | '/_authenticated/events/$eventId'
     | '/_authenticated/events/create'
+    | '/_authenticated/teams/$teamId'
     | '/_authenticated/volunteers/$employeeId'
     | '/_authenticated/admin/'
+    | '/_authenticated/ai-insights/'
     | '/_authenticated/audit-log/'
     | '/_authenticated/events/'
     | '/_authenticated/feedback/'
     | '/_authenticated/ingestion/'
     | '/_authenticated/notifications/'
     | '/_authenticated/reports/'
+    | '/_authenticated/teams/'
     | '/_authenticated/volunteers/'
   fileRoutesById: FileRoutesById
 }
@@ -241,6 +303,8 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   CallbackRoute: typeof CallbackRoute
   LoginRoute: typeof LoginRoute
+  NoTenantRoute: typeof NoTenantRoute
+  SelectTenantRoute: typeof SelectTenantRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -273,6 +337,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/no-tenant': {
+      id: '/no-tenant'
+      path: '/no-tenant'
+      fullPath: '/no-tenant'
+      preLoaderRoute: typeof NoTenantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/select-tenant': {
+      id: '/select-tenant'
+      path: '/select-tenant'
+      fullPath: '/select-tenant'
+      preLoaderRoute: typeof SelectTenantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -292,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ai-insights/': {
+      id: '/_authenticated/ai-insights/'
+      path: '/ai-insights'
+      fullPath: '/ai-insights/'
+      preLoaderRoute: typeof AuthenticatedAiInsightsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/audit-log/': {
@@ -350,6 +435,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/teams/': {
+      id: '/_authenticated/teams/'
+      path: '/teams'
+      fullPath: '/teams/'
+      preLoaderRoute: typeof AuthenticatedTeamsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/teams/$teamId': {
+      id: '/_authenticated/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/teams/$teamId'
+      preLoaderRoute: typeof AuthenticatedTeamsTeamIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/volunteers/': {
       id: '/_authenticated/volunteers/'
       path: '/volunteers'
@@ -372,14 +471,17 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedEventsEventIdRoute: typeof AuthenticatedEventsEventIdRoute
   AuthenticatedEventsCreateRoute: typeof AuthenticatedEventsCreateRoute
+  AuthenticatedTeamsTeamIdRoute: typeof AuthenticatedTeamsTeamIdRoute
   AuthenticatedVolunteersEmployeeIdRoute: typeof AuthenticatedVolunteersEmployeeIdRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAiInsightsIndexRoute: typeof AuthenticatedAiInsightsIndexRoute
   AuthenticatedAuditLogIndexRoute: typeof AuthenticatedAuditLogIndexRoute
   AuthenticatedEventsIndexRoute: typeof AuthenticatedEventsIndexRoute
   AuthenticatedFeedbackIndexRoute: typeof AuthenticatedFeedbackIndexRoute
   AuthenticatedIngestionIndexRoute: typeof AuthenticatedIngestionIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
+  AuthenticatedTeamsIndexRoute: typeof AuthenticatedTeamsIndexRoute
   AuthenticatedVolunteersIndexRoute: typeof AuthenticatedVolunteersIndexRoute
 }
 
@@ -388,15 +490,18 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedEventsEventIdRoute: AuthenticatedEventsEventIdRoute,
   AuthenticatedEventsCreateRoute: AuthenticatedEventsCreateRoute,
+  AuthenticatedTeamsTeamIdRoute: AuthenticatedTeamsTeamIdRoute,
   AuthenticatedVolunteersEmployeeIdRoute:
     AuthenticatedVolunteersEmployeeIdRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAiInsightsIndexRoute: AuthenticatedAiInsightsIndexRoute,
   AuthenticatedAuditLogIndexRoute: AuthenticatedAuditLogIndexRoute,
   AuthenticatedEventsIndexRoute: AuthenticatedEventsIndexRoute,
   AuthenticatedFeedbackIndexRoute: AuthenticatedFeedbackIndexRoute,
   AuthenticatedIngestionIndexRoute: AuthenticatedIngestionIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
+  AuthenticatedTeamsIndexRoute: AuthenticatedTeamsIndexRoute,
   AuthenticatedVolunteersIndexRoute: AuthenticatedVolunteersIndexRoute,
 }
 
@@ -409,6 +514,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   CallbackRoute: CallbackRoute,
   LoginRoute: LoginRoute,
+  NoTenantRoute: NoTenantRoute,
+  SelectTenantRoute: SelectTenantRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

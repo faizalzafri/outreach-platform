@@ -6,20 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import java.util.regex.Pattern;
 
 /**
- * Logback converter that detects and redacts secret/credential patterns in log messages.
- * <p>
- * Detects common secret patterns such as:
- * <ul>
- *   <li>password=value</li>
- *   <li>secret=value</li>
- *   <li>apiKey=value</li>
- *   <li>token=value</li>
- *   <li>authorization=value</li>
- *   <li>credential=value</li>
- * </ul>
- * <p>
- * Values can be delimited by quotes, spaces, commas, semicolons, or end of string.
- * Ensures secret values are never present in log output.
+ * Logback converter that detects and redacts secret/credential patterns (passwords, tokens, API keys) in log messages.
  */
 public class SecretMaskingMessageConverter extends ClassicConverter {
 
@@ -42,12 +29,7 @@ public class SecretMaskingMessageConverter extends ClassicConverter {
         return maskSecrets(message);
     }
 
-    /**
-     * Applies secret masking patterns to the given text.
-     *
-     * @param text the text to mask
-     * @return the text with secret values replaced by REDACTED placeholder
-     */
+    /** Applies secret masking patterns to the given text. */
     public static String maskSecrets(String text) {
         if (text == null || text.isEmpty()) {
             return text;

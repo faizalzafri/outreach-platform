@@ -27,8 +27,12 @@ class TemplateValidationServiceTest {
     void validWhenAllRequiredVariablesPresent() {
         String schema = """
                 {
-                  "volunteerName": { "type": "string", "required": true },
-                  "eventDate": { "type": "string", "required": true }
+                  "type": "object",
+                  "properties": {
+                    "volunteerName": { "type": "string" },
+                    "eventDate": { "type": "string" }
+                  },
+                  "required": ["volunteerName", "eventDate"]
                 }
                 """;
         Map<String, Object> variables = Map.of(
@@ -45,8 +49,12 @@ class TemplateValidationServiceTest {
     void reportsErrorWhenRequiredVariableMissing() {
         String schema = """
                 {
-                  "volunteerName": { "type": "string", "required": true },
-                  "eventDate": { "type": "string", "required": true }
+                  "type": "object",
+                  "properties": {
+                    "volunteerName": { "type": "string" },
+                    "eventDate": { "type": "string" }
+                  },
+                  "required": ["volunteerName", "eventDate"]
                 }
                 """;
         Map<String, Object> variables = Map.of("volunteerName", "Alice");
@@ -61,8 +69,12 @@ class TemplateValidationServiceTest {
     void allowsOptionalVariablesToBeMissing() {
         String schema = """
                 {
-                  "volunteerName": { "type": "string", "required": true },
-                  "notes": { "type": "string", "required": false }
+                  "type": "object",
+                  "properties": {
+                    "volunteerName": { "type": "string" },
+                    "notes": { "type": "string" }
+                  },
+                  "required": ["volunteerName"]
                 }
                 """;
         Map<String, Object> variables = Map.of("volunteerName", "Bob");
@@ -98,9 +110,13 @@ class TemplateValidationServiceTest {
     void reportsMultipleMissingRequiredVariables() {
         String schema = """
                 {
-                  "name": { "type": "string", "required": true },
-                  "email": { "type": "string", "required": true },
-                  "city": { "type": "string", "required": true }
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "email": { "type": "string" },
+                    "city": { "type": "string" }
+                  },
+                  "required": ["name", "email", "city"]
                 }
                 """;
         Map<String, Object> variables = Map.of("city", "Mumbai");

@@ -1,13 +1,15 @@
 package com.outreach.platform.event.integration;
 
+import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -64,7 +66,21 @@ class CacheBehaviorIT {
     private TestRestTemplate restTemplate;
 
     @Inject
-    private RedisTemplate<String, Object> redisTemplate;
+    private StringRedisTemplate redisTemplate;
+
+    @BeforeEach
+    void setUp() {
+        // TestRestTemplate's underlying RestTemplate is a shared bean across all test methods in
+        // this class — guard against stacking a duplicate interceptor. Without a tenant header,
+        // TenantEntityListener throws IllegalStateException on persist, which the controller
+        // turns into a 500 (same root cause fixed in EventServiceIT/AuditLogIT).
+        if (restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add(TenantConstants.X_TENANT_ID_HEADER, TenantConstants.DEFAULT_TENANT_ID.toString());
+                return execution.execute(request, body);
+            });
+        }
+    }
 
     @Test
     void getEvent_secondCallShouldBeServedFromCache() {

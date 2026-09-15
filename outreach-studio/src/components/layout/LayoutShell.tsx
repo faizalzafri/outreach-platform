@@ -7,9 +7,10 @@
  */
 
 import { useMemo } from 'react';
-import { useRouterState } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/hooks/usePermission';
 import { filterNavigationByRoles } from '@/lib/navigation-filter';
 import { Sidebar, type NavigationGroup } from './Sidebar';
 import { Header } from './Header';
@@ -99,6 +100,27 @@ function AdminIcon() {
   );
 }
 
+function AiInsightsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1a7 7 0 01-7 7h-2a7 7 0 01-7-7H4a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73A2 2 0 0111 4a2 2 0 011-2z" />
+      <circle cx="9" cy="13" r="1" />
+      <circle cx="15" cy="13" r="1" />
+    </svg>
+  );
+}
+
+function TeamsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+
 function AuditLogIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -147,11 +169,13 @@ const navigationGroups: NavigationGroup[] = [
     label: 'Analytics',
     items: [
       { label: 'Reports', href: '/reports', icon: ReportsIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO'] },
+      { label: 'AI Insights', href: '/ai-insights', icon: AiInsightsIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
   },
   {
     label: 'System',
     items: [
+      { label: 'Teams', href: '/teams', icon: TeamsIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Administration', href: '/admin', icon: AdminIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Audit Log', href: '/audit-log', icon: AuditLogIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
@@ -162,6 +186,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const { user, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const { hasPermission: canCreateEvent } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
   // Get active route from TanStack Router's state
   const routerState = useRouterState();
@@ -225,7 +256,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
       />
 
       <div className={mainClasses}>
-        <Header onToggleSidebar={toggleSidebar} />
+        <Header
+          onToggleSidebar={toggleSidebar}
+          onCreateEvent={
+            canCreateEvent ? () => void navigate({ to: '/events/create' }) : undefined
+          }
+        />
 
         <main className={styles.main} id="main-content" role="main">
           {children}

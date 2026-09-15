@@ -115,7 +115,7 @@
   color: var(--color-green-700);
 }
 
-.availabilityBadge--unavailable {
+.availabilityBadge--busy {
   background: var(--color-red-100);
   color: var(--color-red-700);
 }
@@ -161,17 +161,6 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 1rem;
-}
-
-/* ----------- Chart Section ----------- */
-
-.chartSection {
-  margin-bottom: 2rem;
-}
-
-.chartWrapper {
-  width: 100%;
-  height: 250px;
 }
 
 /* ----------- Skeleton ----------- */

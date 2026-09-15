@@ -1,10 +1,12 @@
 package com.outreach.platform.ingestion.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * MongoDB document representing a domain event in the outbox pattern.
@@ -17,6 +19,10 @@ public class DomainEventDocument {
     private String eventType;
     private Map<String, Object> payload;
     private EventStatus status;
+
+    @Indexed
+    private UUID tenantId;
+
     private Instant createdAt;
     private Instant publishedAt;
 
@@ -53,6 +59,14 @@ public class DomainEventDocument {
 
     public void setStatus(EventStatus status) {
         this.status = status;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public Instant getCreatedAt() {

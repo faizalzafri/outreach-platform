@@ -1,40 +1,37 @@
 package com.outreach.platform.event.entity;
 
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.event.model.AttendanceStatus;
 import com.outreach.platform.event.model.EmailStatus;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Tracks volunteer enrollment and attendance for an event.
+ *
+ * <p>See {@link EventEntity} for why the audit columns are overridden rather than renamed.
+ * {@code updated_at}/{@code updated_by}/{@code version} were added by
+ * {@code 20250122-004-add-missing-audit-columns.sql} specifically to allow this migration —
+ * this entity had no equivalent columns before that.
  */
 @Entity
 @Table(name = "event_enrollment", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "volunteer_id"})
 })
-@EntityListeners(AuditingEntityListener.class)
-public class EventEnrollmentEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class EventEnrollmentEntity extends TenantAwareBaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -61,19 +58,7 @@ public class EventEnrollmentEntity {
     @Column(name = "marked_by", length = 100)
     private String markedBy;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
     public EventEnrollmentEntity() {
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public EventEntity getEvent() {
@@ -132,11 +117,6 @@ public class EventEnrollmentEntity {
         this.markedBy = markedBy;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
+    // id, tenantId, createdDate/lastModifiedDate/createdBy/lastModifiedBy, and version
+    // are inherited — see the class-level @AttributeOverrides.
 }

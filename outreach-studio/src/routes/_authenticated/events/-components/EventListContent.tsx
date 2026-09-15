@@ -8,11 +8,16 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/data-table/DataTable';
+import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useToast } from '@/hooks/useToast';
+import { usePermission } from '@/hooks/usePermission';
+import type { NormalizedError } from '@/types/api';
 import type { Event, EventStatus } from '@/types/domain';
 
 import { Route } from '../index';
@@ -44,7 +49,11 @@ function StatusBadge({ status }: { status: EventStatus }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-const columns: ColumnDef<Event, unknown>[] = [
+function buildColumns(
+  onDelete: (event: Event) => void,
+  canManage: boolean,
+): ColumnDef<Event, unknown>[] {
+  return [
   {
     accessorKey: 'eventCode',
     header: 'Code',
@@ -127,25 +136,21 @@ const columns: ColumnDef<Event, unknown>[] = [
         >
           View
         </Link>
-        <Link
-          to="/events/$eventId"
-          params={{ eventId: row.original.id }}
-          search={{ tab: 'overview' }}
-          className={styles['actionLink']}
-        >
-          Edit
-        </Link>
-        <button
-          type="button"
-          className={styles['actionBtn']}
-          aria-label={`Delete event ${row.original.eventName}`}
-        >
-          Delete
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            className={styles['actionBtn']}
+            aria-label={`Delete event ${row.original.eventName}`}
+            onClick={() => onDelete(row.original)}
+          >
+            Delete
+          </button>
+        )}
       </div>
     ),
   },
-];
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -155,6 +160,14 @@ export function EventListContent() {
   const search = Route.useSearch();
   const [searchText, setSearchText] = useState(search.search ?? '');
   const debouncedSearch = useDebounce(searchText, 300);
+  const queryClient = useQueryClient();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const { hasPermission: canManage } = usePermission([
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
 
   const queryKey = useMemo(
     () => queryKeys.events.list({
@@ -166,13 +179,37 @@ export function EventListContent() {
     [search.page, search.size, search.status, debouncedSearch],
   );
 
+  const deleteMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      await httpClient.delete(`/events/${eventId}`);
+    },
+    onSuccess: () => {
+      toastSuccess('Event deleted');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.all });
+    },
+    onError: (error: NormalizedError) => {
+      toastError(error.message || 'Failed to delete event');
+    },
+  });
+
+  const columns = useMemo(
+    () => buildColumns((event) => {
+      if (window.confirm(`Delete event "${event.eventName}"? This cannot be undone.`)) {
+        deleteMutation.mutate(event.id);
+      }
+    }, canManage),
+    [deleteMutation, canManage],
+  );
+
   return (
     <div className={styles['container']}>
       <div className={styles['header']}>
         <h1 className={styles['pageTitle']}>Events</h1>
-        <Link to="/events/create" className={styles['createBtn']}>
-          Create Event
-        </Link>
+        {canManage && (
+          <Link to="/events/create" className={styles['createBtn']}>
+            Create Event
+          </Link>
+        )}
       </div>
 
       {/* Search text filter */}

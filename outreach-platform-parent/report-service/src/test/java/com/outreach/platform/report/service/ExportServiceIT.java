@@ -1,5 +1,6 @@
 package com.outreach.platform.report.service;
 
+import com.outreach.platform.report.ReportServiceApplication;
 import com.outreach.platform.report.model.ExportFormat;
 import com.outreach.platform.report.model.ExportJobDto;
 import com.outreach.platform.report.model.ExportJobStatus;
@@ -12,10 +13,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +27,12 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest
+// Explicit classes=: bare @SpringBootTest auto-detects the nearest @SpringBootConfiguration by
+// walking up from this test's own package, and RabbitMqEventListenerIT's nested TestApp (a
+// minimal @SpringBootApplication for that class's own narrow test) lives in this exact same
+// package — closer than the real ReportServiceApplication one package up — so it was being
+// picked instead, booting a context with no ExportService bean at all.
+@SpringBootTest(classes = ReportServiceApplication.class)
 @ActiveProfiles("test")
 @Testcontainers
 class ExportServiceIT {
@@ -37,12 +46,31 @@ class ExportServiceIT {
             .withUsername("test")
             .withPassword("test");
 
+    // The app has @RabbitListener beans that start eagerly on context refresh — without a real
+    // broker, they either fail to connect or (worse, if something else is listening on the
+    // default localhost:5672) fail auth against it.
+    @Container
+    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+
+    // RedisCacheConfig's cacheManager bean requires a real RedisConnectionFactory.
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongodb::getReplicaSetUrl);
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.rabbitmq.host", rabbitmq::getHost);
+        registry.add("spring.rabbitmq.port", rabbitmq::getAmqpPort);
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        // application-test.yml excludes RedisAutoConfiguration globally (most tests don't need
+        // real caching) — override back to nothing so RedisCacheConfig's cacheManager bean gets
+        // a real RedisConnectionFactory from the container above.
+        registry.add("spring.autoconfigure.exclude", () -> "");
     }
 
     @Inject

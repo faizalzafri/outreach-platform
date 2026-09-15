@@ -8,12 +8,12 @@ export function buildNotificationTemplate(overrides: Partial<NotificationTemplat
     id: `tmpl-${counter}`,
     name: `Template ${counter}`,
     type: 'EMAIL',
-    subject: `Notification Subject ${counter}`,
-    body: `Hello {{name}}, this is notification template ${counter}.`,
-    engine: 'handlebars',
-    status: 'ACTIVE',
+    subjectTemplate: `Notification Subject ${counter}`,
+    bodyTemplate: `Hello {{name}}, this is notification template ${counter}.`,
+    engine: 'THYMELEAF',
+    active: true,
     version: 1,
-    variables: [{ name: 'name', dataType: 'string' }],
+    variablesSchema: JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } }),
     ...overrides,
   };
 }

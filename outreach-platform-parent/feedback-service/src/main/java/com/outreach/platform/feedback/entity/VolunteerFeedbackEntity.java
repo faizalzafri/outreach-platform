@@ -1,40 +1,29 @@
 package com.outreach.platform.feedback.entity;
 
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.feedback.model.FeedbackSentiment;
 import com.outreach.platform.feedback.model.FeedbackStatus;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.Version;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * JPA entity mapped to the volunteer_feedback table.
- * Represents a feedback submission from a volunteer for a specific event.
- */
+/** JPA entity representing a volunteer's feedback submission for an event. */
 @Entity
 @Table(name = "volunteer_feedback", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"event_id", "volunteer_id"})
 })
-@EntityListeners(AuditingEntityListener.class)
-public class VolunteerFeedbackEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "createdBy", column = @Column(name = "created_by", length = 100))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class VolunteerFeedbackEntity extends TenantAwareBaseEntity {
 
     @Column(name = "event_id", nullable = false)
     private UUID eventId;
@@ -80,30 +69,10 @@ public class VolunteerFeedbackEntity {
     @Column(name = "reviewed_by", length = 100)
     private String reviewedBy;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @Version
-    @Column(name = "version")
-    private Long version;
-
     public VolunteerFeedbackEntity() {
     }
 
     // --- Getters and Setters ---
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
 
     public UUID getEventId() {
         return eventId;
@@ -215,29 +184,5 @@ public class VolunteerFeedbackEntity {
 
     public void setReviewedBy(String reviewedBy) {
         this.reviewedBy = reviewedBy;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 }

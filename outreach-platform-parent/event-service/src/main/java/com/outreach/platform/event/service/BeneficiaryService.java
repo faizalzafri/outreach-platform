@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.BeneficiaryEntity;
 import com.outreach.platform.event.entity.EventBeneficiaryEntity;
 import com.outreach.platform.event.mapper.BeneficiaryMapper;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -127,7 +129,11 @@ public class BeneficiaryService {
     }
 
     private BeneficiaryEntity findOrThrow(UUID id) {
-        return beneficiaryRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Beneficiary not found: " + id));
+        // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
+        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        Optional<BeneficiaryEntity> beneficiary = TenantContext.isPresent()
+                ? beneficiaryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
+                : beneficiaryRepository.findById(id);
+        return beneficiary.orElseThrow(() -> new NoSuchElementException("Beneficiary not found: " + id));
     }
 }

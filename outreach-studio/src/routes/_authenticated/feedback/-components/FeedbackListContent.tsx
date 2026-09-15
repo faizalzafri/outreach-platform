@@ -181,7 +181,7 @@ export function FeedbackListContent() {
       <DataTable<FeedbackRecord>
         columns={columns}
         queryKey={queryKey}
-        endpoint="/feedback"
+        endpoint="/feedback/search"
         defaultPageSize={10}
         searchPlaceholder="Search feedback..."
         enableColumnVisibility={true}

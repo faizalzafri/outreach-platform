@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +17,13 @@ import java.util.UUID;
  */
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, UUID> {
+
+    /**
+     * Tenant-scoped primary-key lookup — use instead of the inherited {@code findById}, which
+     * compiles to {@code EntityManager.find()} and is not reached by Hibernate's {@code @Filter}.
+     * See {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0.
+     */
+    Optional<UserEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
     Optional<UserEntity> findByUsername(String username);
 
@@ -25,4 +34,14 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     long countByAccountLocked(boolean accountLocked);
 
     Page<UserEntity> findByRole(UserRole role, Pageable pageable);
+
+    /** Batch lookup for enriching a page of team-membership userIds with username/email. */
+    List<UserEntity> findByIdIn(Collection<UUID> ids);
+
+    /** Searches users not already in the given exclusion set — used for "add team member" search. */
+    Page<UserEntity> findByUsernameContainingIgnoreCaseAndIdNotIn(
+            String username, Collection<UUID> excludedIds, Pageable pageable);
+
+    /** Same search with no exclusions (e.g. a brand-new team with zero members yet). */
+    Page<UserEntity> findByUsernameContainingIgnoreCase(String username, Pageable pageable);
 }

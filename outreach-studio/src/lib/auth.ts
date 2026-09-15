@@ -21,6 +21,7 @@ import type {
   TokenResponse,
   UserProfile,
 } from '@/types/auth';
+import { useTenantStore } from '@/stores/tenant-store';
 
 // --- Configuration ---
 
@@ -47,11 +48,13 @@ function getKeycloakEndpoints(config: KeycloakConfig) {
   // Otherwise, use Spring Authorization Server endpoints
   // Authorization endpoint uses the full URL (browser redirect)
   // Token/revoke use relative paths (proxied via Vite in dev, Nginx in prod)
-  // Logout uses the full URL (browser redirect to end server session)
+  // Logout uses the full URL (browser redirect to end server session) — auth-service's own
+  // SecurityConfig maps its logout endpoint at the plain Spring Security default path, /logout,
+  // not the OIDC RP-initiated-logout path /connect/logout (which this auth server doesn't expose).
   return {
     authorization: `${config.url}/oauth2/authorize`,
     token: `/oauth2/token`,
-    logout: `${config.url}/connect/logout`,
+    logout: `${config.url}/logout`,
     revoke: `/oauth2/revoke`,
   };
 }
@@ -85,6 +88,19 @@ export function generateState(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * Thrown by {@link createAuthModule}'s `handleCallback` when the auth server rejects token
+ * issuance with the `NO_TENANT_ASSOCIATION` OAuth2 error — the authenticated user has no tenant
+ * membership at all. The callback route checks for this specific type to redirect to `/no-tenant`
+ * instead of showing a generic authentication-failed message.
+ */
+export class NoTenantAssociationError extends Error {
+  constructor() {
+    super('User has no tenant association');
+    this.name = 'NoTenantAssociationError';
+  }
+}
+
 // --- Token Helpers ---
 
 /**
@@ -105,6 +121,30 @@ export function decodeJwtPayload(token: string): JwtClaims {
  */
 export function extractRoles(claims: JwtClaims): string[] {
   return claims.realm_access?.roles ?? [];
+}
+
+/**
+ * A regular (non-Platform-Admin) user's token must always carry a tenant_id — the auth server
+ * rejects token issuance server-side (NO_TENANT_ASSOCIATION) when a regular user has no active
+ * tenant membership at all, so a token reaching the frontend without one, and without
+ * platform_admin either, indicates a malformed or tampered token rather than a normal state to
+ * recover from silently.
+ */
+export function hasValidTenantClaims(claims: JwtClaims): boolean {
+  return Boolean(claims.tenant_id) || claims.platform_admin === true;
+}
+
+/**
+ * Pushes tenant claims from a freshly-decoded token onto the Tenant Store. Called after both
+ * initial token exchange and every silent refresh so the store never carries a stale tenant_id
+ * across a token rotation.
+ */
+function syncTenantStore(claims: JwtClaims): void {
+  useTenantStore.getState().setTenantFromJwt({
+    tenant_id: claims.tenant_id,
+    tenant_roles: claims.tenant_roles,
+    platform_admin: claims.platform_admin,
+  });
 }
 
 /**
@@ -164,6 +204,7 @@ export function createAuthModule(): AuthModule {
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    tenantSelectionRequired: false,
   };
 
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -174,13 +215,29 @@ export function createAuthModule(): AuthModule {
     listeners.forEach((listener) => listener(state));
   }
 
-  function extractUserFromToken(accessToken: string): UserProfile {
+  /**
+   * Decodes a freshly-issued access token once and derives everything a caller needs from it:
+   * the user profile, whether tenant selection is still pending, and (as a side effect) syncing
+   * the Tenant Store. Throws if the token is malformed or fails the tenant-claim sanity check —
+   * callers must clear the session on that error, not retry.
+   */
+  function processNewToken(accessToken: string): { user: UserProfile; tenantSelectionRequired: boolean } {
     const claims = decodeJwtPayload(accessToken);
+
+    if (!hasValidTenantClaims(claims)) {
+      throw new Error('Token is missing tenant association: authentication failed');
+    }
+
+    syncTenantStore(claims);
+
     return {
-      sub: claims.sub,
-      name: claims.name ?? claims.preferred_username ?? 'Unknown',
-      email: claims.email ?? '',
-      roles: extractRoles(claims),
+      user: {
+        sub: claims.sub,
+        name: claims.name ?? claims.preferred_username ?? 'Unknown',
+        email: claims.email ?? '',
+        roles: extractRoles(claims),
+      },
+      tenantSelectionRequired: claims.tenant_selection_required ?? false,
     };
   }
 
@@ -236,24 +293,12 @@ export function createAuthModule(): AuthModule {
 
     // Validate state parameter
     if (!storedState || callbackState !== storedState) {
-      setState({
-        isLoading: false,
-        isAuthenticated: false,
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-      });
+      clearSession();
       throw new Error('Invalid state parameter: authentication failed');
     }
 
     if (!verifier) {
-      setState({
-        isLoading: false,
-        isAuthenticated: false,
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-      });
+      clearSession();
       throw new Error('Missing PKCE verifier: authentication failed');
     }
 
@@ -278,11 +323,19 @@ export function createAuthModule(): AuthModule {
       });
 
       if (!response.ok) {
+        // The auth server rejects token issuance with this specific OAuth2 error code (RFC 6749
+        // §5.2 error response) when an authenticated user has no tenant membership at all —
+        // distinct from every other token-exchange failure, since the callback route needs to
+        // send the user to a dedicated explanatory page rather than a generic error message.
+        const errorBody = await response.json().catch(() => null) as { error?: string } | null;
+        if (errorBody?.error === 'NO_TENANT_ASSOCIATION') {
+          throw new NoTenantAssociationError();
+        }
         throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
       }
 
       const tokens = (await response.json()) as TokenResponse;
-      const user = extractUserFromToken(tokens.access_token);
+      const { user, tenantSelectionRequired } = processNewToken(tokens.access_token);
 
       setState({
         accessToken: tokens.access_token,
@@ -290,17 +343,12 @@ export function createAuthModule(): AuthModule {
         user,
         isAuthenticated: true,
         isLoading: false,
+        tenantSelectionRequired,
       });
 
       scheduleAutoRefresh(tokens.access_token);
     } catch (error) {
-      setState({
-        isLoading: false,
-        isAuthenticated: false,
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-      });
+      clearSession();
 
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new Error('Token exchange timed out: authentication could not be completed', { cause: error });
@@ -337,7 +385,9 @@ export function createAuthModule(): AuthModule {
       }
 
       const tokens = (await response.json()) as TokenResponse;
-      const user = extractUserFromToken(tokens.access_token);
+      // Atomic shallow merge — updates token-derived fields only, no navigation or unmount, so
+      // in-progress form state elsewhere in the app is untouched by a background token rotation.
+      const { user, tenantSelectionRequired } = processNewToken(tokens.access_token);
 
       setState({
         accessToken: tokens.access_token,
@@ -345,12 +395,14 @@ export function createAuthModule(): AuthModule {
         user,
         isAuthenticated: true,
         isLoading: false,
+        tenantSelectionRequired,
       });
 
       scheduleAutoRefresh(tokens.access_token);
       return tokens.access_token;
     } catch {
-      // Network error — redirect to login
+      // Network error, malformed token, or missing tenant claims — all treated the same way:
+      // clear the session and let the caller redirect to login.
       clearSession();
       return null;
     }
@@ -382,7 +434,7 @@ export function createAuthModule(): AuthModule {
 
     // Redirect to auth server's logout which invalidates the session
     // and redirects back to our login page (configured in SecurityConfig)
-    window.location.href = `${config.url}/logout`;
+    window.location.href = endpoints.logout;
   }
 
   function getAccessToken(): string | null {
@@ -423,7 +475,10 @@ export function createAuthModule(): AuthModule {
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      tenantSelectionRequired: false,
     });
+
+    useTenantStore.getState().clearTenant();
   }
 
   return {

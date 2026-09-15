@@ -7,3 +7,5 @@ export { buildDeliveryRecord } from './delivery-record.factory';
 export { buildAuditEntry } from './audit-entry.factory';
 export { buildUser } from './user.factory';
 export { buildDashboardKPIs } from './dashboard-kpis.factory';
+export { buildTenant, buildTenantMembership } from './tenant.factory';
+export { buildTeam, buildTeamMember } from './team.factory';

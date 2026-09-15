@@ -6,8 +6,8 @@ export const ingestionHandlers = [
     return HttpResponse.json(
       {
         jobId: 'job-001',
-        status: 'QUEUED',
-        filename: 'volunteers-2024.xlsx',
+        status: 'ACCEPTED',
+        fileName: 'volunteers-2024.xlsx',
         createdAt: new Date().toISOString(),
       },
       { status: 202 },
@@ -17,9 +17,9 @@ export const ingestionHandlers = [
   // GET /api/ingestion/jobs/:jobId - poll job status
   http.get('/api/ingestion/jobs/:jobId', ({ params }) => {
     return HttpResponse.json({
-      jobId: params.jobId,
+      id: params.jobId,
       status: 'COMPLETED',
-      filename: 'volunteers-2024.xlsx',
+      fileName: 'volunteers-2024.xlsx',
       progress: 100,
       totalRows: 250,
       processedRows: 250,
@@ -38,8 +38,8 @@ export const ingestionHandlers = [
     return HttpResponse.json({
       content: [
         {
-          jobId: 'job-001',
-          filename: 'volunteers-2024.xlsx',
+          id: 'job-001',
+          fileName: 'volunteers-2024.xlsx',
           status: 'COMPLETED',
           progress: 100,
           totalRows: 250,
@@ -49,9 +49,9 @@ export const ingestionHandlers = [
           completedAt: '2024-06-01T10:02:30Z',
         },
         {
-          jobId: 'job-002',
-          filename: 'events-import.csv',
-          status: 'PROCESSING',
+          id: 'job-002',
+          fileName: 'events-import.csv',
+          status: 'RUNNING',
           progress: 65,
           totalRows: 100,
           processedRows: 65,
@@ -67,38 +67,28 @@ export const ingestionHandlers = [
     })
   }),
 
-  // GET /api/ingestion/jobs/:jobId/errors - job errors
-  http.get('/api/ingestion/jobs/:jobId/errors', ({ request }) => {
-    const url = new URL(request.url)
-    const page = Number(url.searchParams.get('page') ?? '0')
-    const size = Number(url.searchParams.get('size') ?? '10')
-
-    return HttpResponse.json({
-      content: [
-        {
-          row: 15,
-          field: 'email',
-          value: 'invalid-email',
-          message: 'Invalid email format',
-        },
-        {
-          row: 42,
-          field: 'department',
-          value: '',
-          message: 'Department is required',
-        },
-        {
-          row: 108,
-          field: 'employeeId',
-          value: 'EMP001',
-          message: 'Duplicate employee ID',
-        },
-      ],
-      totalElements: 3,
-      totalPages: 1,
-      page,
-      size,
-    })
+  // GET /api/ingestion/jobs/:jobId/errors - job errors (bare array, matching the real backend)
+  http.get('/api/ingestion/jobs/:jobId/errors', () => {
+    return HttpResponse.json([
+      {
+        rowNumber: 15,
+        columnName: 'email',
+        errorMessage: 'Invalid email format',
+        rejectedValue: 'invalid-email',
+      },
+      {
+        rowNumber: 42,
+        columnName: 'department',
+        errorMessage: 'Department is required',
+        rejectedValue: '',
+      },
+      {
+        rowNumber: 108,
+        columnName: 'employeeId',
+        errorMessage: 'Duplicate employee ID',
+        rejectedValue: 'EMP001',
+      },
+    ])
   }),
 ]
 

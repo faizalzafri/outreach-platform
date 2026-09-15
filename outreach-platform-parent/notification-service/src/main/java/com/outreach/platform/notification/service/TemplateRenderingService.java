@@ -10,11 +10,7 @@ import org.thymeleaf.templateresolver.StringTemplateResolver;
 
 import java.util.Map;
 
-/**
- * Renders notification templates from database-stored Thymeleaf strings.
- * Uses a dedicated StringTemplateResolver so templates are resolved from
- * in-memory strings rather than the classpath.
- */
+/** Renders Thymeleaf templates from database-stored strings. */
 @Service
 public class TemplateRenderingService {
 
@@ -33,13 +29,7 @@ public class TemplateRenderingService {
         stringTemplateEngine.setTemplateResolver(resolver);
     }
 
-    /**
-     * Renders a Thymeleaf template string with the given variables.
-     *
-     * @param templateContent the Thymeleaf HTML template content (e.g. "Hello [[${name}]]")
-     * @param variables       map of variable names to values injected into the template
-     * @return the rendered HTML string
-     */
+    /** Renders a Thymeleaf template string with the given variables. */
     public String render(String templateContent, Map<String, Object> variables) {
         Context context = new Context();
         if (variables != null) {

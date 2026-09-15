@@ -7,6 +7,8 @@ export type { SidebarProps, NavigationGroup, NavigationItem } from './Sidebar';
 export { Header } from './Header';
 export type { HeaderProps } from './Header';
 
+export { TenantBadge } from './TenantBadge';
+
 export { ForbiddenPage } from './ForbiddenPage';
 
 export { ProtectedRoute } from './ProtectedRoute';

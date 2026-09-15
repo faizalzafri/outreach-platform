@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: notification-service
+
+  # Exclude OAuth2 Resource Server and Mail Health auto-configuration in tests, same as application-test.yml
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.mail.MailHealthContributorAutoConfiguration
+
+  # Real Postgres via Testcontainers (datasource URL/credentials set dynamically) with Liquibase
+  # enabled and ddl-auto=validate — unlike application-test.yml's H2/create-drop, this profile
+  # exists specifically to prove the entity mappings match what Liquibase actually produces
+  # against a real engine (docs/specs/platform-hardening/, Task 1.5).
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/test_notifications_postgres_it
+      auto-index-creation: false
+
+  mail:
+    host: localhost
+    port: 3025
+
+  thymeleaf:
+    cache: false
+
+server:
+  port: 0
+
+app:
+  security:
+    enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+notification-service:
+  max-retry-attempts: 3
+  retry-backoff-minutes: 1,5,30
+  from-address: test@outreach.com
+  from-name: Test Platform
+  batch-size: 10

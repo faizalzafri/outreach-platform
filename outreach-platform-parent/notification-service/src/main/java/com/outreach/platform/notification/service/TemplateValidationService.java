@@ -10,20 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Validates that provided template variables match the declared variables_schema.
- * <p>
- * The variables_schema is a JSON object where each key is a variable name and
- * the value is an object describing the variable (e.g. type, required).
- * Example schema:
- * <pre>
- * {
- *   "volunteerName": { "type": "string", "required": true },
- *   "eventDate": { "type": "string", "required": false }
- * }
- * </pre>
- */
+/** Validates provided template variables against the declared JSON schema. */
 @Service
 public class TemplateValidationService {
 
@@ -35,11 +24,12 @@ public class TemplateValidationService {
     }
 
     /**
-     * Validates that the provided variables satisfy the template's schema.
+     * Validates that the provided variables satisfy the template's schema, returning any errors.
      *
-     * @param variablesSchema the JSON schema string from the template entity
-     * @param variables       the actual variables provided for rendering
-     * @return list of validation error messages; empty if valid
+     * <p>{@code variablesSchema} is a standard JSON Schema object — {@code {"type":"object",
+     * "properties":{"varName":{"type":"string"}, ...},"required":["varName"]}} — matching every
+     * seeded template and this DTO's own Swagger examples. required lives as a top-level array of
+     * variable names, per the JSON Schema spec, not nested per-property.
      */
     public List<String> validate(String variablesSchema, Map<String, Object> variables) {
         List<String> errors = new ArrayList<>();
@@ -48,7 +38,7 @@ public class TemplateValidationService {
             return errors;
         }
 
-        Map<String, Map<String, Object>> schema;
+        Map<String, Object> schema;
         try {
             schema = objectMapper.readValue(variablesSchema, new TypeReference<>() {});
         } catch (JsonProcessingException e) {
@@ -58,12 +48,12 @@ public class TemplateValidationService {
 
         Set<String> providedKeys = (variables != null) ? variables.keySet() : Set.of();
 
-        for (Map.Entry<String, Map<String, Object>> entry : schema.entrySet()) {
-            String varName = entry.getKey();
-            Map<String, Object> varDef = entry.getValue();
+        Set<String> requiredVars = (schema.get("required") instanceof List<?> required)
+                ? required.stream().map(String::valueOf).collect(Collectors.toSet())
+                : Set.of();
 
-            boolean required = Boolean.TRUE.equals(varDef.get("required"));
-            if (required && !providedKeys.contains(varName)) {
+        for (String varName : requiredVars) {
+            if (!providedKeys.contains(varName)) {
                 errors.add("Missing required variable: " + varName);
             }
         }

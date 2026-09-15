@@ -6,6 +6,7 @@ import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
@@ -15,6 +16,8 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring")
 public interface EventMapper {
 
+    @Mapping(target = "createdAt", source = "createdDate")
+    @Mapping(target = "updatedAt", source = "lastModifiedDate")
     EventDto toDto(EventEntity entity);
 
     EventEntity toEntity(EventCreateRequest request);

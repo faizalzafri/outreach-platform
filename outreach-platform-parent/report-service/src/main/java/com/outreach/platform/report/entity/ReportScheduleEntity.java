@@ -1,18 +1,18 @@
 package com.outreach.platform.report.entity;
 
+import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.report.model.ExportFormat;
 import com.outreach.platform.report.model.ScheduleStatus;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * JPA entity mapping to the report_schedules table.
@@ -20,12 +20,10 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "report_schedules")
-public class ReportScheduleEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+@AttributeOverride(name = "createdDate", column = @Column(name = "created_at", nullable = false, updatable = false))
+@AttributeOverride(name = "lastModifiedDate", column = @Column(name = "updated_at"))
+@AttributeOverride(name = "lastModifiedBy", column = @Column(name = "updated_by", length = 100))
+public class ReportScheduleEntity extends TenantAwareBaseEntity {
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -40,9 +38,11 @@ public class ReportScheduleEntity {
     @Column(name = "export_format", nullable = false, length = 20)
     private ExportFormat exportFormat;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "filter_criteria", columnDefinition = "jsonb")
     private String filterCriteria;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "recipients", columnDefinition = "jsonb")
     private String recipients;
 
@@ -56,22 +56,13 @@ public class ReportScheduleEntity {
     @Column(name = "next_run_at")
     private Instant nextRunAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
     public ReportScheduleEntity() {
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    // id/tenantId/createdDate(→created_at)/lastModifiedDate(→updated_at)/createdBy/
+    // lastModifiedBy(→updated_by)/version are inherited from TenantAwareBaseEntity/BaseEntity —
+    // see the class-level @AttributeOverrides for the column-name mapping. Callers previously
+    // using getCreatedAt() must switch to getCreatedDate().
 
     public String getName() {
         return name;
@@ -143,21 +134,5 @@ public class ReportScheduleEntity {
 
     public void setNextRunAt(Instant nextRunAt) {
         this.nextRunAt = nextRunAt;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
     }
 }

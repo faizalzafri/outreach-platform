@@ -8,16 +8,17 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
-/**
- * MongoDB document representing an AI job.
- * TTL is managed via the ttlExpiresAt field with a MongoDB TTL index.
- */
+/** MongoDB document representing an AI job with TTL-based expiration. */
 @Document(collection = "ai_jobs")
 public class AiJobDocument {
 
     @Id
     private String id;
+
+    @Indexed
+    private UUID tenantId;
 
     private AiJobType jobType;
 
@@ -36,7 +37,8 @@ public class AiJobDocument {
 
     public AiJobDocument() {}
 
-    public AiJobDocument(AiJobType jobType, Map<String, Object> request, Instant ttlExpiresAt) {
+    public AiJobDocument(UUID tenantId, AiJobType jobType, Map<String, Object> request, Instant ttlExpiresAt) {
+        this.tenantId = tenantId;
         this.jobType = jobType;
         this.status = AiJobStatus.PENDING;
         this.request = request;
@@ -50,6 +52,14 @@ public class AiJobDocument {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public AiJobType getJobType() {

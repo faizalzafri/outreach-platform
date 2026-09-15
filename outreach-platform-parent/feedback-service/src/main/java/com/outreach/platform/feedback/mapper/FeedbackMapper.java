@@ -18,6 +18,8 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface FeedbackMapper {
 
+    @Mapping(source = "createdDate", target = "createdAt")
+    @Mapping(source = "lastModifiedDate", target = "updatedAt")
     FeedbackDto toDto(VolunteerFeedbackEntity entity);
 
     List<FeedbackDto> toDtoList(List<VolunteerFeedbackEntity> entities);
@@ -28,9 +30,12 @@ public interface FeedbackMapper {
     @Mapping(target = "submittedAt", expression = "java(java.time.Instant.now())")
     @Mapping(target = "reviewedAt", ignore = true)
     @Mapping(target = "reviewedBy", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdDate", ignore = true)
+    @Mapping(target = "lastModifiedDate", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "tenantId", ignore = true)
     VolunteerFeedbackEntity toEntity(FeedbackSubmitRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -41,8 +46,11 @@ public interface FeedbackMapper {
     @Mapping(target = "submittedAt", ignore = true)
     @Mapping(target = "reviewedAt", ignore = true)
     @Mapping(target = "reviewedBy", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdDate", ignore = true)
+    @Mapping(target = "lastModifiedDate", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "tenantId", ignore = true)
     void updateEntityFromRequest(FeedbackUpdateRequest request, @MappingTarget VolunteerFeedbackEntity entity);
 }

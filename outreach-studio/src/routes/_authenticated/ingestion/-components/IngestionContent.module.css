@@ -144,28 +144,28 @@
 }
 
 .statusPending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-100);
+  color: var(--color-warning-800);
 }
 
 .statusInProgress {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--color-info-100);
+  color: var(--color-info-800);
 }
 
 .statusCompleted {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-success-100);
+  color: var(--color-success-800);
 }
 
 .statusCompletedWithErrors {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-100);
+  color: var(--color-warning-800);
 }
 
 .statusFailed {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-100);
+  color: var(--color-danger-800);
 }
 
 /* ----------- Error Message ----------- */
@@ -173,10 +173,10 @@
 .errorMessage {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
+  background: var(--color-danger-100);
+  border: 1px solid var(--color-danger-200);
   border-radius: var(--radius-md);
-  color: #991b1b;
+  color: var(--color-danger-800);
   font-size: 0.875rem;
   display: flex;
   align-items: center;
@@ -189,30 +189,30 @@
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #991b1b;
-  background: #ffffff;
-  border: 1px solid #fecaca;
+  color: var(--color-danger-800);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-danger-200);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
 .retryButton:hover {
-  background: #fef2f2;
+  background: var(--color-danger-50);
 }
 
 .retryButton:focus-visible {
-  outline: 2px solid #991b1b;
+  outline: 2px solid var(--color-danger-800);
   outline-offset: 2px;
 }
 
 .timeoutMessage {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
+  background: var(--color-warning-100);
+  border: 1px solid var(--color-warning-200);
   border-radius: var(--radius-md);
-  color: #92400e;
+  color: var(--color-warning-800);
   font-size: 0.875rem;
 }
 

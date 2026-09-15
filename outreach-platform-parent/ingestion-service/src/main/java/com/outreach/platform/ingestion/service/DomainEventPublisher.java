@@ -1,5 +1,6 @@
 package com.outreach.platform.ingestion.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.model.DomainEventDocument;
 import com.outreach.platform.ingestion.model.EventStatus;
 import com.outreach.platform.ingestion.repo.DomainEventRepository;
@@ -9,12 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-/**
- * Writes domain events to the MongoDB domain_events outbox collection with PENDING status.
- * An external poller is responsible for picking up PENDING events and publishing them.
- */
+/** Writes domain events to the MongoDB outbox collection with PENDING status for later publishing. */
 @Named
 public class DomainEventPublisher {
 
@@ -33,9 +33,6 @@ public class DomainEventPublisher {
 
     /**
      * Publishes a domain event by writing it to the outbox collection.
-     *
-     * @param eventType the event type constant
-     * @param payload   event data as a key-value map
      */
     public void publish(String eventType, Map<String, Object> payload) {
         DomainEventDocument event = new DomainEventDocument();
@@ -44,18 +41,25 @@ public class DomainEventPublisher {
         event.setStatus(EventStatus.PENDING);
         event.setCreatedAt(Instant.now());
 
+        if (TenantContext.isPresent()) {
+            event.setTenantId(TenantContext.getCurrentTenantId());
+        } else {
+            log.warn("Persisting domain event without tenantId: TenantContext is empty. eventType={}", eventType);
+        }
+
         domainEventRepository.save(event);
-        log.info("Published domain event: type={}, id={}", eventType, event.getId());
+        log.info("Published domain event: type={}, id={}, tenantId={}", eventType, event.getId(), event.getTenantId());
     }
 
     /**
-     * Publishes a VolunteersImported event.
+     * Publishes a VolunteersImported event for one resolved event, matching the payload shape
+     * notification-service's {@code RabbitMqEventListener.handleVolunteersImported} expects:
+     * {@code {eventId, volunteers: [{email, name}, ...]}}.
      */
-    public void publishVolunteersImported(String jobId, String fileName, int importedCount) {
+    public void publishVolunteersImported(UUID eventId, List<Map<String, String>> volunteers) {
         publish(EVENT_VOLUNTEERS_IMPORTED, Map.of(
-                "jobId", jobId,
-                "fileName", fileName,
-                "importedCount", importedCount
+                "eventId", eventId.toString(),
+                "volunteers", volunteers
         ));
     }
 

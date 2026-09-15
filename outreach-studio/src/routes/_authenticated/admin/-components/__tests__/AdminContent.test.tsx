@@ -232,6 +232,7 @@ describe('AdminContent', () => {
 
       await user.type(screen.getByLabelText('Username'), 'new_user');
       await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
 
       await waitFor(() => {
         const submitBtn = screen.getByRole('button', { name: /Create$/i });
@@ -266,6 +267,7 @@ describe('AdminContent', () => {
 
       await user.type(screen.getByLabelText('Username'), 'existing_user');
       await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
 
       const submitBtn = screen.getByRole('button', { name: /Create$/i });
       await user.click(submitBtn);
@@ -302,6 +304,7 @@ describe('AdminContent', () => {
 
       await user.type(screen.getByLabelText('Username'), 'new_user');
       await user.type(screen.getByLabelText('Email'), 'existing@example.com');
+      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
 
       const submitBtn = screen.getByRole('button', { name: /Create$/i });
       await user.click(submitBtn);
@@ -336,6 +339,7 @@ describe('AdminContent', () => {
 
       await user.type(screen.getByLabelText('Username'), 'new_user');
       await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
 
       const submitBtn = screen.getByRole('button', { name: /Create$/i });
       await user.click(submitBtn);
@@ -422,7 +426,7 @@ describe('AdminContent', () => {
         expect(statusPayload).not.toBeNull();
       });
 
-      expect(statusPayload!.status).toBe('DISABLED');
+      expect(statusPayload!.enabled).toBe(false);
     });
 
     it('closes dialog without action when Cancel is clicked', async () => {

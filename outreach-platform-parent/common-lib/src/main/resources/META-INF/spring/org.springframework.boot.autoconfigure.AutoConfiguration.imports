@@ -1,2 +1,6 @@
+com.outreach.platform.common.audit.AuditingAutoConfiguration
+com.outreach.platform.common.cache.CacheErrorHandlingAutoConfiguration
 com.outreach.platform.common.config.IdpAutoConfiguration
+com.outreach.platform.common.feign.FeignAuthAutoConfiguration
 com.outreach.platform.common.health.HealthAutoConfiguration
+com.outreach.platform.common.tenant.config.TenantAutoConfiguration

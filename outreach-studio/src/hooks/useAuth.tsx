@@ -22,6 +22,7 @@ export interface AuthContextValue {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  tenantSelectionRequired: boolean;
   login: () => void;
   logout: () => Promise<void>;
 }
@@ -48,7 +49,14 @@ const MOCK_USER: UserProfile = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authState, setAuthState] = useState<AuthState>(() =>
     AUTH_BYPASS
-      ? { accessToken: 'mock-token', refreshToken: null, user: MOCK_USER, isAuthenticated: true, isLoading: false }
+      ? {
+          accessToken: 'mock-token',
+          refreshToken: null,
+          user: MOCK_USER,
+          isAuthenticated: true,
+          isLoading: false,
+          tenantSelectionRequired: false,
+        }
       : authModule.getState()
   );
 
@@ -83,6 +91,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user: authState.user,
     isAuthenticated: authState.isAuthenticated,
     isLoading: authState.isLoading,
+    tenantSelectionRequired: authState.tenantSelectionRequired,
     login,
     logout,
   };

@@ -16,11 +16,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Servlet filter that generates or propagates a correlation ID for request tracing.
- * If the incoming request contains an X-Correlation-ID header, it is used;
- * otherwise, a new UUID is generated.
- * The correlation ID is placed in the SLF4J MDC for structured logging
- * and added to the response header for downstream consumers.
+ * Servlet filter that propagates or generates a correlation ID (UUID) for distributed request tracing via MDC and response headers.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

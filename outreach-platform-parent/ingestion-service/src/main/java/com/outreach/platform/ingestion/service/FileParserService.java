@@ -13,10 +13,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Orchestrates file parsing by delegating to the appropriate parser
- * based on file extension, then validates all rows.
- */
+/** Orchestrates file parsing by delegating to the appropriate parser based on extension, then validates rows. */
 @Named
 public class FileParserService {
 
@@ -38,18 +35,22 @@ public class FileParserService {
         this.properties = properties;
     }
 
-    /**
-     * Parse and validate a multipart file. Returns structured results with valid rows and errors.
-     *
-     * @param file the uploaded multipart file
-     * @return parse result containing valid rows, errors, and counts
-     * @throws IOException if the file cannot be read
-     */
+    /** Parse and validate a multipart file, returning structured results with valid rows and errors. */
     public ParseResult parseAndValidate(MultipartFile file) throws IOException {
         String extension = getExtension(file.getOriginalFilename());
         validateExtension(extension);
 
-        List<ParsedRow> parsedRows = parseFile(file.getInputStream(), extension);
+        return parseAndValidate(file.getInputStream(), extension);
+    }
+
+    /**
+     * Parse and validate from a raw input stream, given an already-validated extension. Used by
+     * the async import pipeline, which parses from bytes captured up front rather than a
+     * request-scoped {@link MultipartFile} (whose backing temp file isn't guaranteed to survive
+     * past the original request).
+     */
+    public ParseResult parseAndValidate(InputStream inputStream, String extension) throws IOException {
+        List<ParsedRow> parsedRows = parseFile(inputStream, extension);
 
         List<ParsedRow> validRows = new ArrayList<>();
         List<ValidationError> allErrors = new ArrayList<>();
@@ -72,12 +73,7 @@ public class FileParserService {
         );
     }
 
-    /**
-     * Validates the file extension against the configured allowed list.
-     *
-     * @param extension the file extension including the dot
-     * @throws IllegalArgumentException if the extension is not allowed
-     */
+    /** Validates the file extension against the configured allowed list. */
     public void validateExtension(String extension) {
         if (!properties.allowedExtensions().contains(extension.toLowerCase())) {
             throw new IllegalArgumentException(

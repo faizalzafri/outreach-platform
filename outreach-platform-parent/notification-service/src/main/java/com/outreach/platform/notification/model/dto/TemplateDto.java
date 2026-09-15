@@ -29,7 +29,7 @@ public record TemplateDto(
         @Schema(description = "Whether the template is active", example = "true")
         boolean active,
         @Schema(description = "Template version number", example = "2")
-        int version,
+        long version,
         @Schema(description = "Creation timestamp")
         Instant createdAt,
         @Schema(description = "Last update timestamp")
