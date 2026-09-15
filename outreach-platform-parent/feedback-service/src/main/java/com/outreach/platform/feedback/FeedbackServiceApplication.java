@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /** Bootstrap class for the Feedback Service. */
 @SpringBootApplication
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 @EnableJpaRepositories(basePackages = "com.outreach.platform.feedback.repo")
 @EnableFeignClients
 @EnableCaching

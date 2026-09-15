@@ -37,7 +37,11 @@ public class FeedbackService {
     }
 
     @Transactional
-    @CacheEvict(value = "feedbackByEvent", key = "#request.eventId()")
+    // listByEvent's cache key now includes the page/size (see its own comment for why), so a
+    // single-key evict here can no longer target "the" entry for this event — evict every
+    // cached page for every event instead. Feedback submission isn't a hot path, and any evicted
+    // page is just a normal cache-miss DB read away.
+    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public FeedbackDto submitFeedback(FeedbackSubmitRequest request) {
         Optional<VolunteerFeedbackEntity> existing =
                 feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId());
@@ -51,7 +55,7 @@ public class FeedbackService {
     }
 
     @Transactional
-    @CacheEvict(value = "feedbackByEvent", key = "#eventId")
+    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public FeedbackDto updateFeedback(UUID eventId, UUID employeeId, FeedbackUpdateRequest request) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
                 .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
@@ -74,7 +78,7 @@ public class FeedbackService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "feedbackByEvent", key = "#eventId")
+    @Cacheable(value = "feedbackByEvent", key = "#eventId + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<FeedbackDto> listByEvent(UUID eventId, Pageable pageable) {
         return feedbackRepository.findByEventId(eventId, pageable)
                 .map(feedbackMapper::toDto);
@@ -110,7 +114,7 @@ public class FeedbackService {
     }
 
     @Transactional
-    @CacheEvict(value = "feedbackByEvent", key = "#eventId")
+    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public void softDelete(UUID eventId, UUID employeeId) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
                 .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
