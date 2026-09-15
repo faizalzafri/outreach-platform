@@ -165,6 +165,17 @@
                     </dependenciesToScan>
                 </configuration>
             </plugin>
+            <!--
+                Declared in the parent's pluginManagement (executions, argLine, DOCKER_HOST) but
+                never actually bound to any service's own build until now — meaning *IT.java
+                classes were never discovered or run by `mvn verify` anywhere in this repo,
+                confirmed by testing: BUILD SUCCESS with zero failsafe report for any of this
+                module's IT classes before this was added.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
 
