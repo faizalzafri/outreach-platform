@@ -15,10 +15,20 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Security configuration for the Notification Service with OAuth2 JWT validation and stateless sessions.
+ *
+ * <p>Excluded from the {@code test} and {@code postgres-it} profiles: {@code @EnableMethodSecurity}
+ * here enforces {@code @PreAuthorize} via AOP independently of the HTTP filter chain, so swapping
+ * in {@code permissiveFilterChain} (app.security.enabled=false) was not enough to stop
+ * role-gated controllers like {@code TemplateController} from 403ing every unauthenticated test
+ * request — confirmed by {@code TemplateControllerIT} failing with exactly that until this guard
+ * was added. See {@code TestSecurityConfig} in {@code src/test/java} for the permissive
+ * replacement, which deliberately does not re-enable method security (mirrors event-service's
+ * {@code SecurityConfig}/{@code TestSecurityConfig} split).</p>
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Profile("!test & !postgres-it")
 public class SecurityConfig {
 
     @Bean

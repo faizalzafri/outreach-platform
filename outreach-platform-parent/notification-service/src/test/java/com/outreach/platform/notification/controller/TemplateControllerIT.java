@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.controller;
 
+import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.notification.model.NotificationType;
 import com.outreach.platform.notification.model.TemplateEngine;
 import com.outreach.platform.notification.model.dto.TemplateCreateRequest;
@@ -7,6 +8,7 @@ import com.outreach.platform.notification.model.dto.TemplateDto;
 import com.outreach.platform.notification.model.dto.TemplatePreviewRequest;
 import com.outreach.platform.notification.model.dto.TemplatePreviewResponse;
 import com.outreach.platform.notification.model.dto.TemplateUpdateRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +23,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -47,6 +50,12 @@ class TemplateControllerIT {
     @Container
     static MongoDBContainer mongo = new MongoDBContainer("mongo:7.0");
 
+    // The app has @RabbitListener beans that start eagerly on context refresh — without a real
+    // broker, they either fail to connect or (worse, if something else is listening on the
+    // default localhost:5672) fail auth against it.
+    @Container
+    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -57,12 +66,29 @@ class TemplateControllerIT {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.liquibase.enabled", () -> "false");
         registry.add("spring.data.mongodb.uri", mongo::getReplicaSetUrl);
+        registry.add("spring.rabbitmq.host", rabbitmq::getHost);
+        registry.add("spring.rabbitmq.port", rabbitmq::getAmqpPort);
         registry.add("eureka.client.enabled", () -> "false");
         registry.add("spring.cloud.discovery.enabled", () -> "false");
     }
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @BeforeEach
+    void setUp() {
+        // TestRestTemplate's underlying RestTemplate is a shared bean across all test methods in
+        // this class — guard against stacking a duplicate interceptor. TenantFilterAspect throws
+        // IllegalStateException on any JpaRepository call made with no tenant context, regardless
+        // of whether the entity extends TenantAwareBaseEntity (NotificationTemplateEntity
+        // hand-rolls its own @FilterDef but the aspect still applies to it).
+        if (restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add(TenantConstants.X_TENANT_ID_HEADER, TenantConstants.DEFAULT_TENANT_ID.toString());
+                return execution.execute(request, body);
+            });
+        }
+    }
 
     @Test
     void createTemplate_returnsCreatedWithId() {
@@ -231,7 +257,13 @@ class TemplateControllerIT {
 
     /**
      * Helper class to deserialize Spring Data Page responses.
+     *
+     * <p>ignoreUnknown: the real Page JSON carries several other Spring Data metadata fields
+     * (empty, first, last, pageable, sort, numberOfElements, ...) this test doesn't need —
+     * without it, the global Jackson FAIL_ON_UNKNOWN_PROPERTIES config rejects the response on
+     * the first one it encounters.
      */
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     static class RestPageResponse<T> {
         private java.util.List<T> content;
         private int totalPages;
