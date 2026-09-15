@@ -2,9 +2,14 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
+
+# Least-privilege default: nothing in this workflow needs to write to the repo,
+# comment on PRs, or touch packages/deployments.
+permissions:
+  contents: read
 
 env:
   JAVA_VERSION: '21'
