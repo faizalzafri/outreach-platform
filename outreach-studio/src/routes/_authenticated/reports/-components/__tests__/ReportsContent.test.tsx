@@ -310,11 +310,13 @@ describe('ReportsContent', () => {
         http.post('/api/reports/export', () => {
           return HttpResponse.json({ jobId: 'export-123' }, { status: 202 });
         }),
-        http.get('/api/reports/export/:jobId/status', () => {
-          return HttpResponse.json({
-            jobId: 'export-123',
-            status: 'COMPLETED',
-            downloadUrl: '/api/reports/export/export-123/download',
+        http.get('/api/reports/export/:jobId', () => {
+          return new HttpResponse('city,score\nMumbai,4.5', {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/csv',
+              'Content-Disposition': 'attachment; filename="report-export-123.csv"',
+            },
           });
         }),
       );
@@ -353,7 +355,7 @@ describe('ReportsContent', () => {
         http.post('/api/reports/export', () => {
           return HttpResponse.json({ jobId: 'export-fail' }, { status: 202 });
         }),
-        http.get('/api/reports/export/:jobId/status', () => {
+        http.get('/api/reports/export/:jobId', () => {
           return HttpResponse.json({
             jobId: 'export-fail',
             status: 'FAILED',
@@ -393,11 +395,11 @@ describe('ReportsContent', () => {
         http.post('/api/reports/export', () => {
           return HttpResponse.json({ jobId: 'export-timeout' }, { status: 202 });
         }),
-        http.get('/api/reports/export/:jobId/status', () => {
-          // Always return IN_PROGRESS to trigger timeout
+        http.get('/api/reports/export/:jobId', () => {
+          // Always return RUNNING to trigger timeout
           return HttpResponse.json({
             jobId: 'export-timeout',
-            status: 'IN_PROGRESS',
+            status: 'RUNNING',
           });
         }),
       );
