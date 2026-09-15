@@ -165,3 +165,14 @@ management:
 idp:
   provider: ${IDP_PROVIDER:keycloak}
   jwks-uri: ${IDP_JWKS_URI:http://localhost:8080/realms/outreach/protocol/openid-connect/certs}
+
+# Service-to-service auth for calling event-service via Feign: common-lib's
+# FeignAuthAutoConfiguration is available whenever this service actually needs a
+# client-credentials-authenticated Feign call. Not wired up here yet — its EventServiceClient
+# has no real call sites in production code, same as ingestion-service's had until this session
+# — and enabling it turned out to have a real side effect: the mere presence of
+# spring.security.oauth2.client.registration.* properties changes @WebMvcTest slices' default
+# security behavior (unauthenticated requests 302-redirect to a login page instead of 401),
+# which is what broke ReportControllerTest.unauthenticatedRequest_returns401 here. Add this
+# registration back (mirroring ingestion-service's application.yml) only once there's a real
+# caller, and account for that test-slice effect when you do.
