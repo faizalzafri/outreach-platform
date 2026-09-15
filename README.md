@@ -4,6 +4,17 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+[![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](outreach-platform-parent/pom.xml)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F?logo=springboot&logoColor=white)](outreach-platform-parent/pom.xml)
+[![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2024.0-6DB33F?logo=spring&logoColor=white)](outreach-platform-parent/pom.xml)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](outreach-studio/package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](outreach-studio/package.json)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![Keycloak](https://img.shields.io/badge/Keycloak-26-4D4D4D?logo=keycloak&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+
 Multi-tenant SaaS platform for corporate volunteer outreach management. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights — with complete data isolation between tenant organizations.
 
 ## Multi-Tenancy
