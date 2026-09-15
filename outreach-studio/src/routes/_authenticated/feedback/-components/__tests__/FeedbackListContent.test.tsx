@@ -27,7 +27,7 @@ async function renderFeedbackList() {
 describe('FeedbackListContent', () => {
   it('displays feedback rows from the API response', async () => {
     server.use(
-      http.get('/api/feedback', () => {
+      http.get('/api/feedback/search', () => {
         return HttpResponse.json({
           content: MOCK_FEEDBACK,
           totalElements: MOCK_FEEDBACK.length,
@@ -49,7 +49,7 @@ describe('FeedbackListContent', () => {
 
   it('shows the empty message when no feedback is returned', async () => {
     server.use(
-      http.get('/api/feedback', () => {
+      http.get('/api/feedback/search', () => {
         return HttpResponse.json({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 10 });
       }),
     );
@@ -64,7 +64,7 @@ describe('FeedbackListContent', () => {
   describe('accessibility', () => {
     it('has no axe violations once loaded', async () => {
       server.use(
-        http.get('/api/feedback', () => {
+        http.get('/api/feedback/search', () => {
           return HttpResponse.json({
             content: MOCK_FEEDBACK,
             totalElements: MOCK_FEEDBACK.length,
