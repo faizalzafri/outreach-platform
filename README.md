@@ -1,5 +1,9 @@
 # Outreach Platform
 
+[![CI Pipeline](https://github.com/faizalzafri/outreach-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/faizalzafri/outreach-platform/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 Multi-tenant SaaS platform for corporate volunteer outreach management. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights — with complete data isolation between tenant organizations.
 
 ## Multi-Tenancy
