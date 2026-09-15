@@ -39,7 +39,6 @@ The platform supports multiple organizations (NGOs, corporates, schools) on a sh
 
 | Service | Port | Responsibility |
 |---------|------|---------------|
-| config-server | 8888 | Centralized configuration |
 | discovery-service | 8761 | Eureka service registry |
 | gateway-service | 7093 | API gateway, JWT validation, rate limiting |
 | auth-service | 8090 | OAuth2/OIDC identity provider |
