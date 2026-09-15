@@ -6,6 +6,8 @@ import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.VolunteerDto;
 import com.outreach.platform.event.model.dto.VolunteerEnrollRequest;
+import com.outreach.platform.event.model.dto.VolunteerImportRequest;
+import com.outreach.platform.event.model.dto.VolunteerImportResponse;
 import com.outreach.platform.event.model.dto.VolunteerProfileUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -193,5 +195,89 @@ class VolunteerIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("\"empty\":true");
+    }
+
+    @Test
+    void importVolunteer_newEmployeeId_createsProfileAndEnrolls() {
+        EventDto event = createTestEvent("Import Create Test");
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP900", "Imported Volunteer", "imported.volunteer@company.com", "9998887776",
+                "Bangalore", "Engineering", "QA Engineer", "Selenium,Java", event.eventCode());
+
+        ResponseEntity<VolunteerImportResponse> response = restTemplate.postForEntity(
+                "/volunteers/import", request, VolunteerImportResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().eventId()).isEqualTo(event.id());
+        assertThat(response.getBody().alreadyEnrolled()).isFalse();
+
+        ResponseEntity<VolunteerDto> created = restTemplate.getForEntity(
+                "/volunteers/{employeeId}", VolunteerDto.class, "EMP900");
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(created.getBody().fullName()).isEqualTo("Imported Volunteer");
+        assertThat(created.getBody().availability()).isEqualTo(VolunteerAvailability.AVAILABLE);
+    }
+
+    @Test
+    void importVolunteer_existingEmployeeId_updatesProfileAndEnrolls() {
+        EventDto event = createTestEvent("Import Update Test");
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP002", "Sneha Patel Updated", "sneha.updated@company.com", "9876543211",
+                "Pune", "Design", "Principal UX Lead", "UI Design,Mentoring", event.eventCode());
+
+        ResponseEntity<VolunteerImportResponse> response = restTemplate.postForEntity(
+                "/volunteers/import", request, VolunteerImportResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().alreadyEnrolled()).isFalse();
+
+        ResponseEntity<VolunteerDto> updated = restTemplate.getForEntity(
+                "/volunteers/{employeeId}", VolunteerDto.class, "EMP002");
+        assertThat(updated.getBody().fullName()).isEqualTo("Sneha Patel Updated");
+        assertThat(updated.getBody().designation()).isEqualTo("Principal UX Lead");
+    }
+
+    @Test
+    void importVolunteer_alreadyEnrolled_isIdempotent() {
+        EventDto event = createTestEvent("Import Idempotency Test");
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP003", "Rajesh Iyer", "rajesh.iyer@company.com", null,
+                null, null, null, null, event.eventCode());
+
+        ResponseEntity<VolunteerImportResponse> first = restTemplate.postForEntity(
+                "/volunteers/import", request, VolunteerImportResponse.class);
+        assertThat(first.getBody().alreadyEnrolled()).isFalse();
+
+        ResponseEntity<VolunteerImportResponse> second = restTemplate.postForEntity(
+                "/volunteers/import", request, VolunteerImportResponse.class);
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(second.getBody().alreadyEnrolled()).isTrue();
+    }
+
+    @Test
+    void importVolunteer_unknownEventCode_shouldReturn404() {
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP004", "Meera Nair", "meera.nair@company.com", null,
+                null, null, null, null, "EVT-NO-SUCH-CODE");
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/volunteers/import", request, String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    private EventDto createTestEvent(String namePrefix) {
+        EventCreateRequest eventRequest = new EventCreateRequest(
+                namePrefix + " " + UUID.randomUUID().toString().substring(0, 8),
+                "Test event description",
+                LocalDate.of(2025, 8, 1), LocalDate.of(2025, 8, 1),
+                "Pune", "Test Venue", "CSR", 30);
+        ResponseEntity<EventDto> response = restTemplate.postForEntity("/events", eventRequest, EventDto.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return response.getBody();
     }
 }

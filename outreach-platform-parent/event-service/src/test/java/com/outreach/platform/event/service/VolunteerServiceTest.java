@@ -8,8 +8,11 @@ import com.outreach.platform.event.model.AttendanceStatus;
 import com.outreach.platform.event.model.VolunteerAvailability;
 import com.outreach.platform.event.model.dto.VolunteerDto;
 import com.outreach.platform.event.model.dto.VolunteerHistoryDto;
+import com.outreach.platform.event.model.dto.VolunteerImportRequest;
+import com.outreach.platform.event.model.dto.VolunteerImportResponse;
 import com.outreach.platform.event.model.dto.VolunteerProfileUpdateRequest;
 import com.outreach.platform.event.repo.EventEnrollmentRepository;
+import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.VolunteerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,13 +49,15 @@ class VolunteerServiceTest {
     @Mock
     private EventEnrollmentRepository enrollmentRepository;
     @Mock
+    private EventRepository eventRepository;
+    @Mock
     private VolunteerMapper volunteerMapper;
 
     private VolunteerService volunteerService;
 
     @BeforeEach
     void setUp() {
-        volunteerService = new VolunteerService(volunteerRepository, enrollmentRepository, volunteerMapper);
+        volunteerService = new VolunteerService(volunteerRepository, enrollmentRepository, eventRepository, volunteerMapper);
     }
 
     @Test
@@ -155,6 +160,110 @@ class VolunteerServiceTest {
         assertThat(historyDto.eventCode()).isEqualTo("EVT-001");
         assertThat(historyDto.city()).isEqualTo("Chennai");
         assertThat(historyDto.attendanceStatus()).isEqualTo(AttendanceStatus.ATTENDED);
+    }
+
+    @Test
+    @DisplayName("importVolunteer creates a new volunteer and enrolls it when neither exists")
+    void importVolunteerCreatesAndEnrolls() {
+        UUID eventId = UUID.randomUUID();
+        EventEntity event = new EventEntity();
+        event.setId(eventId);
+        event.setEventCode("EVT-001");
+
+        VolunteerEntity newVolunteer = buildVolunteer("EMP020");
+        UUID volunteerId = UUID.randomUUID();
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP020", "New Volunteer", "new@company.com", "9999999999",
+                "Pune", "Engineering", "Developer", "Java", "EVT-001");
+
+        when(eventRepository.findByEventCode("EVT-001")).thenReturn(Optional.of(event));
+        when(volunteerRepository.findByEmployeeId("EMP020")).thenReturn(Optional.empty());
+        when(volunteerMapper.toEntity(request)).thenReturn(newVolunteer);
+        when(volunteerRepository.save(newVolunteer)).thenAnswer(inv -> {
+            newVolunteer.setId(volunteerId);
+            return newVolunteer;
+        });
+        when(enrollmentRepository.existsByEventIdAndVolunteerId(eventId, volunteerId)).thenReturn(false);
+
+        VolunteerImportResponse response = volunteerService.importVolunteer(request);
+
+        assertThat(response.volunteerId()).isEqualTo(volunteerId);
+        assertThat(response.eventId()).isEqualTo(eventId);
+        assertThat(response.alreadyEnrolled()).isFalse();
+        assertThat(newVolunteer.getAvailability()).isEqualTo(VolunteerAvailability.AVAILABLE);
+        verify(enrollmentRepository).save(any());
+        verify(volunteerMapper, org.mockito.Mockito.never()).updateEntityFromImportRequest(any(), any());
+    }
+
+    @Test
+    @DisplayName("importVolunteer updates an existing volunteer's profile and enrolls it")
+    void importVolunteerUpdatesExistingAndEnrolls() {
+        UUID eventId = UUID.randomUUID();
+        UUID volunteerId = UUID.randomUUID();
+        EventEntity event = new EventEntity();
+        event.setId(eventId);
+        event.setEventCode("EVT-002");
+
+        VolunteerEntity existing = buildVolunteer("EMP001");
+        existing.setId(volunteerId);
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP001", "Updated Name", "updated@company.com", "8888888888",
+                "Chennai", "Sales", "Manager", "Sales,Negotiation", "EVT-002");
+
+        when(eventRepository.findByEventCode("EVT-002")).thenReturn(Optional.of(event));
+        when(volunteerRepository.findByEmployeeId("EMP001")).thenReturn(Optional.of(existing));
+        when(volunteerRepository.save(existing)).thenReturn(existing);
+        when(enrollmentRepository.existsByEventIdAndVolunteerId(eventId, volunteerId)).thenReturn(false);
+
+        VolunteerImportResponse response = volunteerService.importVolunteer(request);
+
+        assertThat(response.volunteerId()).isEqualTo(volunteerId);
+        assertThat(response.alreadyEnrolled()).isFalse();
+        verify(volunteerMapper).updateEntityFromImportRequest(request, existing);
+        verify(volunteerMapper, org.mockito.Mockito.never()).toEntity(any());
+        verify(enrollmentRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("importVolunteer is idempotent: re-importing an already-enrolled volunteer does not create a duplicate enrollment")
+    void importVolunteerAlreadyEnrolledIsNoOp() {
+        UUID eventId = UUID.randomUUID();
+        UUID volunteerId = UUID.randomUUID();
+        EventEntity event = new EventEntity();
+        event.setId(eventId);
+        event.setEventCode("EVT-003");
+
+        VolunteerEntity existing = buildVolunteer("EMP001");
+        existing.setId(volunteerId);
+
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP001", "Existing Name", "existing@company.com", null,
+                null, null, null, null, "EVT-003");
+
+        when(eventRepository.findByEventCode("EVT-003")).thenReturn(Optional.of(event));
+        when(volunteerRepository.findByEmployeeId("EMP001")).thenReturn(Optional.of(existing));
+        when(volunteerRepository.save(existing)).thenReturn(existing);
+        when(enrollmentRepository.existsByEventIdAndVolunteerId(eventId, volunteerId)).thenReturn(true);
+
+        VolunteerImportResponse response = volunteerService.importVolunteer(request);
+
+        assertThat(response.alreadyEnrolled()).isTrue();
+        verify(enrollmentRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("importVolunteer throws when the eventCode does not resolve to an event")
+    void importVolunteerThrowsWhenEventCodeUnknown() {
+        VolunteerImportRequest request = new VolunteerImportRequest(
+                "EMP001", "Name", "email@company.com", null, null, null, null, null, "EVT-UNKNOWN");
+
+        when(eventRepository.findByEventCode("EVT-UNKNOWN")).thenReturn(Optional.empty());
+
+        assertThatExceptionOfType(NoSuchElementException.class)
+                .isThrownBy(() -> volunteerService.importVolunteer(request));
+        verify(volunteerRepository, org.mockito.Mockito.never()).findByEmployeeId(any());
     }
 
     private VolunteerEntity buildVolunteer(String employeeId) {

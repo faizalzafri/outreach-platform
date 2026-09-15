@@ -2,6 +2,8 @@ package com.outreach.platform.event.controller;
 
 import com.outreach.platform.event.model.dto.VolunteerDto;
 import com.outreach.platform.event.model.dto.VolunteerHistoryDto;
+import com.outreach.platform.event.model.dto.VolunteerImportRequest;
+import com.outreach.platform.event.model.dto.VolunteerImportResponse;
 import com.outreach.platform.event.model.dto.VolunteerProfileUpdateRequest;
 import com.outreach.platform.event.service.VolunteerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -71,5 +74,22 @@ public class VolunteerController {
             @Parameter(description = "Employee ID") @PathVariable String employeeId,
             Pageable pageable) {
         return ResponseEntity.ok(volunteerService.getHistory(employeeId, pageable));
+    }
+
+    /**
+     * Deliberately not {@code @PreAuthorize}-gated: its only legitimate caller is
+     * ingestion-service's bulk-import pipeline, authenticated via the
+     * {@code outreach-services} OAuth2 client-credentials token (see common-lib's
+     * {@code FeignAuthAutoConfiguration}). That token carries no {@code realm_access.roles}
+     * claim by design (auth-service's token customizer explicitly skips role/tenant enrichment
+     * for client_credentials grants), so any {@code hasAnyRole(...)} check would reject it
+     * regardless of role. It's still behind {@code .anyRequest().authenticated()} — reachable
+     * only with a valid JWT — and the human-facing upload endpoint that triggers this path is
+     * itself gated to TENANT_ADMIN/ADMIN/PLATFORM_ADMIN in IngestionController.
+     */
+    @Operation(summary = "Import volunteer", description = "Upserts a volunteer profile by employeeId and enrolls it in the event identified by eventCode. Idempotent: re-importing an already-enrolled volunteer is a no-op.")
+    @PostMapping("/import")
+    public ResponseEntity<VolunteerImportResponse> importVolunteer(@Valid @RequestBody VolunteerImportRequest request) {
+        return ResponseEntity.ok(volunteerService.importVolunteer(request));
     }
 }
