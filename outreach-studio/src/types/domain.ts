@@ -31,19 +31,31 @@ export interface Event {
   createdBy: string;
 }
 
-export type VolunteerAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'ON_LEAVE';
+export type VolunteerAvailability = 'AVAILABLE' | 'BUSY' | 'ON_LEAVE';
 
 export interface Volunteer {
+  id: string;
   employeeId: string;
-  name: string;
+  fullName: string;
   email: string;
+  phone: string;
+  baseLocation: string;
   department: string;
-  location: string;
-  skills: string[];
-  joinDate: string;
+  designation: string;
+  skills: string;
   availability: VolunteerAvailability;
-  totalEvents: number;
-  averageScore: number | null;
+  totalEventsParticipated: number;
+  avgFeedbackScore: number | null;
+}
+
+export interface VolunteerHistoryEntry {
+  eventId: string;
+  eventName: string;
+  eventCode: string;
+  eventDate: string;
+  city: string;
+  attendanceStatus: AttendanceStatus;
+  registeredAt: string;
 }
 
 export type FeedbackSentiment = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';

@@ -72,7 +72,7 @@
   color: var(--color-green-700);
 }
 
-.availabilityBadge--unavailable {
+.availabilityBadge--busy {
   background: var(--color-red-100);
   color: var(--color-red-700);
 }

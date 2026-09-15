@@ -5,16 +5,18 @@ let counter = 0;
 export function buildVolunteer(overrides: Partial<Volunteer> = {}): Volunteer {
   counter += 1;
   return {
-    employeeId: `emp-${counter}`,
-    name: `Volunteer ${counter}`,
+    id: `vol-${counter}`,
+    employeeId: `EMP${String(counter).padStart(3, '0')}`,
+    fullName: `Volunteer ${counter}`,
     email: `volunteer${counter}@example.com`,
+    phone: '9876543210',
+    baseLocation: 'Bangalore',
     department: 'Engineering',
-    location: 'Bangalore',
-    skills: ['communication', 'teamwork'],
-    joinDate: '2024-01-15',
+    designation: 'Developer',
+    skills: 'Communication,Teamwork',
     availability: 'AVAILABLE',
-    totalEvents: 5,
-    averageScore: 4.0,
+    totalEventsParticipated: 5,
+    avgFeedbackScore: 4.0,
     ...overrides,
   };
 }

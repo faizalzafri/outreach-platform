@@ -1,8 +1,7 @@
 /**
  * Volunteer Detail Route
  *
- * Displays profile, participation history, and feedback score trends
- * for a specific volunteer.
+ * Displays profile and participation history for a specific volunteer.
  * Uses React.lazy + Suspense for code splitting.
  */
 

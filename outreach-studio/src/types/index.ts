@@ -4,6 +4,8 @@ export type {
   Event,
   VolunteerAvailability,
   Volunteer,
+  AttendanceStatus,
+  VolunteerHistoryEntry,
   FeedbackSubmission,
   ImportJobStatus,
   ImportJob,

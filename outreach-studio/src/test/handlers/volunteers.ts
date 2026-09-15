@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw'
 
 export const volunteerHandlers = [
-  // GET /api/events/volunteers - paginated list
-  http.get('/api/events/volunteers', ({ request }) => {
+  // GET /api/volunteers - paginated list, optionally filtered by ?search=
+  http.get('/api/volunteers', ({ request }) => {
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '10')
@@ -10,28 +10,32 @@ export const volunteerHandlers = [
     return HttpResponse.json({
       content: [
         {
+          id: 'c0000000-0000-0000-0000-000000000001',
           employeeId: 'EMP001',
-          name: 'Anita Desai',
+          fullName: 'Anita Desai',
           email: 'anita.desai@company.com',
+          phone: '9876543210',
+          baseLocation: 'Mumbai',
           department: 'Engineering',
-          location: 'Mumbai',
-          skills: ['JavaScript', 'React', 'Node.js'],
-          totalEvents: 12,
-          avgScore: 4.5,
+          designation: 'Senior Developer',
+          skills: 'JavaScript,React,Node.js',
           availability: 'AVAILABLE',
-          joinDate: '2022-03-15T00:00:00Z',
+          totalEventsParticipated: 12,
+          avgFeedbackScore: 4.5,
         },
         {
+          id: 'c0000000-0000-0000-0000-000000000002',
           employeeId: 'EMP002',
-          name: 'Vikram Singh',
+          fullName: 'Vikram Singh',
           email: 'vikram.singh@company.com',
+          phone: '9876543211',
+          baseLocation: 'Delhi',
           department: 'Marketing',
-          location: 'Delhi',
-          skills: ['Content Writing', 'Social Media', 'Event Planning'],
-          totalEvents: 8,
-          avgScore: 4.1,
-          availability: 'UNAVAILABLE',
-          joinDate: '2023-01-10T00:00:00Z',
+          designation: 'Marketing Lead',
+          skills: 'Content Writing,Social Media,Event Planning',
+          availability: 'BUSY',
+          totalEventsParticipated: 8,
+          avgFeedbackScore: 4.1,
         },
       ],
       totalElements: 150,
@@ -41,56 +45,85 @@ export const volunteerHandlers = [
     })
   }),
 
-  // GET /api/events/volunteers/:employeeId - volunteer detail
-  http.get('/api/events/volunteers/:employeeId', ({ params }) => {
+  // GET /api/volunteers/:employeeId - volunteer detail
+  http.get('/api/volunteers/:employeeId', ({ params }) => {
     return HttpResponse.json({
+      id: 'c0000000-0000-0000-0000-000000000001',
       employeeId: params.employeeId,
-      name: 'Anita Desai',
+      fullName: 'Anita Desai',
       email: 'anita.desai@company.com',
+      phone: '9876543210',
+      baseLocation: 'Mumbai',
       department: 'Engineering',
-      location: 'Mumbai',
-      skills: ['JavaScript', 'React', 'Node.js'],
-      totalEvents: 12,
-      avgScore: 4.5,
+      designation: 'Senior Developer',
+      skills: 'JavaScript,React,Node.js',
       availability: 'AVAILABLE',
-      joinDate: '2022-03-15T00:00:00Z',
-      participationHistory: [
+      totalEventsParticipated: 12,
+      avgFeedbackScore: 4.5,
+    })
+  }),
+
+  // GET /api/volunteers/:employeeId/history - paginated participation history
+  http.get('/api/volunteers/:employeeId/history', ({ request }) => {
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '5')
+
+    return HttpResponse.json({
+      content: [
         {
           eventId: 'evt-001',
           eventName: 'Annual Volunteer Drive',
-          date: '2024-06-01T09:00:00Z',
-          role: 'PARTICIPANT',
-          feedbackScore: 5,
+          eventCode: 'EVT-2024-001',
+          eventDate: '2024-06-01',
+          city: 'Mumbai',
+          attendanceStatus: 'ATTENDED',
+          registeredAt: '2024-05-01T09:00:00Z',
         },
         {
           eventId: 'evt-003',
           eventName: 'Beach Cleanup',
-          date: '2024-04-22T07:00:00Z',
-          role: 'LEAD',
-          feedbackScore: 4,
+          eventCode: 'EVT-2024-003',
+          eventDate: '2024-04-22',
+          city: 'Chennai',
+          attendanceStatus: 'ATTENDED',
+          registeredAt: '2024-04-01T07:00:00Z',
         },
       ],
+      totalElements: 2,
+      totalPages: Math.ceil(2 / size),
+      page,
+      size,
     })
   }),
 
-  // PUT /api/events/volunteers/:employeeId/availability - update availability
-  http.put('/api/events/volunteers/:employeeId/availability', async ({ params, request }) => {
+  // PUT /api/volunteers/:employeeId - update profile/availability
+  http.put('/api/volunteers/:employeeId', async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({
+      id: 'c0000000-0000-0000-0000-000000000001',
       employeeId: params.employeeId,
-      availability: body.availability,
-      updatedAt: new Date().toISOString(),
+      fullName: 'Anita Desai',
+      email: 'anita.desai@company.com',
+      phone: '9876543210',
+      baseLocation: 'Mumbai',
+      department: 'Engineering',
+      designation: 'Senior Developer',
+      skills: 'JavaScript,React,Node.js',
+      availability: body.availability ?? 'AVAILABLE',
+      totalEventsParticipated: 12,
+      avgFeedbackScore: 4.5,
     })
   }),
 ]
 
 export const volunteerErrorHandlers = {
-  badRequest: http.put('/api/events/volunteers/:employeeId/availability', () => {
+  badRequest: http.put('/api/volunteers/:employeeId', () => {
     return HttpResponse.json(
       {
         error: 'Bad Request',
         message: 'Invalid availability value',
-        details: [{ field: 'availability', message: 'Must be AVAILABLE or UNAVAILABLE' }],
+        details: [{ field: 'availability', message: 'Must be AVAILABLE, BUSY, or ON_LEAVE' }],
       },
       {
         status: 400,
@@ -99,7 +132,7 @@ export const volunteerErrorHandlers = {
     )
   }),
 
-  unauthorized: http.get('/api/events/volunteers', () => {
+  unauthorized: http.get('/api/volunteers', () => {
     return HttpResponse.json(
       { error: 'Unauthorized', message: 'Token expired or invalid' },
       {
@@ -109,7 +142,7 @@ export const volunteerErrorHandlers = {
     )
   }),
 
-  serverError: http.get('/api/events/volunteers', () => {
+  serverError: http.get('/api/volunteers', () => {
     return HttpResponse.json(
       { error: 'Internal Server Error', message: 'An unexpected error occurred' },
       {
@@ -119,7 +152,7 @@ export const volunteerErrorHandlers = {
     )
   }),
 
-  notFound: http.get('/api/events/volunteers/:employeeId', () => {
+  notFound: http.get('/api/volunteers/:employeeId', () => {
     return HttpResponse.json(
       { error: 'Not Found', message: 'Volunteer not found' },
       {
