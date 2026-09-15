@@ -2,6 +2,8 @@ package com.outreach.platform.event.repo;
 
 import com.outreach.platform.event.entity.EventEnrollmentEntity;
 import com.outreach.platform.event.model.AttendanceStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,6 +20,8 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
     List<EventEnrollmentEntity> findByEventId(UUID eventId);
 
     List<EventEnrollmentEntity> findByVolunteerId(UUID volunteerId);
+
+    Page<EventEnrollmentEntity> findByVolunteerId(UUID volunteerId, Pageable pageable);
 
     Optional<EventEnrollmentEntity> findByEventIdAndVolunteerId(UUID eventId, UUID volunteerId);
 
