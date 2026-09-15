@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -43,19 +44,22 @@ class MongoDbIndexIT {
     @Container
     static MongoDBContainer mongodb = new MongoDBContainer("mongo:7.0");
 
+    // The app context can't start without a datasource — AdminService/other beans require JPA
+    // repositories unconditionally — so a real Postgres container is needed here too, even though
+    // this suite only asserts against Mongo collections/indexes (previously tried to exclude JPA
+    // entirely, which left UserRepository with no bean and failed context startup for every test).
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("event_test")
+            .withUsername("test")
+            .withPassword("test");
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongodb::getReplicaSetUrl);
-        // Disable PostgreSQL for this test (MongoDB only)
-        registry.add("spring.datasource.url", () -> "jdbc:postgresql://localhost:5432/unused");
-        registry.add("spring.datasource.username", () -> "postgres");
-        registry.add("spring.datasource.password", () -> "postgres");
-        registry.add("spring.liquibase.enabled", () -> "false");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        registry.add("spring.autoconfigure.exclude", () ->
-                "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-                        + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-                        + "org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration");
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
     }
 
     @Autowired
