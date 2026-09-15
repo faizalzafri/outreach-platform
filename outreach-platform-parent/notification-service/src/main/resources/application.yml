@@ -57,9 +57,13 @@ spring:
     properties:
       mail:
         smtp:
-          auth: true
+          # Real SMTP providers need both; MailHog (the dev/docker-compose target) supports
+          # neither and rejects them outright — jakarta.mail refuses to even connect with
+          # auth=true and no password configured ("AuthenticationFailedException: failed to
+          # connect, no password specified?"), confirmed live against the running dev stack.
+          auth: ${SMTP_AUTH_ENABLED:true}
           starttls:
-            enable: true
+            enable: ${SMTP_STARTTLS_ENABLED:true}
           connectiontimeout: 5000
           timeout: 5000
 

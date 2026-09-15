@@ -302,6 +302,8 @@ services:
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
       SMTP_HOST: mailhog
       SMTP_PORT: "1025"
+      SMTP_AUTH_ENABLED: "false"
+      SMTP_STARTTLS_ENABLED: "false"
     networks:
       - outreach-net
     depends_on:
