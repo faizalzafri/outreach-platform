@@ -81,7 +81,7 @@
         <caffeine.version>3.1.8</caffeine.version>
 
         <!-- Observability / Tracing -->
-        <micrometer-tracing.version>1.4.2</micrometer-tracing.version>
+        <micrometer-tracing.version>1.7.1</micrometer-tracing.version>
         <opentelemetry.version>1.44.1</opentelemetry.version>
 
         <!-- API Documentation -->
@@ -92,7 +92,7 @@
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
-        <spotbugs-maven-plugin.version>4.8.6.6</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
     </properties>
 
     <!-- ========================== -->
