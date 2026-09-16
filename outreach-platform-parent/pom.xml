@@ -66,7 +66,7 @@
         <liquibase.version>4.30.0</liquibase.version>
 
         <!-- Resilience -->
-        <resilience4j.version>2.3.0</resilience4j.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
 
         <!-- Object Mapping -->
         <mapstruct.version>1.6.3</mapstruct.version>
