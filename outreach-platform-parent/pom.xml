@@ -75,7 +75,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
 
         <!-- Hypersistence Utils (PostgreSQL-specific JPA types: JSONB, PostgreSQL enums) -->
-        <hypersistence-utils.version>3.9.0</hypersistence-utils.version>
+        <hypersistence-utils.version>3.15.5</hypersistence-utils.version>
 
         <!-- Caching -->
         <caffeine.version>3.1.8</caffeine.version>
