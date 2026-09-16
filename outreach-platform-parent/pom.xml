@@ -81,7 +81,7 @@
         <caffeine.version>3.1.8</caffeine.version>
 
         <!-- Observability / Tracing -->
-        <micrometer-tracing.version>1.4.2</micrometer-tracing.version>
+        <micrometer-tracing.version>1.7.1</micrometer-tracing.version>
         <opentelemetry.version>1.44.1</opentelemetry.version>
 
         <!-- API Documentation -->
