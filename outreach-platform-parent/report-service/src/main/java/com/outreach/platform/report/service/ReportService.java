@@ -14,6 +14,7 @@ import com.outreach.platform.report.model.ReportQueryParams;
 import com.outreach.platform.report.model.SentimentBreakdownDto;
 import com.outreach.platform.report.model.TimeSeriesDataPoint;
 import com.outreach.platform.report.model.TrendDataDto;
+import com.outreach.platform.common.tenant.TenantContext;
 import jakarta.inject.Inject;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -26,14 +27,24 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Business logic for report aggregation and analytics queries.
  * Uses JdbcTemplate for read-only native queries against PostgreSQL.
+ *
+ * <p>Tenant isolation is explicit here: Hibernate's tenant {@code @Filter} only applies to JPA
+ * queries, never to raw JDBC, so every query adds its own {@code tenant_id = ?} predicate when a
+ * tenant is in context. An empty context (PLATFORM_ADMIN) keeps the cross-tenant view. Cache
+ * keys carry the same tenant so one tenant's cached report is never served to another.
  */
 @Service
 public class ReportService {
+
+    /** SpEL prefix for every cache key; "null" for the cross-tenant PLATFORM_ADMIN view. */
+    static final String TENANT_KEY_PREFIX =
+            "T(com.outreach.platform.common.tenant.TenantContext).getCurrentTenantId() + ':' + ";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -42,7 +53,7 @@ public class ReportService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Cacheable(value = "reportCache", key = "'byEvent:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'byEvent:' + #params")
     public List<EventScoreDto> aggregateByEvent(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.id::text AS event_id, e.event_name, e.city,
@@ -71,7 +82,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byBeneficiary:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'byBeneficiary:' + #params")
     public List<BeneficiaryScoreDto> aggregateByBeneficiary(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT b.id::text AS beneficiary_id, b.name AS beneficiary_name,
@@ -99,7 +110,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byCity:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'byCity:' + #params")
     public List<CityScoreDto> aggregateByCity(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.city,
@@ -126,7 +137,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byPoc:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'byPoc:' + #params")
     public List<PocScoreDto> aggregateByPoc(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT u.id::text AS poc_id, u.username AS poc_name,
@@ -154,20 +165,21 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'dashboard:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'dashboard:' + #params")
     public DashboardSummaryDto getDashboardSummary(ReportQueryParams params) {
-        StringBuilder sql = new StringBuilder("""
+        String t = tenantPredicate("");
+        String sql = """
                 SELECT
-                    (SELECT COUNT(*) FROM events WHERE 1=1) AS total_events,
-                    (SELECT COUNT(*) FROM events WHERE status = 'COMPLETED') AS completed_events,
-                    (SELECT COUNT(*) FROM volunteers) AS total_volunteers,
-                    (SELECT COUNT(*) FROM volunteer_feedback) AS total_feedback,
-                    (SELECT AVG(score) FROM volunteer_feedback) AS avg_score,
-                    (SELECT COUNT(*) FROM beneficiaries WHERE active = true) AS total_beneficiaries,
-                    (SELECT COUNT(DISTINCT city) FROM events WHERE city IS NOT NULL) AS active_cities
-                """);
+                    (SELECT COUNT(*) FROM events WHERE %1$s) AS total_events,
+                    (SELECT COUNT(*) FROM events WHERE status = 'COMPLETED' AND %1$s) AS completed_events,
+                    (SELECT COUNT(*) FROM volunteers WHERE %1$s) AS total_volunteers,
+                    (SELECT COUNT(*) FROM volunteer_feedback WHERE %1$s) AS total_feedback,
+                    (SELECT AVG(score) FROM volunteer_feedback WHERE %1$s) AS avg_score,
+                    (SELECT COUNT(*) FROM beneficiaries WHERE active = true AND %1$s) AS total_beneficiaries,
+                    (SELECT COUNT(DISTINCT city) FROM events WHERE city IS NOT NULL AND %1$s) AS active_cities
+                """.formatted(t);
 
-        return jdbcTemplate.queryForObject(sql.toString(), (rs, rowNum) -> new DashboardSummaryDto(
+        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new DashboardSummaryDto(
                 rs.getLong("total_events"),
                 rs.getLong("completed_events"),
                 rs.getLong("total_volunteers"),
@@ -177,10 +189,10 @@ public class ReportService {
                         : BigDecimal.ZERO,
                 rs.getLong("total_beneficiaries"),
                 rs.getLong("active_cities")
-        ));
+        ), tenantArgs(7));
     }
 
-    @Cacheable(value = "reportCache", key = "'trends:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'trends:' + #params")
     public TrendDataDto getTrends(ReportQueryParams params) {
         String granularity = params.effectiveGranularity();
         String truncExpr = mapGranularityToTrunc(granularity);
@@ -195,7 +207,7 @@ public class ReportService {
                 WHERE e.event_date IS NOT NULL
                 """, truncExpr));
         List<Object> args = new ArrayList<>();
-        appendDateFilters(sql, args, params);
+        appendEventScopeFilters(sql, args, params);
         sql.append(String.format(" GROUP BY DATE_TRUNC('%s', e.event_date) ORDER BY period", truncExpr));
 
         List<TrendDataDto.TrendPoint> points = jdbcTemplate.query(sql.toString(), (rs, rowNum) ->
@@ -211,35 +223,45 @@ public class ReportService {
         return new TrendDataDto(granularity, points);
     }
 
-    @Cacheable(value = "reportCache", key = "'kpis:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'kpis:' + #params")
     public KpiDto getKpis(ReportQueryParams params) {
         LocalDate startOfMonth = YearMonth.now().atDay(1);
 
         String sql = """
                 SELECT
-                    (SELECT AVG(score) FROM volunteer_feedback) AS avg_score,
+                    (SELECT AVG(score) FROM volunteer_feedback WHERE %1$s) AS avg_score,
                     (SELECT CASE WHEN COUNT(*) = 0 THEN 0
                             ELSE CAST(COUNT(vf2.id) AS DECIMAL) / COUNT(ee.id) * 100
                             END
                      FROM event_enrollment ee
                      LEFT JOIN volunteer_feedback vf2
                        ON vf2.event_id = ee.event_id AND vf2.volunteer_id = ee.volunteer_id
+                     WHERE %2$s
                     ) AS feedback_completion_rate,
                     (SELECT CASE WHEN COUNT(*) = 0 THEN 0
                             ELSE CAST(COUNT(CASE WHEN total_events_participated > 1 THEN 1 END) AS DECIMAL)
                                  / COUNT(*) * 100
                             END
-                     FROM volunteers
+                     FROM volunteers WHERE %1$s
                     ) AS retention_rate,
                     (SELECT CASE WHEN COUNT(*) = 0 THEN 0
                             ELSE AVG(total_events_participated) END
-                     FROM volunteers
+                     FROM volunteers WHERE %1$s
                     ) AS avg_events_per_volunteer,
                     (SELECT COUNT(*) FROM volunteer_feedback
-                     WHERE submitted_at >= ?) AS feedback_this_month,
+                     WHERE submitted_at >= ? AND %1$s) AS feedback_this_month,
                     (SELECT COUNT(*) FROM events
-                     WHERE event_date >= ?) AS events_this_month
-                """;
+                     WHERE event_date >= ? AND %1$s) AS events_this_month
+                """.formatted(tenantPredicate(""), tenantPredicate("ee."));
+
+        // Bind order follows the placeholders above: four tenant predicates, then each
+        // month-start date followed by its subquery's tenant predicate.
+        Object monthStart = Date.valueOf(startOfMonth);
+        List<Object> args = new ArrayList<>(List.of(tenantArgs(4)));
+        args.add(monthStart);
+        args.addAll(List.of(tenantArgs(1)));
+        args.add(monthStart);
+        args.addAll(List.of(tenantArgs(1)));
 
         return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new KpiDto(
                 rs.getBigDecimal("avg_score") != null
@@ -256,10 +278,10 @@ public class ReportService {
                         : BigDecimal.ZERO,
                 rs.getLong("feedback_this_month"),
                 rs.getLong("events_this_month")
-        ), Date.valueOf(startOfMonth), Date.valueOf(startOfMonth));
+        ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'timeSeries:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'timeSeries:' + #params")
     public List<TimeSeriesDataPoint> getTimeSeries(ReportQueryParams params) {
         String granularity = params.effectiveGranularity();
         String truncExpr = mapGranularityToTrunc(granularity);
@@ -285,7 +307,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'comparison:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'comparison:' + #params")
     public ComparisonResultDto getComparison(ReportQueryParams params) {
         if (params.eventIds() != null && !params.eventIds().isEmpty()) {
             return compareEvents(params);
@@ -293,7 +315,7 @@ public class ReportService {
         return comparePeriods(params);
     }
 
-    @Cacheable(value = "reportCache", key = "'heatmap:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'heatmap:' + #params")
     public List<HeatmapEntry> getHeatmap(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.city,
@@ -304,7 +326,7 @@ public class ReportService {
                 WHERE e.city IS NOT NULL AND ee.attendance_status = 'ATTENDED'
                 """);
         List<Object> args = new ArrayList<>();
-        appendDateFilters(sql, args, params);
+        appendEventScopeFilters(sql, args, params);
         if (params.cities() != null && !params.cities().isEmpty()) {
             sql.append(" AND e.city = ANY(?)");
             args.add(params.cities().toArray(new String[0]));
@@ -340,7 +362,7 @@ public class ReportService {
                 .toList();
     }
 
-    @Cacheable(value = "reportCache", key = "'sentiment:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'sentiment:' + #params")
     public SentimentBreakdownDto getSentiment(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT
@@ -370,7 +392,7 @@ public class ReportService {
         }, args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'participation:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'participation:' + #params")
     public ParticipationRateDto getParticipationRate(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT
@@ -383,7 +405,7 @@ public class ReportService {
                 WHERE 1=1
                 """);
         List<Object> args = new ArrayList<>();
-        appendDateFilters(sql, args, params);
+        appendEventScopeFilters(sql, args, params);
 
         return jdbcTemplate.queryForObject(sql.toString(), (rs, rowNum) -> {
             long registered = rs.getLong("total_registered");
@@ -401,7 +423,7 @@ public class ReportService {
         }, args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'nps:' + #params")
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'nps:' + #params")
     public List<NpsResultDto> getNps(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.id::text AS event_id, e.event_name,
@@ -455,6 +477,8 @@ public class ReportService {
                 """);
         List<Object> args = new ArrayList<>();
         args.add(params.eventIds().toArray(new String[0]));
+        sql.append(" AND ").append(tenantPredicate("e."));
+        args.addAll(List.of(tenantArgs(1)));
         sql.append(" GROUP BY e.id, e.event_name ORDER BY e.event_name");
 
         List<ComparisonResultDto.ComparisonItem> items = jdbcTemplate.query(sql.toString(), (rs, rowNum) ->
@@ -484,7 +508,7 @@ public class ReportService {
                 WHERE e.event_date IS NOT NULL
                 """, truncExpr));
         List<Object> args = new ArrayList<>();
-        appendDateFilters(sql, args, params);
+        appendEventScopeFilters(sql, args, params);
         sql.append(String.format(" GROUP BY DATE_TRUNC('%s', e.event_date) ORDER BY label", truncExpr));
 
         List<ComparisonResultDto.ComparisonItem> items = jdbcTemplate.query(sql.toString(), (rs, rowNum) ->
@@ -501,7 +525,7 @@ public class ReportService {
     }
 
     private void appendFilters(StringBuilder sql, List<Object> args, ReportQueryParams params) {
-        appendDateFilters(sql, args, params);
+        appendEventScopeFilters(sql, args, params);
         if (params.eventIds() != null && !params.eventIds().isEmpty()) {
             sql.append(" AND e.id::text = ANY(?)");
             args.add(params.eventIds().toArray(new String[0]));
@@ -520,7 +544,14 @@ public class ReportService {
         }
     }
 
-    private void appendDateFilters(StringBuilder sql, List<Object> args, ReportQueryParams params) {
+    /**
+     * Restricts the {@code e} (events) alias to the caller's tenant and the requested date range.
+     * Every other table in these queries is reached through a join on {@code e}, so scoping the
+     * event scopes the whole row set.
+     */
+    private void appendEventScopeFilters(StringBuilder sql, List<Object> args, ReportQueryParams params) {
+        sql.append(" AND ").append(tenantPredicate("e."));
+        args.addAll(List.of(tenantArgs(1)));
         if (params.dateFrom() != null) {
             sql.append(" AND e.event_date >= ?");
             args.add(Date.valueOf(params.dateFrom()));
@@ -529,6 +560,18 @@ public class ReportService {
             sql.append(" AND e.event_date <= ?");
             args.add(Date.valueOf(params.dateTo()));
         }
+    }
+
+    /** {@code <alias>tenant_id = ?} when a tenant is in context, else {@code TRUE} (cross-tenant view). */
+    private static String tenantPredicate(String alias) {
+        return TenantContext.isPresent() ? alias + "tenant_id = ?" : "TRUE";
+    }
+
+    /** The current tenant id once per {@link #tenantPredicate} occurrence; empty without a tenant. */
+    private static Object[] tenantArgs(int occurrences) {
+        return TenantContext.isPresent()
+                ? Collections.nCopies(occurrences, TenantContext.getCurrentTenantId()).toArray()
+                : new Object[0];
     }
 
     private String mapGranularityToTrunc(String granularity) {

@@ -72,7 +72,7 @@ class ReportServiceTest {
     @Test
     void getDashboardSummary_returnsSummary() {
         DashboardSummaryDto expected = new DashboardSummaryDto(50, 30, 200, 500, new BigDecimal("4.00"), 10, 5);
-        when(jdbcTemplate.queryForObject(anyString(), any(RowMapper.class)))
+        when(jdbcTemplate.queryForObject(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(expected);
 
         ReportQueryParams params = new ReportQueryParams(null, null, null, null, null, null, null);

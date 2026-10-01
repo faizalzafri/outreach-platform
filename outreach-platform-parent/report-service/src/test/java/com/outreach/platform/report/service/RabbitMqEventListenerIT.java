@@ -42,9 +42,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * receives ImportJobCompleted messages and publishes a local Spring event.
  * Uses a minimal Spring Boot application context with only RabbitMQ enabled.
  */
+// No test profile here, so Eureka must be switched off explicitly — otherwise this context
+// registers a dead report-service:9005 instance with any locally running discovery server and
+// the gateway starts load-balancing real traffic onto it.
 @SpringBootTest(
         classes = RabbitMqEventListenerIT.TestApp.class,
-        webEnvironment = SpringBootTest.WebEnvironment.NONE
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "eureka.client.enabled=false"
 )
 @Testcontainers
 class RabbitMqEventListenerIT {
