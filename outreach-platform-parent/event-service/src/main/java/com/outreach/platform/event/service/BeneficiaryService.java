@@ -110,9 +110,7 @@ public class BeneficiaryService {
      */
     @Transactional(readOnly = true)
     public List<EventDto> getEventsForBeneficiary(UUID beneficiaryId) {
-        if (!beneficiaryRepository.existsById(beneficiaryId)) {
-            throw new NoSuchElementException("Beneficiary not found: " + beneficiaryId);
-        }
+        findOrThrow(beneficiaryId); // tenant-scoped existence check
         List<EventBeneficiaryEntity> associations = eventBeneficiaryRepository.findByIdBeneficiaryId(beneficiaryId);
         return associations.stream()
                 .map(a -> eventMapper.toDto(a.getEvent()))
