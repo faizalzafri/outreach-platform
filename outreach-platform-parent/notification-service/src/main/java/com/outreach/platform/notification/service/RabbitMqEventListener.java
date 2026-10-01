@@ -2,6 +2,7 @@ package com.outreach.platform.notification.service;
 
 import com.outreach.platform.common.messaging.DomainEventMessage;
 import com.outreach.platform.common.messaging.RabbitMqConstants;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.model.DeliveryStatus;
 import com.outreach.platform.notification.model.EmailDeliveryDocument;
 import com.outreach.platform.notification.repo.EmailDeliveryRepository;
@@ -99,6 +100,8 @@ public class RabbitMqEventListener {
     /** Persists a PENDING delivery record and hands it to the async dispatcher. */
     private void queueEmail(String eventId, String email, String name, String subject, String body) {
         EmailDeliveryDocument delivery = new EmailDeliveryDocument();
+        // Bound from the message's x-tenant-id by the listener container's interceptor.
+        delivery.setTenantId(TenantContext.getCurrentTenantId());
         delivery.setEventId(eventId);
         delivery.setRecipientEmail(email);
         delivery.setRecipientName(name);

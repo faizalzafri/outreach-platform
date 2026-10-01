@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.config.NotificationServiceProperties;
 import com.outreach.platform.notification.model.DeliveryStatus;
 import com.outreach.platform.notification.model.EmailDeliveryDocument;
@@ -11,8 +12,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /** Retries failed email deliveries based on scheduled retry times or manual triggers. */
 @Service
@@ -59,9 +61,13 @@ public class EmailRetryService {
 
     /** Manually retries all failed deliveries for a given event, resetting attempts if permanently failed. */
     public int retryFailedForEvent(String eventId) {
-        List<EmailDeliveryDocument> allFailed =
-                new ArrayList<>(deliveryRepository.findByEventIdAndStatus(eventId, DeliveryStatus.FAILED));
-        allFailed.addAll(deliveryRepository.findByEventIdAndStatus(eventId, DeliveryStatus.PERMANENTLY_FAILED));
+        // Scoped to the caller's tenant so one tenant can't trigger re-sends of another's emails;
+        // an empty TenantContext (PLATFORM_ADMIN) retries across tenants.
+        Set<DeliveryStatus> failedStatuses = Set.of(DeliveryStatus.FAILED, DeliveryStatus.PERMANENTLY_FAILED);
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        List<EmailDeliveryDocument> allFailed = tenantId != null
+                ? deliveryRepository.findByTenantIdAndEventIdAndStatusIn(tenantId, eventId, failedStatuses)
+                : deliveryRepository.findByEventIdAndStatusIn(eventId, failedStatuses);
 
         log.info("Manual retry requested for event {}. Found {} failed deliveries", eventId, allFailed.size());
 

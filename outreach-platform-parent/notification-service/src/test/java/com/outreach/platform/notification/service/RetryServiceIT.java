@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.model.DeliveryStatus;
 import com.outreach.platform.notification.model.EmailDeliveryDocument;
 import com.outreach.platform.notification.repo.EmailDeliveryRepository;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -21,6 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,6 +78,9 @@ class RetryServiceIT {
 
     @Autowired
     private EmailRetryService retryService;
+
+    @Autowired
+    private DeliveryTrackingService deliveryTrackingService;
 
     @Autowired
     private EmailDeliveryRepository deliveryRepository;
@@ -176,6 +182,40 @@ class RetryServiceIT {
         // Status should remain FAILED
         EmailDeliveryDocument stillFailed = deliveryRepository.findByEventId("retry-event-4").get(0);
         assertThat(stillFailed.getStatus()).isEqualTo(DeliveryStatus.FAILED);
+    }
+
+    @Test
+    void deliveryReadsAndManualRetry_areScopedToTheCallersTenant() {
+        UUID tenantA = UUID.randomUUID();
+        UUID tenantB = UUID.randomUUID();
+        // Same eventId string for both tenants: scoping must come from tenantId, not the event.
+        EmailDeliveryDocument mine = failedDelivery(tenantA, "a@example.com");
+        EmailDeliveryDocument theirs = deliveryRepository.save(failedDelivery(tenantB, "b@example.com"));
+        deliveryRepository.save(mine);
+        doThrow(new RuntimeException("still down")).when(mailSender).send(any(MimeMessage.class));
+
+        try {
+            TenantContext.setCurrentTenantId(tenantA);
+            assertThat(deliveryTrackingService.getStatusSummary("shared-event").total()).isEqualTo(1);
+            assertThat(deliveryTrackingService.getDeliveryHistory(PageRequest.of(0, 10)).getContent())
+                    .extracting(EmailDeliveryDocument::getRecipientEmail).containsExactly("a@example.com");
+            assertThat(deliveryTrackingService.getAnalytics().totalEmails()).isEqualTo(1);
+            assertThat(retryService.retryFailedForEvent("shared-event")).isEqualTo(1);
+        } finally {
+            TenantContext.clear();
+        }
+
+        // Tenant B's delivery was neither visible nor re-sent.
+        EmailDeliveryDocument untouched = deliveryRepository.findById(theirs.getId()).orElseThrow();
+        assertThat(untouched.getStatus()).isEqualTo(DeliveryStatus.FAILED);
+        assertThat(untouched.getAttempts()).isEqualTo(1);
+    }
+
+    private EmailDeliveryDocument failedDelivery(UUID tenantId, String email) {
+        EmailDeliveryDocument delivery = createDelivery("shared-event", email, 1);
+        delivery.setTenantId(tenantId);
+        delivery.setStatus(DeliveryStatus.FAILED);
+        return delivery;
     }
 
     private EmailDeliveryDocument createDelivery(String eventId, String email, int attempts) {

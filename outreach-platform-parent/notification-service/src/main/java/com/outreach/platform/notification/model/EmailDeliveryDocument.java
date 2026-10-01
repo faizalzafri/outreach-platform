@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * MongoDB document tracking individual email delivery attempts and status.
@@ -16,6 +17,9 @@ public class EmailDeliveryDocument {
 
     @Id
     private String id;
+
+    @Indexed
+    private UUID tenantId;
 
     @Indexed
     private String eventId;
@@ -54,6 +58,14 @@ public class EmailDeliveryDocument {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getEventId() {
