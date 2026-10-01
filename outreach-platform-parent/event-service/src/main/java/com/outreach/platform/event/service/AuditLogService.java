@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.audit.SecurityAuditorAware;
 import com.outreach.platform.event.model.AuditLogDocument;
 import com.outreach.platform.event.model.PlatformAdminAuditDocument;
 import com.outreach.platform.event.model.dto.AuditLogEntry;
@@ -54,6 +55,14 @@ public class AuditLogService {
         mongoTemplate.save(doc, COLLECTION_PLATFORM_ADMIN_AUDIT);
         log.info("Platform_Admin cross-tenant access: admin={}, targetTenant={}, action={}, endpoint={}",
                 adminUserId, targetTenantId, action, endpoint);
+    }
+
+    /**
+     * Logs an audit entry attributed to the authenticated caller ("system" when there is none).
+     */
+    public void log(String action, String resourceType, String resourceId, Map<String, Object> details) {
+        String userId = new SecurityAuditorAware().getCurrentAuditor().orElseThrow();
+        log(userId, action, resourceType, resourceId, details);
     }
 
     /**

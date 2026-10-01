@@ -80,7 +80,7 @@ public class EventService {
         entity.setAttendedCount(0);
         EventEntity saved = eventRepository.save(entity);
 
-        auditLogService.log("system", "CREATE_EVENT", "Event",
+        auditLogService.log("CREATE_EVENT", "Event",
                 saved.getId().toString(), Map.of("eventName", saved.getEventName()));
 
         return eventMapper.toDto(saved);
@@ -153,7 +153,7 @@ public class EventService {
                 "recipients", pocRecipients(eventId)
         ));
 
-        auditLogService.log("system", "UPDATE_STATUS", "Event",
+        auditLogService.log("UPDATE_STATUS", "Event",
                 eventId.toString(), Map.of(
                         "previousStatus", currentStatus.name(),
                         "newStatus", targetStatus.name()));
