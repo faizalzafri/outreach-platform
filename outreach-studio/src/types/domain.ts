@@ -145,12 +145,11 @@ export interface DeliveryRecord {
 export interface AuditEntry {
   id: string;
   timestamp: string;
-  user: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;
-  ipAddress: string;
-  payload: Record<string, unknown>;
+  details: Record<string, unknown>;
 }
 
 export type UserRole = 'ROLE_ADMIN' | 'ROLE_PMO' | 'ROLE_POC';

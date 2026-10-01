@@ -94,18 +94,17 @@ function RowGroup({ entry, isExpanded, onToggle, colSpan }: RowGroupProps) {
         aria-expanded={isExpanded}
       >
         <td className={styles['td']}>{formatTimestamp(entry.timestamp)}</td>
-        <td className={styles['td']}>{entry.user}</td>
+        <td className={styles['td']}>{entry.userId}</td>
         <td className={styles['td']}>{entry.action}</td>
         <td className={styles['td']}>{entry.resourceType}</td>
         <td className={styles['td']}>{entry.resourceId}</td>
-        <td className={styles['td']}>{entry.ipAddress}</td>
       </tr>
       {isExpanded && (
         <tr className={styles['expandedRow']}>
           <td colSpan={colSpan} className={styles['expandedCell']}>
             <div className={styles['payloadContainer']}>
               <pre className={styles['payloadPre']}>
-                {JSON.stringify(entry.payload, null, 2)}
+                {JSON.stringify(entry.details, null, 2)}
               </pre>
             </div>
           </td>
@@ -277,11 +276,10 @@ export function AuditLogContent() {
   // --- Column definitions ---
   const sortableColumns = [
     { id: 'timestamp', label: 'Timestamp' },
-    { id: 'user', label: 'User' },
+    { id: 'userId', label: 'User' },
     { id: 'action', label: 'Action' },
     { id: 'resourceType', label: 'Resource Type' },
     { id: 'resourceId', label: 'Resource ID' },
-    { id: 'ipAddress', label: 'IP Address' },
   ] as const;
 
   return (
