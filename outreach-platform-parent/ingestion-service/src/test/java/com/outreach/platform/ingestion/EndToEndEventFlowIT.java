@@ -23,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.bson.Document;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -110,6 +112,9 @@ class EndToEndEventFlowIT {
 
     @Inject
     private RabbitTemplate rabbitTemplate;
+
+    @Inject
+    private MongoTemplate mongoTemplate;
 
     @Inject
     private DomainEventPublisher domainEventPublisher;
@@ -207,6 +212,27 @@ class EndToEndEventFlowIT {
         assertThat(notifMsg.eventType()).isEqualTo("VolunteersImported");
         assertThat(notifMsg.payload()).containsEntry("eventId", eventId.toString());
         assertThat(notifMsg.payload()).containsKey("volunteers");
+    }
+
+    @Test
+    void otherServicesOutboxDocuments_areNeitherPublishedNorBreakThePoller() throws InterruptedException {
+        // event-service's outbox shares the database: a PENDING document of its shape (JSON-string
+        // payload) must not be published by this poller, nor stop it publishing its own events.
+        mongoTemplate.getCollection("domain_events").insertOne(new Document()
+                .append("_id", "event-service-doc")
+                .append("eventType", "EventStatusChanged")
+                .append("payload", "{\"eventId\":\"x\"}")
+                .append("status", "PENDING"));
+        domainEventPublisher.publishImportJobCompleted("e2e-job-own", "own.csv", "COMPLETED", 1, 1, 0);
+
+        domainEventOutboxPoller.pollAndPublish();
+
+        assertThat(testMessageCapture.reportLatch.await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(testMessageCapture.reportMessages.get(0).payload()).containsEntry("jobId", "e2e-job-own");
+        assertThat(mongoTemplate.getCollection("domain_events")
+                .find(new Document("_id", "event-service-doc")).first().getString("status"))
+                .isEqualTo("PENDING");
+        mongoTemplate.getCollection("domain_events").deleteMany(new Document());
     }
 
     @Test
