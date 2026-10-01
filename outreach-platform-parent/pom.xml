@@ -77,6 +77,10 @@
         <!-- Hypersistence Utils (PostgreSQL-specific JPA types: JSONB, PostgreSQL enums) -->
         <hypersistence-utils.version>3.9.0</hypersistence-utils.version>
 
+        <!-- Documents: Excel (ingestion parsing, report export) and PDF (report export) -->
+        <poi.version>5.4.0</poi.version>
+        <openpdf.version>3.0.5</openpdf.version>
+
         <!-- Caching -->
         <caffeine.version>3.1.8</caffeine.version>
 
@@ -222,6 +226,20 @@
                 <groupId>io.hypersistence</groupId>
                 <artifactId>hypersistence-utils-hibernate-63</artifactId>
                 <version>${hypersistence-utils.version}</version>
+            </dependency>
+
+            <!-- Apache POI (Excel) -->
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
+
+            <!-- OpenPDF -->
+            <dependency>
+                <groupId>com.github.librepdf</groupId>
+                <artifactId>openpdf</artifactId>
+                <version>${openpdf.version}</version>
             </dependency>
 
             <!-- Caffeine Local Cache -->

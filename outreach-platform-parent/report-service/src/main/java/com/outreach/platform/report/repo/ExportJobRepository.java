@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Spring Data MongoDB repository for export job tracking documents.
@@ -13,4 +14,6 @@ import java.util.Optional;
 public interface ExportJobRepository extends MongoRepository<ExportJobDocument, String> {
 
     Optional<ExportJobDocument> findByJobId(String jobId);
+
+    Optional<ExportJobDocument> findByJobIdAndTenantId(String jobId, UUID tenantId);
 }

@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * MongoDB document tracking the lifecycle of an asynchronous report export job.
@@ -25,6 +26,9 @@ public class ExportJobDocument {
 
     @Indexed(unique = true)
     private String jobId;
+
+    @Indexed
+    private UUID tenantId;
 
     private String jobType;
 
@@ -65,6 +69,14 @@ public class ExportJobDocument {
 
     public void setJobId(String jobId) {
         this.jobId = jobId;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getJobType() {
