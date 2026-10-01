@@ -10,16 +10,17 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import com.outreach.platform.common.config.RealmRoleJwtAuthenticationConverter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import com.outreach.platform.auth.service.otp.OtpLoginSuccessHandler;
 
-import javax.sql.DataSource;
 
 /**
  * Default security filter chain for form-login and resource protection.
@@ -30,6 +31,7 @@ import javax.sql.DataSource;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @ConditionalOnProperty(name = "idp.provider", havingValue = "spring")
 public class SecurityConfig {
 
@@ -55,7 +57,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                // Roles live in realm_access.roles (as on every other service), for @PreAuthorize
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
+                        .jwtAuthenticationConverter(new RealmRoleJwtAuthenticationConverter())));
 
         return http.build();
     }
@@ -76,7 +80,9 @@ public class SecurityConfig {
             HttpSecurity http,
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder,
-            AccountLockoutService lockoutService
+            AccountLockoutService lockoutService,
+            RequestCache requestCache,
+            OtpLoginSuccessHandler otpLoginSuccessHandler
     ) throws Exception {
         LockoutAwareAuthenticationProvider authenticationProvider =
                 new LockoutAwareAuthenticationProvider(userDetailsService, passwordEncoder, lockoutService);
@@ -93,23 +99,22 @@ public class SecurityConfig {
                         // (the custom request cache below has no favicon exclusion), replacing the
                         // pending /oauth2/authorize request.
                         .requestMatchers("/favicon.ico").permitAll()
+                        // Account pages reached from emailed links or the sign-in page; the
+                        // single-use token in the link is the credential
+                        .requestMatchers("/activate", "/forgot-password", "/reset-password", "/css/**").permitAll()
+                        // Second sign-in step: the password was already checked; the parked
+                        // authentication in this session is what the code completes
+                        .requestMatchers("/login/otp", "/login/otp/resend").permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
+                        // Hands off to the one-time-code step when the user's policy asks for it
+                        .successHandler(otpLoginSuccessHandler)
                         .permitAll()
                 )
-                .requestCache(cache -> cache
-                        .requestCache(new org.springframework.security.web.savedrequest.HttpSessionRequestCache() {{
-                            setMatchingRequestParameterName(null);
-                            setRequestMatcher(request -> {
-                                String uri = request.getRequestURI();
-                                // Don't cache Chrome DevTools or .well-known requests
-                                return !uri.startsWith("/.well-known") && !uri.contains("appspecific");
-                            });
-                        }})
-                )
+                .requestCache(cache -> cache.requestCache(requestCache))
                 .logout(logout -> logout
                         .logoutRequestMatcher(new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/logout", "GET"))
                         .logoutSuccessUrl("http://localhost:5173/login")
@@ -122,45 +127,19 @@ public class SecurityConfig {
     }
 
     /**
-     * JDBC-backed user details service for authenticating resource owners.
-     * Uses auth_users/auth_authorities tables to avoid conflict with the platform users table.
-     * Default admin user is provisioned on first startup if not already present.
+     * Where the pending {@code /oauth2/authorize} request is kept while the user signs in. Shared
+     * with the one-time-code step so it resumes the same request after the code is accepted.
      */
     @Bean
-    public UserDetailsService userDetailsService(DataSource dataSource, PasswordEncoder passwordEncoder) {
-        JdbcUserDetailsManager userManager = new JdbcUserDetailsManager(dataSource);
-
-        // Point to auth-service specific tables (avoids conflict with event-service users table)
-        userManager.setUsersByUsernameQuery(
-                "SELECT username, password, enabled FROM auth_users WHERE username = ?");
-        userManager.setAuthoritiesByUsernameQuery(
-                "SELECT username, authority FROM auth_authorities WHERE username = ?");
-        userManager.setCreateUserSql(
-                "INSERT INTO auth_users (username, password, enabled) VALUES (?,?,?)");
-        userManager.setCreateAuthoritySql(
-                "INSERT INTO auth_authorities (username, authority) VALUES (?,?)");
-        userManager.setUserExistsSql(
-                "SELECT username FROM auth_users WHERE username = ?");
-        userManager.setDeleteUserSql(
-                "DELETE FROM auth_users WHERE username = ?");
-        userManager.setDeleteUserAuthoritiesSql(
-                "DELETE FROM auth_authorities WHERE username = ?");
-        userManager.setUpdateUserSql(
-                "UPDATE auth_users SET password = ?, enabled = ? WHERE username = ?");
-        userManager.setChangePasswordSql(
-                "UPDATE auth_users SET password = ? WHERE username = ?");
-
-        // Provision default admin if not present
-        if (!userManager.userExists("admin")) {
-            UserDetails admin = User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("Admin@12345!"))
-                    .roles("ADMIN")
-                    .build();
-            userManager.createUser(admin);
-        }
-
-        return userManager;
+    public RequestCache requestCache() {
+        HttpSessionRequestCache cache = new HttpSessionRequestCache();
+        cache.setMatchingRequestParameterName(null);
+        cache.setRequestMatcher(request -> {
+            String uri = request.getRequestURI();
+            // Don't cache Chrome DevTools or .well-known requests
+            return !uri.startsWith("/.well-known") && !uri.contains("appspecific");
+        });
+        return cache;
     }
 
     /**

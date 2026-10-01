@@ -1,25 +1,21 @@
 package com.outreach.platform.auth.service;
 
 import com.outreach.platform.auth.config.AuthServiceProperties;
+import com.outreach.platform.auth.repo.UserAccountRepository;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- * Brute-force protection service implementing account lockout after repeated failed attempts.
- * Configuration: 5 failed attempts → 30 minute lock (matching Keycloak realm settings).
- *
- * <p>This implementation uses an in-memory store. For clustered deployments,
- * replace with a Redis-backed implementation.</p>
- *
- * <p>Only active when {@code idp.provider=spring}. When Keycloak is the active provider,
- * lockout enforcement is handled by the Keycloak realm brute-force detection settings.
+ * Brute-force protection: after {@code maxFailedAttempts} consecutive failures the account is
+ * locked for {@code lockDuration}. State lives on the account row, so it survives restarts and is
+ * shared by every auth-service instance. Unknown usernames are ignored.
  */
 @Named
 @ConditionalOnProperty(name = "idp.provider", havingValue = "spring")
@@ -27,76 +23,53 @@ public class AccountLockoutService {
 
     private static final Logger log = LoggerFactory.getLogger(AccountLockoutService.class);
 
+    private final UserAccountRepository accounts;
     private final int maxFailedAttempts;
-    private final long lockDurationMillis;
-
-    private final ConcurrentMap<String, LockoutState> lockoutStates = new ConcurrentHashMap<>();
+    private final Duration lockDuration;
 
     @Inject
-    public AccountLockoutService(AuthServiceProperties properties) {
+    public AccountLockoutService(UserAccountRepository accounts, AuthServiceProperties properties) {
+        this.accounts = accounts;
         var bruteForce = properties.security().bruteForce();
         this.maxFailedAttempts = bruteForce.maxFailedAttempts();
-        this.lockDurationMillis = bruteForce.lockDuration().toMillis();
+        this.lockDuration = bruteForce.lockDuration();
     }
 
-    /**
-     * Records a failed authentication attempt for the given username.
-     *
-     * @param username the account identifier
-     */
+    @Transactional
     public void recordFailedAttempt(String username) {
-        lockoutStates.compute(username, (key, state) -> {
-            if (state == null) {
-                return new LockoutState(1, null);
+        Instant now = Instant.now();
+        accounts.findByUsername(username).ifPresent(account -> {
+            // A lock that has run out starts a fresh count rather than relocking on the next miss.
+            if (account.getLockedUntil() != null && !account.isLocked(now)) {
+                account.setLockedUntil(null);
+                account.setFailedLoginAttempts(0);
             }
-            int newCount = state.failedAttempts() + 1;
-            Instant lockedUntil = state.lockedUntil();
-            if (newCount >= maxFailedAttempts) {
-                lockedUntil = Instant.now().plusMillis(lockDurationMillis);
-                log.warn("Account locked: username={}, lockedUntil={}", username, lockedUntil);
+            int attempts = account.getFailedLoginAttempts() + 1;
+            account.setFailedLoginAttempts(attempts);
+            if (attempts >= maxFailedAttempts && account.getLockedUntil() == null) {
+                account.setLockedUntil(now.plus(lockDuration));
+                log.warn("Account locked after {} failed sign-ins: userId={}", attempts, account.getId());
             }
-            return new LockoutState(newCount, lockedUntil);
         });
     }
 
-    /**
-     * Checks whether the account is currently locked out.
-     *
-     * @param username the account identifier
-     * @return true if the account is locked and the lock duration has not elapsed
-     */
+    @Transactional(readOnly = true)
     public boolean isLocked(String username) {
-        LockoutState state = lockoutStates.get(username);
-        if (state == null || state.lockedUntil() == null) {
-            return false;
-        }
-        if (Instant.now().isAfter(state.lockedUntil())) {
-            // Lock expired — reset state
-            lockoutStates.remove(username);
-            return false;
-        }
-        return true;
+        return accounts.findByUsername(username).map(a -> a.isLocked(Instant.now())).orElse(false);
     }
 
-    /**
-     * Resets the lockout state upon successful authentication.
-     *
-     * @param username the account identifier
-     */
-    public void resetAttempts(String username) {
-        lockoutStates.remove(username);
+    /** Successful sign-in: clears failures and records the time. */
+    @Transactional
+    public void recordSuccessfulLogin(String username) {
+        accounts.findByUsername(username).ifPresent(account -> {
+            account.setFailedLoginAttempts(0);
+            account.setLockedUntil(null);
+            account.setLastLoginAt(Instant.now());
+        });
     }
 
-    /**
-     * Returns the number of failed attempts for the given username.
-     *
-     * @param username the account identifier
-     * @return failed attempt count, or 0 if no record exists
-     */
+    @Transactional(readOnly = true)
     public int getFailedAttempts(String username) {
-        LockoutState state = lockoutStates.get(username);
-        return state != null ? state.failedAttempts() : 0;
+        return accounts.findByUsername(username).map(a -> a.getFailedLoginAttempts()).orElse(0);
     }
-
-    private record LockoutState(int failedAttempts, Instant lockedUntil) {}
 }

@@ -11,7 +11,8 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.outreach.platform.auth.entity.Tenant;
 import com.outreach.platform.auth.entity.TenantMembership;
 import com.outreach.platform.auth.service.TenantMembershipService;
-import com.outreach.platform.auth.util.UserIdentifiers;
+import com.outreach.platform.auth.entity.UserAccount;
+import com.outreach.platform.auth.repo.UserAccountRepository;
 import jakarta.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -81,17 +82,20 @@ import java.util.UUID;
 @EnableConfigurationProperties(AuthServiceProperties.class)
 public class AuthorizationServerConfig {
 
-    private static final String PLATFORM_ADMIN_AUTHORITY = "ROLE_PLATFORM_ADMIN";
+    private static final String PLATFORM_ADMIN_AUTHORITY = com.outreach.platform.auth.service.AccountUserDetailsService.PLATFORM_ADMIN_AUTHORITY;
     private static final String NO_TENANT_ASSOCIATION_ERROR = "NO_TENANT_ASSOCIATION";
 
     private final AuthServiceProperties properties;
     private final TenantMembershipService tenantMembershipService;
+    private final UserAccountRepository accounts;
 
     @Inject
     public AuthorizationServerConfig(AuthServiceProperties properties,
-                                     TenantMembershipService tenantMembershipService) {
+                                     TenantMembershipService tenantMembershipService,
+                                     UserAccountRepository accounts) {
         this.properties = properties;
         this.tenantMembershipService = tenantMembershipService;
+        this.accounts = accounts;
     }
 
     /**
@@ -267,27 +271,27 @@ public class AuthorizationServerConfig {
                     return;
                 }
 
-                // Add realm_access.roles for Keycloak format compatibility
-                var roles = principal.getAuthorities().stream()
-                        .map(Object::toString)
-                        .filter(authority -> authority.startsWith("ROLE_"))
-                        .toList();
-                claims.put("realm_access", java.util.Map.of("roles", roles));
+                UserAccount account = accounts.findByUsername(principal.getName())
+                        .orElseThrow(() -> new OAuth2AuthenticationException(
+                                new OAuth2Error("ACCOUNT_NOT_FOUND", "Account no longer exists", null)));
+                UUID userId = account.getId();
 
-                // Check if user is a Platform_Admin
-                boolean isPlatformAdmin = principal.getAuthorities().stream()
-                        .anyMatch(auth -> PLATFORM_ADMIN_AUTHORITY.equals(auth.getAuthority()));
+                // Identity claims the UI shows; sub stays the username (audit trails key off it).
+                claims.put("uid", userId.toString());
+                claims.put("preferred_username", account.getUsername());
+                claims.put("name", account.getDisplayName() != null ? account.getDisplayName() : account.getUsername());
+                if (account.getEmail() != null) {
+                    claims.put("email", account.getEmail());
+                }
 
+                boolean isPlatformAdmin = account.isPlatformAdmin();
                 claims.put("platform_admin", isPlatformAdmin);
 
                 if (isPlatformAdmin) {
-                    // Platform_Admin: set platform_admin claim, omit tenant_id
+                    // Platform_Admin: no tenant_id; the only role is the platform one
+                    claims.put("realm_access", java.util.Map.of("roles", List.of(PLATFORM_ADMIN_AUTHORITY)));
                     return;
                 }
-
-                // Regular user: resolve tenant membership
-                String username = principal.getName();
-                UUID userId = UserIdentifiers.fromUsername(username);
 
                 Optional<Tenant> activeTenant = tenantMembershipService.getActiveTenantForUser(userId);
 
@@ -309,6 +313,10 @@ public class AuthorizationServerConfig {
                         .map(m -> m.getRole().name())
                         .toList();
                 claims.put("tenant_roles", tenantRoles);
+                // Roles are per tenant: a user who is ADMIN in one tenant and POC in another must
+                // only carry the active tenant's role (realm_access.roles is what services check).
+                claims.put("realm_access", java.util.Map.of("roles",
+                        tenantRoles.stream().map(role -> "ROLE_" + role).toList()));
 
                 // Signals the frontend to redirect to the tenant-selection page instead of
                 // trusting this (arbitrarily-picked) tenant_id — set only until the user makes

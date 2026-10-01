@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -48,109 +49,16 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should complete full PKCE authorization code flow and return valid JWT")
-    void shouldCompleteFullPkceFlow() throws Exception {
-        // Step 1: Initiate authorization request — expect redirect to login
-        String authorizeUrl = baseUrl() + "/oauth2/authorize"
-                + "?response_type=code"
-                + "&client_id=outreach-dashboard"
-                + "&redirect_uri=http://localhost:5173/callback"
-                + "&scope=openid profile email roles"
-                + "&code_challenge=" + codeChallenge
-                + "&code_challenge_method=S256"
-                + "&state=test-state";
+    @DisplayName("Password sign-in through the dashboard client issues a JWT with identity claims")
+    void shouldCompleteFullPkceFlow() {
+        BrowserSession browser = new BrowserSession(baseUrl());
 
-        // Step 1: The authorization endpoint should redirect to login
-        ResponseEntity<String> authorizeResponse = restTemplate.getForEntity(authorizeUrl, String.class);
-        // Should redirect to login page (302) or return login form (200)
-        assertThat(authorizeResponse.getStatusCode().value())
-                .isIn(200, 302);
+        HttpResponse<String> authorize = browser.startAuthorization();
+        assertThat(BrowserSession.location(authorize)).endsWith("/login");
 
-        // Step 2: Authenticate via form login (get the session)
-        String loginUrl = baseUrl() + "/login";
-        MultiValueMap<String, String> loginForm = new LinkedMultiValueMap<>();
-        loginForm.add("username", "admin");
-        loginForm.add("password", "Admin@12345!");
+        String accessToken = browser.finishAuthorization(browser.login("admin", "password"));
 
-        HttpHeaders loginHeaders = new HttpHeaders();
-        loginHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        // First, get the login page to obtain session and CSRF token
-        ResponseEntity<String> loginPage = restTemplate.getForEntity(loginUrl, String.class);
-        String csrfToken = extractCsrfToken(loginPage.getBody());
-        List<String> cookies = loginPage.getHeaders().get(HttpHeaders.SET_COOKIE);
-
-        if (csrfToken != null) {
-            loginForm.add("_csrf", csrfToken);
-        }
-
-        if (cookies != null) {
-            loginHeaders.put(HttpHeaders.COOKIE, cookies);
-        }
-
-        HttpEntity<MultiValueMap<String, String>> loginRequest = new HttpEntity<>(loginForm, loginHeaders);
-        ResponseEntity<String> loginResponse = restTemplate.postForEntity(loginUrl, loginRequest, String.class);
-
-        // After login, extract the session cookie
-        List<String> sessionCookies = loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE);
-        List<String> allCookies = sessionCookies != null ? sessionCookies : cookies;
-
-        // Step 3: Now request authorization again with the session
-        HttpHeaders authHeaders = new HttpHeaders();
-        if (allCookies != null) {
-            authHeaders.put(HttpHeaders.COOKIE, allCookies);
-        }
-
-        HttpEntity<Void> authRequest = new HttpEntity<>(authHeaders);
-        ResponseEntity<String> authResponse = restTemplate.exchange(
-                authorizeUrl, HttpMethod.GET, authRequest, String.class);
-
-        // The response should contain a redirect with the authorization code
-        String redirectUrl = null;
-        if (authResponse.getStatusCode().is3xxRedirection()) {
-            redirectUrl = authResponse.getHeaders().getLocation().toString();
-        } else if (authResponse.getStatusCode().is2xxSuccessful() && authResponse.getBody() != null) {
-            // May be a consent page or direct redirect within the body
-            redirectUrl = extractRedirectFromBody(authResponse.getBody());
-        }
-
-        // If we got a redirect with a code, continue token exchange
-        if (redirectUrl != null && redirectUrl.contains("code=")) {
-            String authCode = extractQueryParam(redirectUrl, "code");
-            assertThat(authCode).isNotBlank();
-
-            // Step 4: Exchange authorization code for tokens
-            MultiValueMap<String, String> tokenRequest = new LinkedMultiValueMap<>();
-            tokenRequest.add("grant_type", "authorization_code");
-            tokenRequest.add("client_id", "outreach-dashboard");
-            tokenRequest.add("code", authCode);
-            tokenRequest.add("redirect_uri", "http://localhost:5173/callback");
-            tokenRequest.add("code_verifier", codeVerifier);
-
-            HttpHeaders tokenHeaders = new HttpHeaders();
-            tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            HttpEntity<MultiValueMap<String, String>> tokenEntity = new HttpEntity<>(tokenRequest, tokenHeaders);
-            ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(
-                    baseUrl() + "/oauth2/token", tokenEntity, Map.class);
-
-            assertThat(tokenResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-            Map<String, Object> tokenBody = tokenResponse.getBody();
-            assertThat(tokenBody).isNotNull();
-            assertThat(tokenBody).containsKey("access_token");
-            assertThat(tokenBody).containsKey("token_type");
-            assertThat(tokenBody.get("token_type").toString()).isEqualToIgnoringCase("Bearer");
-
-            // Note: Spring Authorization Server 1.4.x does NOT issue refresh tokens for
-            // public clients (ClientAuthenticationMethod.NONE) by design — even with PKCE.
-            // The dashboard client relies on short-lived access tokens + silent re-auth.
-            // Refresh tokens ARE issued for confidential clients (outreach-services).
-            // See: OAuth2AuthorizationCodeAuthenticationProvider source.
-
-            // Step 5: Verify access token is a valid JWT with expected claims
-            String accessToken = tokenBody.get("access_token").toString();
-            verifyJwtStructure(accessToken);
-        }
+        verifyJwtStructure(accessToken);
     }
 
     @Test
@@ -207,6 +115,11 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
         String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
         assertThat(payloadJson).contains("\"iss\"");
         assertThat(payloadJson).contains("\"sub\"");
+        // Identity claims the UI shows, and roles narrowed to the active tenant
+        assertThat(payloadJson).contains("\"uid\":\"a0000000-0000-0000-0000-000000000001\"")
+                .contains("\"name\":\"Admin\"")
+                .contains("\"preferred_username\":\"admin\"")
+                .contains("\"realm_access\":{\"roles\":[\"ROLE_ADMIN\"]}");
     }
 
     @Test

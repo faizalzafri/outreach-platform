@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Activate your account')}"></head>
+<body>
+<div class="page">
+    <div class="card">
+        <div th:replace="~{fragments :: brand}"></div>
+
+        <h1 class="heading">Set up your account</h1>
+        <p class="subtitle">
+            Welcome, <strong th:text="${displayName}">Priya</strong>. Your username is
+            <strong th:text="${username}">priya</strong>. Choose a password to finish.
+        </p>
+
+        <div th:replace="~{fragments :: violations(${violations})}"></div>
+
+        <form class="form" th:action="@{/activate}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="token" th:value="${token}"/>
+            <th:block th:replace="~{fragments :: password-fields}"></th:block>
+            <button type="submit" class="btn-primary">Activate account</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * and this application only serves as a health-check/discovery participant.
  */
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class AuthServiceApplication {
 
     public static void main(String[] args) {

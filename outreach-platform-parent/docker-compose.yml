@@ -163,12 +163,23 @@ services:
       EUREKA_URI: http://discovery-service:8761/eureka
       IDP_PROVIDER: spring
       IDP_JWKS_URI: http://auth-service:8090/oauth2/jwks
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: outreach
+      RABBITMQ_PASSWORD: outreach_secret
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      # Links in invitation and reset emails point at the auth server as the browser sees it
+      AUTH_PUBLIC_URL: http://localhost:8090
+      # First platform admin, invited by email on first start (MailHog locally)
+      PLATFORM_ADMIN_EMAIL: platform.admin@outreach-platform.com
     networks:
       - outreach-net
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
