@@ -4,6 +4,13 @@ spring:
     discovery:
       enabled: false
 
+  # Listeners (e.g. the user-directory sync) would connect to a broker at startup; tests call the
+  # listener beans directly instead.
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+
   # Disable security auto-configuration for migration tests
   autoconfigure:
     exclude:

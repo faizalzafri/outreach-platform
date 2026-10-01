@@ -31,7 +31,6 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     long countByEnabled(boolean enabled);
 
-    long countByAccountLocked(boolean accountLocked);
 
     Page<UserEntity> findByRole(UserRole role, Pageable pageable);
 

@@ -65,4 +65,7 @@
          AES-256-GCM ciphertext, breaking JPA decryption for every list/read of those rows -->
     <include file="db/changelog/20260914-001-fix-plaintext-seed-pii.sql"/>
 
+    <!-- 15. Users become a directory synced from auth-service (credentials move there) -->
+    <include file="db/changelog/20261002-001-users-become-directory.sql"/>
+
 </databaseChangeLog>

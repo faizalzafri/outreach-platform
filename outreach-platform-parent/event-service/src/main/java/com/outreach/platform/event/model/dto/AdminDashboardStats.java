@@ -11,8 +11,6 @@ public record AdminDashboardStats(
         long totalUsers,
         @Schema(description = "Currently active users", example = "140")
         long activeUsers,
-        @Schema(description = "Locked user accounts", example = "3")
-        long lockedUsers,
         @Schema(description = "Total events created", example = "45")
         long totalEvents,
         @Schema(description = "Currently active events", example = "8")

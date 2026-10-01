@@ -226,7 +226,6 @@ class TenantScopedRepositoriesIsolationIT {
         UserEntity user = new UserEntity();
         user.setUsername(username + "-" + UUID.randomUUID().toString().substring(0, 8));
         user.setEmail("encrypted-placeholder");
-        user.setPasswordHash("hash-placeholder");
         user.setRole(UserRole.ADMIN);
         user.setEnabled(true);
         return user;

@@ -4,30 +4,21 @@ import com.outreach.platform.event.model.dto.AdminDashboardStats;
 import com.outreach.platform.event.model.dto.AuditLogEntry;
 import com.outreach.platform.event.model.dto.AuditLogSearchCriteria;
 import com.outreach.platform.event.model.dto.SystemConfigDto;
-import com.outreach.platform.event.model.dto.UserCreateRequest;
 import com.outreach.platform.event.model.dto.UserDto;
-import com.outreach.platform.event.model.dto.UserRoleChangeRequest;
-import com.outreach.platform.event.model.dto.UserStatusRequest;
-import com.outreach.platform.event.model.dto.UserUpdateRequest;
 import com.outreach.platform.event.service.AdminService;
 import com.outreach.platform.event.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * REST controller for admin operations: user management, audit log, system config, and dashboard.
@@ -57,7 +47,7 @@ public class AdminController {
         this.auditLogService = auditLogService;
     }
 
-    // ─── User Management ────────────────────────────────────────────────────────
+    // ─── User Directory (read-only; accounts are managed in auth-service) ──────
 
     @Operation(summary = "List users", description = "Lists all platform users with pagination, optionally filtered by role")
     @GetMapping("/users")
@@ -67,37 +57,6 @@ public class AdminController {
             @RequestParam(required = false) String role) {
         Page<UserDto> users = adminService.listUsers(pageable, role);
         return ResponseEntity.ok(users);
-    }
-
-    @Operation(summary = "Create user", description = "Creates a new user account")
-    @PostMapping("/users")
-    public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserCreateRequest request) {
-        UserDto created = adminService.createUser(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    @Operation(summary = "Update user", description = "Updates an existing user account")
-    @PutMapping("/users/{id}")
-    public ResponseEntity<UserDto> updateUser(@Parameter(description = "User UUID") @PathVariable UUID id,
-                                              @Valid @RequestBody UserUpdateRequest request) {
-        UserDto updated = adminService.updateUser(id, request);
-        return ResponseEntity.ok(updated);
-    }
-
-    @Operation(summary = "Change user status", description = "Enables or disables a user account")
-    @PatchMapping("/users/{id}/status")
-    public ResponseEntity<UserDto> changeUserStatus(@Parameter(description = "User UUID") @PathVariable UUID id,
-                                                    @Valid @RequestBody UserStatusRequest request) {
-        UserDto updated = adminService.enableDisableUser(id, request);
-        return ResponseEntity.ok(updated);
-    }
-
-    @Operation(summary = "Change user role", description = "Changes a user's assigned role")
-    @PatchMapping("/users/{id}/role")
-    public ResponseEntity<UserDto> changeUserRole(@Parameter(description = "User UUID") @PathVariable UUID id,
-                                                  @Valid @RequestBody UserRoleChangeRequest request) {
-        UserDto updated = adminService.changeRole(id, request);
-        return ResponseEntity.ok(updated);
     }
 
     // ─── Audit Log ──────────────────────────────────────────────────────────────
