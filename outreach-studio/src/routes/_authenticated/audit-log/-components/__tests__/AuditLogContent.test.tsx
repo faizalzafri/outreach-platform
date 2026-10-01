@@ -236,7 +236,7 @@ describe('AuditLogContent', () => {
         http.get('/api/admin/audit-log', ({ request }) => {
           requestCount++;
           const url = new URL(request.url);
-          const userParam = url.searchParams.get('user');
+          const userParam = url.searchParams.get('userId');
           const content = userParam
             ? mockAuditEntries.content.filter((e) =>
                 e.user.toLowerCase().includes(userParam.toLowerCase()),

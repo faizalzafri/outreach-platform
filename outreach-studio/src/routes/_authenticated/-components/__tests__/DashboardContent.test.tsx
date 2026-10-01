@@ -168,7 +168,7 @@ describe('DashboardContent', () => {
         http.get('/api/reports/dashboard/trends', ({ request }) => {
           requestCount++;
           const url = new URL(request.url);
-          lastStartDate = url.searchParams.get('startDate');
+          lastStartDate = url.searchParams.get('dateFrom');
           return HttpResponse.json(mockTrends);
         }),
       );
@@ -195,7 +195,7 @@ describe('DashboardContent', () => {
       server.use(
         http.get('/api/reports/dashboard/trends', ({ request }) => {
           const url = new URL(request.url);
-          lastEndDate = url.searchParams.get('endDate');
+          lastEndDate = url.searchParams.get('dateTo');
           return HttpResponse.json(mockTrends);
         }),
       );

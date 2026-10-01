@@ -419,8 +419,8 @@ export function DashboardContent() {
     queryFn: async () => {
       const response = await httpClient.get<TrendsResponse>('/reports/dashboard/trends', {
         params: {
-          startDate,
-          endDate,
+          dateFrom: startDate,
+          dateTo: endDate,
           granularity: granularity.toLowerCase(),
         },
       });

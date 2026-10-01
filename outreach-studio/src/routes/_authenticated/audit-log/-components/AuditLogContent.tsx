@@ -115,6 +115,22 @@ function RowGroup({ entry, isExpanded, onToggle, colSpan }: RowGroupProps) {
   );
 }
 
+/**
+ * Query params as GET /admin/audit-log(/export) binds them: userId, and dateFrom/dateTo as
+ * instants covering the whole of the picked days (UTC).
+ */
+function auditFilterParams(f: {
+  startDate: string; endDate: string; user: string; action: string; resourceType: string;
+}): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (f.startDate) params['dateFrom'] = `${f.startDate}T00:00:00Z`;
+  if (f.endDate) params['dateTo'] = `${f.endDate}T23:59:59.999Z`;
+  if (f.user) params['userId'] = f.user;
+  if (f.action) params['action'] = f.action;
+  if (f.resourceType) params['resourceType'] = f.resourceType;
+  return params;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -147,12 +163,9 @@ export function AuditLogContent() {
 
   // --- Build filter params ---
   const filterParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    if (startDate) params['startDate'] = startDate;
-    if (endDate) params['endDate'] = endDate;
-    if (debouncedUser) params['user'] = debouncedUser;
-    if (actionFilter) params['action'] = actionFilter;
-    if (resourceTypeFilter) params['resourceType'] = resourceTypeFilter;
+    const params = auditFilterParams({
+      startDate, endDate, user: debouncedUser, action: actionFilter, resourceType: resourceTypeFilter,
+    });
     if (sortState.direction) {
       params['sort'] = `${sortState.column},${sortState.direction}`;
     }
@@ -225,12 +238,9 @@ export function AuditLogContent() {
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const params: Record<string, string> = {};
-      if (startDate) params['startDate'] = startDate;
-      if (endDate) params['endDate'] = endDate;
-      if (debouncedUser) params['user'] = debouncedUser;
-      if (actionFilter) params['action'] = actionFilter;
-      if (resourceTypeFilter) params['resourceType'] = resourceTypeFilter;
+      const params = auditFilterParams({
+        startDate, endDate, user: debouncedUser, action: actionFilter, resourceType: resourceTypeFilter,
+      });
 
       const response = await httpClient.get('/admin/audit-log/export', {
         params,
