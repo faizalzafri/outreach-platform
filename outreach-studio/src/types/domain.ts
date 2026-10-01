@@ -183,6 +183,26 @@ export interface Account {
   createdAt: string | null;
 }
 
+export type OtpPurpose = 'LOGIN' | 'PASSWORD_RESET' | 'PASSWORD_CHANGE';
+
+export interface OtpSettings {
+  enabled: boolean;
+  length: number;
+  ttlSeconds: number;
+  maxAttempts: number;
+  resendCooldownSeconds: number;
+}
+
+/** An organization's sign-in security (/api/auth/security-policy). */
+export interface SecurityPolicy {
+  passwordMinLength: number;
+  passwordHistoryCount: number;
+  /** Read-only: the platform floor the organization cannot go below. */
+  platformMinLength?: number;
+  platformHistoryCount?: number;
+  otp: Record<OtpPurpose, OtpSettings>;
+}
+
 /** The signed-in user's own account (/api/auth/me). */
 export interface Profile {
   id: string;

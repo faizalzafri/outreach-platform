@@ -100,6 +100,14 @@ function AdminIcon() {
   );
 }
 
+function SecurityIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
 function AiInsightsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -177,6 +185,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { label: 'Teams', href: '/teams', icon: TeamsIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Administration', href: '/admin', icon: AdminIcon, requiredRoles: ['ROLE_ADMIN'] },
+      { label: 'Security', href: '/admin/security', icon: SecurityIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Audit Log', href: '/audit-log', icon: AuditLogIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
   },
