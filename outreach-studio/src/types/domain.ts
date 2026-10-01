@@ -155,12 +155,45 @@ export interface AuditEntry {
 export type UserRole = 'ROLE_ADMIN' | 'ROLE_PMO' | 'ROLE_POC';
 export type UserStatus = 'ENABLED' | 'DISABLED' | 'LOCKED';
 
+/** A user in event-service's directory (read-only; used for pickers such as POC assignment). */
 export interface User {
   id: string;
   username: string;
+  displayName: string | null;
   email: string;
   role: UserRole;
   enabled: boolean;
+}
+
+/** Tenant role as auth-service names it (no ROLE_ prefix). */
+export type AccountRole = 'ADMIN' | 'PMO' | 'POC';
+export type AccountStatus = 'INVITED' | 'ACTIVE' | 'DISABLED';
+
+/** A sign-in account as returned by auth-service's user administration API (/api/auth/users). */
+export interface Account {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  phone: string | null;
+  role: AccountRole;
+  status: AccountStatus;
+  locked: boolean;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+}
+
+/** The signed-in user's own account (/api/auth/me). */
+export interface Profile {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  phone: string | null;
+  platformAdmin: boolean;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  passwordMinLength: number;
 }
 
 /** Dashboard tiles, combined from GET /reports/dashboard and GET /reports/dashboard/kpis. */

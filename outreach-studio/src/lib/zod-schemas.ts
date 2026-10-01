@@ -189,14 +189,18 @@ export type FeedbackForm = z.infer<typeof feedbackFormSchema>;
 /**
  * User creation form schema.
  */
-export const userCreateSchema = z.object({
-  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/),
-  email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
-  role: z.enum(['ROLE_ADMIN', 'ROLE_PMO', 'ROLE_POC']),
+/**
+ * Invite form: the new user chooses their own password from the emailed activation link, so no
+ * password is ever entered here.
+ */
+export const userInviteSchema = z.object({
+  username: z.string().regex(/^[a-zA-Z0-9._-]{3,50}$/, '3–50 letters, digits, dots, hyphens or underscores'),
+  displayName: z.string().trim().min(1, 'Enter the person\'s name').max(100),
+  email: z.string().email('Enter a valid email address').max(254),
+  role: z.enum(['ADMIN', 'PMO', 'POC']),
 });
 
-export type UserCreateForm = z.infer<typeof userCreateSchema>;
+export type UserInviteForm = z.infer<typeof userInviteSchema>;
 
 /**
  * Team creation/edit form schema.

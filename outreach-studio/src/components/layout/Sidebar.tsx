@@ -191,11 +191,9 @@ export function Sidebar({
           </div>
 
           <div className={styles.bottomActions}>
-            {/* Settings opens user administration, which only admins may use */}
-            {user.roles.includes('ROLE_ADMIN') && (
+            {/* Your own profile: name, phone and password */}
             <Link
-              to="/admin"
-              search={{ page: 1, size: 10 }}
+              to="/settings"
               className={styles.bottomBtn}
               data-tooltip={collapsed ? 'Settings' : undefined}
               aria-label="Settings"
@@ -208,7 +206,6 @@ export function Sidebar({
               </span>
               <span className={styles.bottomBtnLabel}>Settings</span>
             </Link>
-            )}
 
             <button
               type="button"

@@ -27,6 +27,7 @@ import { Route as AuthenticatedFeedbackIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedIngestionIndexRouteImport } from './routes/_authenticated/ingestion/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports/index'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedTeamsIndexRouteImport } from './routes/_authenticated/teams/index'
 import { Route as AuthenticatedTeamsTeamIdRouteImport } from './routes/_authenticated/teams/$teamId'
 import { Route as AuthenticatedVolunteersIndexRouteImport } from './routes/_authenticated/volunteers/index'
@@ -130,6 +131,12 @@ const AuthenticatedReportsIndexRoute =
     path: '/reports/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTeamsIndexRoute = AuthenticatedTeamsIndexRouteImport.update({
   id: '/teams/',
   path: '/teams/',
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/teams/': typeof AuthenticatedTeamsIndexRoute
   '/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
@@ -197,6 +205,7 @@ export interface FileRoutesByTo {
   '/ingestion': typeof AuthenticatedIngestionIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
   '/teams': typeof AuthenticatedTeamsIndexRoute
   '/volunteers': typeof AuthenticatedVolunteersIndexRoute
 }
@@ -222,6 +231,7 @@ export interface FileRoutesById {
   '/_authenticated/ingestion/': typeof AuthenticatedIngestionIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/teams/': typeof AuthenticatedTeamsIndexRoute
   '/_authenticated/volunteers/': typeof AuthenticatedVolunteersIndexRoute
 }
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/ingestion/'
     | '/notifications/'
     | '/reports/'
+    | '/settings/'
     | '/teams/'
     | '/volunteers/'
   fileRoutesByTo: FileRoutesByTo
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/ingestion'
     | '/notifications'
     | '/reports'
+    | '/settings'
     | '/teams'
     | '/volunteers'
   id:
@@ -294,6 +306,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ingestion/'
     | '/_authenticated/notifications/'
     | '/_authenticated/reports/'
+    | '/_authenticated/settings/'
     | '/_authenticated/teams/'
     | '/_authenticated/volunteers/'
   fileRoutesById: FileRoutesById
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/teams/': {
       id: '/_authenticated/teams/'
       path: '/teams'
@@ -481,6 +501,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIngestionIndexRoute: typeof AuthenticatedIngestionIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedTeamsIndexRoute: typeof AuthenticatedTeamsIndexRoute
   AuthenticatedVolunteersIndexRoute: typeof AuthenticatedVolunteersIndexRoute
 }
@@ -501,6 +522,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIngestionIndexRoute: AuthenticatedIngestionIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedTeamsIndexRoute: AuthenticatedTeamsIndexRoute,
   AuthenticatedVolunteersIndexRoute: AuthenticatedVolunteersIndexRoute,
 }

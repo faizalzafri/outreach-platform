@@ -7,6 +7,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
   return {
     id: `user-${counter}`,
     username: `testuser${counter}`,
+    displayName: `Test User ${counter}`,
     email: `testuser${counter}@example.com`,
     role: 'ROLE_PMO',
     enabled: true,
