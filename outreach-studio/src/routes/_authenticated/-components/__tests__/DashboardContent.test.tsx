@@ -18,38 +18,35 @@ vi.mock('@/hooks/useAuth', () => ({
 // Mock data
 // ---------------------------------------------------------------------------
 
-const mockKpis = {
+// Shapes as report-service and event-service return them
+const mockSummary = {
   totalEvents: 42,
-  activeEvents: 8,
+  completedEvents: 8,
   totalVolunteers: 356,
+  overallAverageScore: 4.3,
+  totalFeedbackSubmissions: 12,
+  activeCities: 5,
+  totalBeneficiaries: 3,
+};
+
+const mockKpis = {
   averageFeedbackScore: 4.3,
-  pendingFeedback: 12,
-  notificationDeliveryRate: 97.5,
+  feedbackCompletionRate: 97.5,
+  volunteerRetentionRate: 20,
+  averageEventsPerVolunteer: 1.4,
+  totalFeedbackThisMonth: 3,
+  totalEventsThisMonth: 2,
 };
 
 const mockTrends = {
-  feedbackTrends: [
-    { date: '2024-05-01', count: 12, avgScore: 4.1 },
-    { date: '2024-05-02', count: 8, avgScore: 4.5 },
-  ],
-  eventStatusDistribution: [
-    { status: 'ACTIVE', count: 10 },
-    { status: 'COMPLETED', count: 5 },
-  ],
-  feedbackScoreDistribution: [
-    { score: 1, count: 3 },
-    { score: 2, count: 8 },
-    { score: 3, count: 22 },
-    { score: 4, count: 45 },
-    { score: 5, count: 32 },
+  granularity: 'day',
+  points: [
+    { period: '2024-05-01 00:00:00+00', eventCount: 1, feedbackCount: 12, averageScore: 4.1 },
+    { period: '2024-05-02 00:00:00+00', eventCount: 1, feedbackCount: 8, averageScore: 4.5 },
   ],
 };
 
-const mockLifecycleStats = [
-  { status: 'DRAFT', count: 5 },
-  { status: 'ACTIVE', count: 8 },
-  { status: 'COMPLETED', count: 12 },
-];
+const mockLifecycleStats = { draft: 5, active: 8, completed: 12 };
 
 const adminUser = {
   user: {
@@ -83,6 +80,9 @@ const pocUser = {
 
 function setupDefaultHandlers() {
   server.use(
+    http.get('/api/reports/dashboard', () => {
+      return HttpResponse.json(mockSummary);
+    }),
     http.get('/api/reports/dashboard/kpis', () => {
       return HttpResponse.json(mockKpis);
     }),
@@ -120,15 +120,15 @@ describe('DashboardContent', () => {
       });
 
       expect(screen.getByText('42')).toBeInTheDocument();
-      expect(screen.getByText('Active Events')).toBeInTheDocument();
+      expect(screen.getByText('Completed Events')).toBeInTheDocument();
       expect(screen.getByText('8')).toBeInTheDocument();
       expect(screen.getByText('Total Volunteers')).toBeInTheDocument();
       expect(screen.getByText('356')).toBeInTheDocument();
       expect(screen.getByText('Avg Feedback Score')).toBeInTheDocument();
       expect(screen.getByText('4.3')).toBeInTheDocument();
-      expect(screen.getByText('Pending Feedback')).toBeInTheDocument();
+      expect(screen.getByText('Feedback Submissions')).toBeInTheDocument();
       expect(screen.getByText('12')).toBeInTheDocument();
-      expect(screen.getByText('Notification Delivery Rate')).toBeInTheDocument();
+      expect(screen.getByText('Feedback Completion Rate')).toBeInTheDocument();
       expect(screen.getByText('97.5%')).toBeInTheDocument();
     });
 

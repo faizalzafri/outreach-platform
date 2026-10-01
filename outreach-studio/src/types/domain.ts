@@ -163,11 +163,12 @@ export interface User {
   enabled: boolean;
 }
 
+/** Dashboard tiles, combined from GET /reports/dashboard and GET /reports/dashboard/kpis. */
 export interface DashboardKPIs {
   totalEvents: number;
-  activeEvents: number;
+  completedEvents: number;
   totalVolunteers: number;
   averageFeedbackScore: number;
-  pendingFeedback: number;
-  notificationDeliveryRate: number;
+  totalFeedbackSubmissions: number;
+  feedbackCompletionRate: number;
 }

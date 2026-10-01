@@ -140,8 +140,21 @@ function KpiCards() {
   const { data, isLoading, isError, error, refetch } = useQuery<DashboardKPIs>({
     queryKey: queryKeys.reports.dashboard({}),
     queryFn: async () => {
-      const response = await httpClient.get<DashboardKPIs>('/reports/dashboard/kpis');
-      return response.data;
+      const [summary, kpis] = await Promise.all([
+        httpClient.get<{
+          totalEvents: number; completedEvents: number; totalVolunteers: number;
+          overallAverageScore: number; totalFeedbackSubmissions: number;
+        }>('/reports/dashboard'),
+        httpClient.get<{ feedbackCompletionRate: number }>('/reports/dashboard/kpis'),
+      ]);
+      return {
+        totalEvents: summary.data.totalEvents,
+        completedEvents: summary.data.completedEvents,
+        totalVolunteers: summary.data.totalVolunteers,
+        averageFeedbackScore: Number(summary.data.overallAverageScore),
+        totalFeedbackSubmissions: summary.data.totalFeedbackSubmissions,
+        feedbackCompletionRate: Number(kpis.data.feedbackCompletionRate),
+      };
     },
   });
 
@@ -170,11 +183,11 @@ function KpiCards() {
 
   const kpis: KpiItem[] = [
     { label: 'Total Events', value: String(data.totalEvents ?? 0) },
-    { label: 'Active Events', value: String(data.activeEvents ?? 0) },
+    { label: 'Completed Events', value: String(data.completedEvents ?? 0) },
     { label: 'Total Volunteers', value: String(data.totalVolunteers ?? 0) },
     { label: 'Avg Feedback Score', value: (data.averageFeedbackScore ?? 0).toFixed(1) },
-    { label: 'Pending Feedback', value: String(data.pendingFeedback ?? 0) },
-    { label: 'Notification Delivery Rate', value: `${(data.notificationDeliveryRate ?? 0).toFixed(1)}%` },
+    { label: 'Feedback Submissions', value: String(data.totalFeedbackSubmissions ?? 0) },
+    { label: 'Feedback Completion Rate', value: `${(data.feedbackCompletionRate ?? 0).toFixed(1)}%` },
   ];
 
   return (
@@ -417,14 +430,26 @@ export function DashboardContent() {
   } = useQuery<TrendsResponse>({
     queryKey: queryKeys.reports.trends(trendParams),
     queryFn: async () => {
-      const response = await httpClient.get<TrendsResponse>('/reports/dashboard/trends', {
+      const response = await httpClient.get<{
+        points: { period: string; feedbackCount: number; averageScore: number }[];
+      }>('/reports/dashboard/trends', {
         params: {
           dateFrom: startDate,
           dateTo: endDate,
           granularity: granularity.toLowerCase(),
         },
       });
-      return response.data;
+      return {
+        // period arrives as a Postgres timestamp ("2024-04-01 00:00:00+00"); keep the date part
+        feedbackTrends: response.data.points.map((p) => ({
+          date: p.period.slice(0, 10),
+          count: p.feedbackCount,
+          avgScore: Number(p.averageScore),
+        })),
+        eventStatusDistribution: [],
+        // ponytail: no endpoint reports per-score counts yet, so this chart stays empty
+        feedbackScoreDistribution: [],
+      };
     },
   });
 
@@ -438,8 +463,12 @@ export function DashboardContent() {
   } = useQuery<LifecycleStats[]>({
     queryKey: [...queryKeys.events.all, 'lifecycle-stats'],
     queryFn: async () => {
-      const response = await httpClient.get<LifecycleStats[]>('/events/lifecycle-stats');
-      return response.data;
+      // The API returns counts keyed by status: { draft: 4, active: 3, ... }
+      const response = await httpClient.get<Record<string, number>>('/events/lifecycle-stats');
+      return Object.entries(response.data).map(([status, count]) => ({
+        status: status.toUpperCase(),
+        count,
+      }));
     },
   });
 
