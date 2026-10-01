@@ -197,8 +197,11 @@ class RetryServiceIT {
         try {
             TenantContext.setCurrentTenantId(tenantA);
             assertThat(deliveryTrackingService.getStatusSummary("shared-event").total()).isEqualTo(1);
-            assertThat(deliveryTrackingService.getDeliveryHistory(PageRequest.of(0, 10)).getContent())
+            assertThat(deliveryTrackingService.getDeliveryHistory(null, PageRequest.of(0, 10)).getContent())
                     .extracting(EmailDeliveryDocument::getRecipientEmail).containsExactly("a@example.com");
+            assertThat(deliveryTrackingService.getDeliveryHistory(DeliveryStatus.FAILED, PageRequest.of(0, 10)).getContent())
+                    .extracting(EmailDeliveryDocument::getRecipientEmail).containsExactly("a@example.com");
+            assertThat(deliveryTrackingService.getDeliveryHistory(DeliveryStatus.SENT, PageRequest.of(0, 10))).isEmpty();
             assertThat(deliveryTrackingService.getAnalytics().totalEmails()).isEqualTo(1);
             assertThat(retryService.retryFailedForEvent("shared-event")).isEqualTo(1);
         } finally {

@@ -127,14 +127,19 @@ export interface NotificationTemplate {
   variablesSchema: string | null;
 }
 
-export type DeliveryStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';
+export type DeliveryStatus =
+  | 'PENDING' | 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED' | 'PERMANENTLY_FAILED' | 'BOUNCED';
 
+/** One email as tracked by notification-service (GET /notifications/history). */
 export interface DeliveryRecord {
   id: string;
-  recipient: string;
-  eventName: string;
+  eventId: string;
+  recipientEmail: string;
+  subject: string;
   status: DeliveryStatus;
-  timestamp: string;
+  createdAt: string;
+  sentAt: string | null;
+  lastAttemptAt: string | null;
 }
 
 export interface AuditEntry {

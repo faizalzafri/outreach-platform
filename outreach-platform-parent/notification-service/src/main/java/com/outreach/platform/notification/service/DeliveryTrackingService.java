@@ -51,13 +51,16 @@ public class DeliveryTrackingService {
     }
 
     /**
-     * Returns paginated delivery history across all of the caller's events.
+     * Returns paginated delivery history across all of the caller's events, optionally only one status.
      */
-    public Page<EmailDeliveryDocument> getDeliveryHistory(Pageable pageable) {
+    public Page<EmailDeliveryDocument> getDeliveryHistory(DeliveryStatus status, Pageable pageable) {
         UUID tenantId = TenantContext.getCurrentTenantId();
-        return tenantId != null
-                ? deliveryRepository.findByTenantId(tenantId, pageable)
-                : deliveryRepository.findAll(pageable);
+        if (tenantId != null) {
+            return status != null
+                    ? deliveryRepository.findByTenantIdAndStatus(tenantId, status, pageable)
+                    : deliveryRepository.findByTenantId(tenantId, pageable);
+        }
+        return status != null ? deliveryRepository.findByStatus(status, pageable) : deliveryRepository.findAll(pageable);
     }
 
     /**

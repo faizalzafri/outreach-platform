@@ -33,6 +33,10 @@ public interface EmailDeliveryRepository extends MongoRepository<EmailDeliveryDo
 
     Page<EmailDeliveryDocument> findByTenantId(UUID tenantId, Pageable pageable);
 
+    Page<EmailDeliveryDocument> findByTenantIdAndStatus(UUID tenantId, DeliveryStatus status, Pageable pageable);
+
+    Page<EmailDeliveryDocument> findByStatus(DeliveryStatus status, Pageable pageable);
+
     List<EmailDeliveryDocument> findByStatusAndNextRetryAtBefore(DeliveryStatus status, Instant now);
 
     long countByTenantId(UUID tenantId);

@@ -70,38 +70,53 @@ const mockDeliveryRecords = {
   content: [
     {
       id: 'del-001',
-      recipient: 'Anita Desai',
-      eventName: 'Annual Volunteer Drive',
+      eventId: 'evt-001',
+      recipientEmail: 'anita.desai@example.com',
+      subject: 'Annual Volunteer Drive',
       status: 'DELIVERED',
-      timestamp: '2024-06-01T08:00:00Z',
+      createdAt: '2024-06-01T08:00:00Z',
+      sentAt: null,
+      lastAttemptAt: null,
     },
     {
       id: 'del-002',
-      recipient: 'Vikram Singh',
-      eventName: 'Annual Volunteer Drive',
+      eventId: 'evt-001',
+      recipientEmail: 'vikram.singh@example.com',
+      subject: 'Annual Volunteer Drive',
       status: 'FAILED',
-      timestamp: '2024-06-01T08:00:00Z',
+      createdAt: '2024-06-01T08:00:00Z',
+      sentAt: null,
+      lastAttemptAt: null,
     },
     {
       id: 'del-003',
-      recipient: 'Priya Kumar',
-      eventName: 'Charity Gala',
-      status: 'BOUNCED',
-      timestamp: '2024-06-02T09:30:00Z',
+      eventId: 'evt-001',
+      recipientEmail: 'priya.kumar@example.com',
+      subject: 'Charity Gala',
+      status: 'PERMANENTLY_FAILED',
+      createdAt: '2024-06-02T09:30:00Z',
+      sentAt: null,
+      lastAttemptAt: null,
     },
     {
       id: 'del-004',
-      recipient: 'Raj Patel',
-      eventName: 'Community Cleanup',
+      eventId: 'evt-001',
+      recipientEmail: 'raj.patel@example.com',
+      subject: 'Community Cleanup',
       status: 'SENT',
-      timestamp: '2024-06-03T07:00:00Z',
+      createdAt: '2024-06-03T07:00:00Z',
+      sentAt: null,
+      lastAttemptAt: null,
     },
     {
       id: 'del-005',
-      recipient: 'Meera Nair',
-      eventName: 'Blood Drive',
+      eventId: 'evt-001',
+      recipientEmail: 'meera.nair@example.com',
+      subject: 'Blood Drive',
       status: 'PENDING',
-      timestamp: '2024-06-03T10:00:00Z',
+      createdAt: '2024-06-03T10:00:00Z',
+      sentAt: null,
+      lastAttemptAt: null,
     },
   ],
   totalElements: 5,
@@ -144,7 +159,7 @@ function setupDefaultHandlers() {
     http.post('/api/notifications/retry/:eventId', () => {
       return HttpResponse.json({ retriedCount: 1, status: 'RETRYING' });
     }),
-    http.post('/api/notifications/schedules', () => {
+    http.post('/api/notifications/schedule', () => {
       return HttpResponse.json({ id: 'sched-001', status: 'SCHEDULED' }, { status: 201 });
     }),
   );
@@ -251,7 +266,7 @@ describe('NotificationsContent', () => {
   // =========================================================================
 
   describe('Retry button visibility logic', () => {
-    it('shows Retry button only for Failed and Bounced records', async () => {
+    it('shows Retry button only for failed records', async () => {
       const user = userEvent.setup();
       await renderNotifications();
 
@@ -260,12 +275,12 @@ describe('NotificationsContent', () => {
 
       // Wait for delivery records to load
       await waitFor(() => {
-        expect(screen.getByText('Anita Desai')).toBeInTheDocument();
+        expect(screen.getByText('anita.desai@example.com')).toBeInTheDocument();
       });
 
-      // Get all Retry buttons - should only appear for FAILED and BOUNCED
+      // Retry buttons appear only for FAILED and PERMANENTLY_FAILED (bounces are not retried)
       const retryButtons = screen.getAllByRole('button', { name: /Retry/i });
-      expect(retryButtons).toHaveLength(2); // del-002 (FAILED) and del-003 (BOUNCED)
+      expect(retryButtons).toHaveLength(2); // del-002 (FAILED) and del-003 (PERMANENTLY_FAILED)
     });
 
     it('does not show Retry button for DELIVERED status', async () => {
@@ -276,10 +291,13 @@ describe('NotificationsContent', () => {
             content: [
               {
                 id: 'del-001',
-                recipient: 'Anita Desai',
-                eventName: 'Annual Volunteer Drive',
+                eventId: 'evt-001',
+                recipientEmail: 'anita.desai@example.com',
+                subject: 'Annual Volunteer Drive',
                 status: 'DELIVERED',
-                timestamp: '2024-06-01T08:00:00Z',
+                createdAt: '2024-06-01T08:00:00Z',
+                sentAt: null,
+                lastAttemptAt: null,
               },
             ],
             totalElements: 1,
@@ -294,7 +312,7 @@ describe('NotificationsContent', () => {
       await user.click(screen.getByRole('tab', { name: /Delivery/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Anita Desai')).toBeInTheDocument();
+        expect(screen.getByText('anita.desai@example.com')).toBeInTheDocument();
       });
 
       expect(screen.queryByRole('button', { name: /Retry/i })).not.toBeInTheDocument();
@@ -308,10 +326,13 @@ describe('NotificationsContent', () => {
             content: [
               {
                 id: 'del-005',
-                recipient: 'Meera Nair',
-                eventName: 'Blood Drive',
+                eventId: 'evt-001',
+                recipientEmail: 'meera.nair@example.com',
+                subject: 'Blood Drive',
                 status: 'PENDING',
-                timestamp: '2024-06-03T10:00:00Z',
+                createdAt: '2024-06-03T10:00:00Z',
+                sentAt: null,
+                lastAttemptAt: null,
               },
             ],
             totalElements: 1,
@@ -326,7 +347,7 @@ describe('NotificationsContent', () => {
       await user.click(screen.getByRole('tab', { name: /Delivery/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Meera Nair')).toBeInTheDocument();
+        expect(screen.getByText('meera.nair@example.com')).toBeInTheDocument();
       });
 
       expect(screen.queryByRole('button', { name: /Retry/i })).not.toBeInTheDocument();
@@ -340,10 +361,13 @@ describe('NotificationsContent', () => {
             content: [
               {
                 id: 'del-004',
-                recipient: 'Raj Patel',
-                eventName: 'Community Cleanup',
+                eventId: 'evt-001',
+                recipientEmail: 'raj.patel@example.com',
+                subject: 'Community Cleanup',
                 status: 'SENT',
-                timestamp: '2024-06-03T07:00:00Z',
+                createdAt: '2024-06-03T07:00:00Z',
+                sentAt: null,
+                lastAttemptAt: null,
               },
             ],
             totalElements: 1,
@@ -358,7 +382,7 @@ describe('NotificationsContent', () => {
       await user.click(screen.getByRole('tab', { name: /Delivery/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Raj Patel')).toBeInTheDocument();
+        expect(screen.getByText('raj.patel@example.com')).toBeInTheDocument();
       });
 
       expect(screen.queryByRole('button', { name: /Retry/i })).not.toBeInTheDocument();
@@ -423,7 +447,7 @@ describe('NotificationsContent', () => {
       let schedulePayload: Record<string, unknown> | null = null;
 
       server.use(
-        http.post('/api/notifications/schedules', async ({ request }) => {
+        http.post('/api/notifications/schedule', async ({ request }) => {
           schedulePayload = (await request.json()) as Record<string, unknown>;
           return HttpResponse.json({ id: 'sched-001', status: 'SCHEDULED' }, { status: 201 });
         }),
@@ -452,6 +476,7 @@ describe('NotificationsContent', () => {
       });
 
       expect(schedulePayload!.cronExpression).toBe('0 9 * * 1');
+      expect(schedulePayload!.eventId).toBe('evt-001');
       expect(screen.queryByText(/Invalid cron expression/)).not.toBeInTheDocument();
     });
 

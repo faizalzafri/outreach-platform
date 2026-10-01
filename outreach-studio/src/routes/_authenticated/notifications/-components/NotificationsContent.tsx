@@ -493,18 +493,20 @@ function DeliveryTab() {
 
   const getDeliveryStatusClass = (status: string): string => {
     switch (status) {
-      case 'PENDING': return styles['statusPending']!;
+      case 'PENDING':
+      case 'QUEUED': return styles['statusPending']!;
       case 'SENT': return styles['statusSent']!;
       case 'DELIVERED': return styles['statusDelivered']!;
-      case 'FAILED': return styles['statusFailed']!;
+      case 'FAILED':
+      case 'PERMANENTLY_FAILED': return styles['statusFailed']!;
       case 'BOUNCED': return styles['statusBounced']!;
       default: return '';
     }
   };
 
   const columns: ColumnDef<DeliveryRecord, unknown>[] = useMemo(() => [
-    { accessorKey: 'recipient', header: 'Recipient' },
-    { accessorKey: 'eventName', header: 'Event' },
+    { accessorKey: 'recipientEmail', header: 'Recipient', enableColumnFilter: false },
+    { accessorKey: 'subject', header: 'Subject', enableColumnFilter: false },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -520,16 +522,18 @@ function DeliveryTab() {
         filterType: 'select' as const,
         filterOptions: [
           { label: 'Pending', value: 'PENDING' },
+          { label: 'Queued', value: 'QUEUED' },
           { label: 'Sent', value: 'SENT' },
           { label: 'Delivered', value: 'DELIVERED' },
           { label: 'Failed', value: 'FAILED' },
+          { label: 'Permanently failed', value: 'PERMANENTLY_FAILED' },
           { label: 'Bounced', value: 'BOUNCED' },
         ],
       },
     },
     {
-      accessorKey: 'timestamp',
-      header: 'Timestamp',
+      accessorKey: 'createdAt',
+      header: 'Created',
       cell: ({ getValue }) => {
         const date = new Date(getValue() as string);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -543,13 +547,14 @@ function DeliveryTab() {
       enableColumnFilter: false,
       cell: ({ row }) => {
         const record = row.original;
-        const canRetry = record.status === 'FAILED' || record.status === 'BOUNCED';
+        // The API retries every failed email of the record's event; bounces are not retried.
+        const canRetry = record.status === 'FAILED' || record.status === 'PERMANENTLY_FAILED';
         if (!canRetry) return null;
         return (
           <button
             type="button"
             className={styles['retryBtn']}
-            onClick={() => retryMutation.mutate(record.id)}
+            onClick={() => retryMutation.mutate(record.eventId)}
             disabled={retryMutation.isPending}
           >
             Retry
@@ -600,13 +605,13 @@ function ScheduleTab() {
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         templateId,
-        targetEvent,
+        eventId: targetEvent,
         triggerType,
       };
       if (triggerType === 'SCHEDULED') {
         payload.cronExpression = cronExpression;
       }
-      await httpClient.post('/notifications/schedules', payload);
+      await httpClient.post('/notifications/schedule', payload);
     },
     onSuccess: () => {
       setSuccess(true);
@@ -664,7 +669,7 @@ function ScheduleTab() {
             className={styles['formInput']}
             value={targetEvent}
             onChange={(e) => setTargetEvent(e.target.value)}
-            placeholder="Event ID or name"
+            placeholder="Event ID"
             required
           />
         </div>
