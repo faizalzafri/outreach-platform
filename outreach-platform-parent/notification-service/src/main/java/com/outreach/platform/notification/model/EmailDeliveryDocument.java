@@ -49,7 +49,21 @@ public class EmailDeliveryDocument {
 
     private Instant sentAt;
 
+    /**
+     * The body held a secret (activation or reset link, one-time code) and was not stored. Such
+     * deliveries are never re-sent from here; the user asks for a new link or code instead.
+     */
+    private boolean redacted;
+
     public EmailDeliveryDocument() {
+    }
+
+    public boolean isRedacted() {
+        return redacted;
+    }
+
+    public void setRedacted(boolean redacted) {
+        this.redacted = redacted;
     }
 
     public String getId() {

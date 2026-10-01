@@ -49,6 +49,7 @@ public class EmailRetryService {
             log.info("Found {} deliveries due for retry", dueForRetry.size());
         }
 
+        dueForRetry = dueForRetry.stream().filter(delivery -> !delivery.isRedacted()).toList();
         for (EmailDeliveryDocument delivery : dueForRetry) {
             delivery.setStatus(DeliveryStatus.PENDING);
             delivery.setNextRetryAt(null);
@@ -71,6 +72,7 @@ public class EmailRetryService {
 
         log.info("Manual retry requested for event {}. Found {} failed deliveries", eventId, allFailed.size());
 
+        allFailed = allFailed.stream().filter(delivery -> !delivery.isRedacted()).toList();
         for (EmailDeliveryDocument delivery : allFailed) {
             delivery.setStatus(DeliveryStatus.PENDING);
             delivery.setNextRetryAt(null);

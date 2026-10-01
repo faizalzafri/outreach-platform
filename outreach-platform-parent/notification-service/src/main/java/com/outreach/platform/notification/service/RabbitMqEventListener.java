@@ -24,12 +24,15 @@ public class RabbitMqEventListener {
 
     private final EmailDeliveryRepository emailDeliveryRepository;
     private final EmailDispatchService emailDispatchService;
+    private final IdentityNotificationService identityNotifications;
 
     @Inject
     public RabbitMqEventListener(EmailDeliveryRepository emailDeliveryRepository,
-                                 EmailDispatchService emailDispatchService) {
+                                 EmailDispatchService emailDispatchService,
+                                 IdentityNotificationService identityNotifications) {
         this.emailDeliveryRepository = emailDeliveryRepository;
         this.emailDispatchService = emailDispatchService;
+        this.identityNotifications = identityNotifications;
     }
 
     /** Routes incoming domain events to the appropriate handler based on eventType. */
@@ -39,6 +42,10 @@ public class RabbitMqEventListener {
                 message.eventType(), message.eventId());
 
         try {
+            if (identityNotifications.handles(message.eventType())) {
+                identityNotifications.handle(message);
+                return;
+            }
             switch (message.eventType()) {
                 case "SendFeedbackEmails" -> handleSendFeedbackEmails(message);
                 case "EventStatusChanged" -> handleEventStatusChanged(message);
