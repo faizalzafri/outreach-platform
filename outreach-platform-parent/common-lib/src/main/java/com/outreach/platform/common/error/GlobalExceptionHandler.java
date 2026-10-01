@@ -157,6 +157,16 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        // Spring MVC's own client errors (unknown route, wrong method, missing parameter, ...)
+        // carry their status; reporting them as 500 hides caller mistakes behind a server fault.
+        if (ex instanceof org.springframework.web.ErrorResponse springError
+                && springError.getStatusCode().is4xxClientError()) {
+            log.warn("Request rejected: {}", ex.getMessage());
+            HttpStatus status = HttpStatus.valueOf(springError.getStatusCode().value());
+            ErrorResponse response = ErrorResponse.of(
+                    status.value(), status.name(), status.getReasonPhrase(), getCorrelationId());
+            return ResponseEntity.status(status).body(response);
+        }
         log.error("Unhandled exception occurred", ex);
         ErrorResponse response = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
