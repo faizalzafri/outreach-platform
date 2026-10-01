@@ -13,9 +13,6 @@ spring:
       - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
 
-  # Use simple in-memory cache for tests (no Redis needed)
-  cache:
-    type: simple
 
   # JPA - validate schema created by Liquibase
   jpa:

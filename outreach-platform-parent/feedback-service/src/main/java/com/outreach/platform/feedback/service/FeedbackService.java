@@ -10,15 +10,12 @@ import com.outreach.platform.feedback.model.dto.FeedbackSubmitRequest;
 import com.outreach.platform.feedback.model.dto.FeedbackUpdateRequest;
 import com.outreach.platform.feedback.repo.VolunteerFeedbackRepository;
 import jakarta.inject.Inject;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,11 +34,6 @@ public class FeedbackService {
     }
 
     @Transactional
-    // listByEvent's cache key now includes the page/size (see its own comment for why), so a
-    // single-key evict here can no longer target "the" entry for this event — evict every
-    // cached page for every event instead. Feedback submission isn't a hot path, and any evicted
-    // page is just a normal cache-miss DB read away.
-    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public FeedbackDto submitFeedback(FeedbackSubmitRequest request) {
         Optional<VolunteerFeedbackEntity> existing =
                 feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId());
@@ -55,7 +47,6 @@ public class FeedbackService {
     }
 
     @Transactional
-    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public FeedbackDto updateFeedback(UUID eventId, UUID employeeId, FeedbackUpdateRequest request) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
                 .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
@@ -78,7 +69,6 @@ public class FeedbackService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "feedbackByEvent", key = "#eventId + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<FeedbackDto> listByEvent(UUID eventId, Pageable pageable) {
         return feedbackRepository.findByEventId(eventId, pageable)
                 .map(feedbackMapper::toDto);
@@ -114,7 +104,6 @@ public class FeedbackService {
     }
 
     @Transactional
-    @CacheEvict(value = "feedbackByEvent", allEntries = true)
     public void softDelete(UUID eventId, UUID employeeId) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
                 .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
@@ -123,7 +112,6 @@ public class FeedbackService {
         feedbackRepository.save(entity);
     }
 
-    @Transactional(readOnly = true)
     public List<String> getCategories() {
         return List.of(
                 "Leadership", "Communication", "Teamwork",
@@ -131,7 +119,6 @@ public class FeedbackService {
         );
     }
 
-    @Transactional(readOnly = true)
     public List<String> getTags() {
         return List.of(
                 "excellent", "needs-improvement", "first-time",

@@ -10,8 +10,6 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-import java.util.List;
-
 /**
  * MapStruct mapper for converting between feedback entities and DTOs.
  */
@@ -21,8 +19,6 @@ public interface FeedbackMapper {
     @Mapping(source = "createdDate", target = "createdAt")
     @Mapping(source = "lastModifiedDate", target = "updatedAt")
     FeedbackDto toDto(VolunteerFeedbackEntity entity);
-
-    List<FeedbackDto> toDtoList(List<VolunteerFeedbackEntity> entities);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "sentiment", ignore = true)
