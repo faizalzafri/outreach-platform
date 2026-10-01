@@ -2,6 +2,8 @@ package com.outreach.platform.ingestion;
 
 import com.outreach.platform.common.messaging.DomainEventMessage;
 import com.outreach.platform.common.messaging.RabbitMqConstants;
+import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.client.EventServiceClient;
 import com.outreach.platform.ingestion.config.TestSecurityConfig;
 import com.outreach.platform.ingestion.model.DomainEventDocument;
@@ -16,9 +18,11 @@ import jakarta.inject.Inject;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -81,6 +85,8 @@ import static org.mockito.Mockito.when;
 @Import({TestSecurityConfig.class, EndToEndEventFlowIT.TestListenerConfig.class})
 class EndToEndEventFlowIT {
 
+    private static final UUID TENANT_ID = UUID.fromString("e2e00000-0000-0000-0000-000000000001");
+
     @Container
     static MongoDBContainer mongodb = new MongoDBContainer("mongo:7.0");
 
@@ -101,6 +107,9 @@ class EndToEndEventFlowIT {
 
     @Inject
     private TestRestTemplate restTemplate;
+
+    @Inject
+    private RabbitTemplate rabbitTemplate;
 
     @Inject
     private DomainEventPublisher domainEventPublisher;
@@ -129,6 +138,16 @@ class EndToEndEventFlowIT {
         jobTrackingRepository.deleteAll();
         fileMetadataRepository.deleteAll();
         testMessageCapture.reset();
+        // Outbox writes made directly by these tests stand in for request-scoped code, which
+        // always runs with a tenant; without one the messages would (correctly) be dead-lettered.
+        TenantContext.setCurrentTenantId(TENANT_ID);
+    }
+
+    @AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+        // Every message that reached a listener carried this tenant across RabbitMQ.
+        assertThat(testMessageCapture.listenerTenants).allSatisfy(t -> assertThat(t).isEqualTo(TENANT_ID));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -188,6 +207,19 @@ class EndToEndEventFlowIT {
         assertThat(notifMsg.eventType()).isEqualTo("VolunteersImported");
         assertThat(notifMsg.payload()).containsEntry("eventId", eventId.toString());
         assertThat(notifMsg.payload()).containsKey("volunteers");
+    }
+
+    @Test
+    void tenantlessEvent_isDeadLetteredInsteadOfHandled() throws InterruptedException {
+        TenantContext.clear();
+        domainEventPublisher.publishVolunteersImported(UUID.randomUUID(), List.of(Map.of("email", "a@b.com", "name", "Alice")));
+
+        domainEventOutboxPoller.pollAndPublish();
+
+        assertThat(testMessageCapture.notificationLatch.await(3, TimeUnit.SECONDS))
+                .as("listener must not run without x-tenant-id").isFalse();
+        assertThat(rabbitTemplate.receive(RabbitMqConstants.QUEUE_NOTIFICATION_DLQ, 5000))
+                .as("message should land on the notification DLQ").isNotNull();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -287,15 +319,19 @@ class EndToEndEventFlowIT {
         volatile CountDownLatch notificationLatch = new CountDownLatch(1);
         final CopyOnWriteArrayList<DomainEventMessage> reportMessages = new CopyOnWriteArrayList<>();
         final CopyOnWriteArrayList<DomainEventMessage> notificationMessages = new CopyOnWriteArrayList<>();
+        /** Tenant bound by the listener container's interceptor from each message's x-tenant-id. */
+        final CopyOnWriteArrayList<UUID> listenerTenants = new CopyOnWriteArrayList<>();
 
         @RabbitListener(queues = RabbitMqConstants.QUEUE_REPORT)
         public void onReportMessage(DomainEventMessage message) {
+            listenerTenants.add(TenantContext.getCurrentTenantId());
             reportMessages.add(message);
             reportLatch.countDown();
         }
 
         @RabbitListener(queues = RabbitMqConstants.QUEUE_NOTIFICATION)
         public void onNotificationMessage(DomainEventMessage message) {
+            listenerTenants.add(TenantContext.getCurrentTenantId());
             notificationMessages.add(message);
             notificationLatch.countDown();
         }
@@ -305,6 +341,7 @@ class EndToEndEventFlowIT {
             notificationLatch = new CountDownLatch(1);
             reportMessages.clear();
             notificationMessages.clear();
+            listenerTenants.clear();
         }
     }
 
@@ -316,6 +353,7 @@ class EndToEndEventFlowIT {
     private ResponseEntity<Map> uploadFile(String fileName, byte[] content) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.set(TenantConstants.X_TENANT_ID_HEADER, TENANT_ID.toString()); // as the gateway would
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", new NamedByteArrayResource(fileName, content));

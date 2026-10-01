@@ -1,6 +1,7 @@
 package com.outreach.platform.event.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.model.DomainEventDocument;
 import com.outreach.platform.event.model.DomainEventStatus;
 import com.outreach.platform.event.repo.DomainEventRepository;
@@ -16,9 +17,12 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +73,26 @@ class DomainEventOutboxServiceTest {
 
         verify(domainEventRepository).findByStatusOrderByCreatedAtAsc(DomainEventStatus.PENDING);
         verify(domainEventRepository, never()).save(any(DomainEventDocument.class));
+    }
+
+    @Test
+    @DisplayName("pollAndPublishPendingEvents() publishes under the event's tenant, then clears it")
+    void pollShouldPublishUnderTheEventsTenant() {
+        UUID tenantId = UUID.randomUUID();
+        DomainEventDocument pendingEvent = new DomainEventDocument("TestEvent", "{}");
+        pendingEvent.setTenantId(tenantId);
+        when(domainEventRepository.findByStatusOrderByCreatedAtAsc(DomainEventStatus.PENDING))
+                .thenReturn(List.of(pendingEvent));
+        AtomicReference<UUID> tenantDuringPublish = new AtomicReference<>();
+        doAnswer(invocation -> {
+            tenantDuringPublish.set(TenantContext.getCurrentTenantId());
+            return null;
+        }).when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
+
+        outboxService.pollAndPublishPendingEvents();
+
+        assertThat(tenantDuringPublish.get()).isEqualTo(tenantId);
+        assertThat(TenantContext.isPresent()).isFalse();
     }
 
     @Test

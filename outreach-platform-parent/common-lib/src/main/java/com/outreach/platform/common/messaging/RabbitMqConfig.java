@@ -1,5 +1,7 @@
 package com.outreach.platform.common.messaging;
 
+import com.outreach.platform.common.tenant.TenantMessageInterceptor;
+import com.outreach.platform.common.tenant.TenantMessagePostProcessor;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -144,6 +146,8 @@ public class RabbitMqConfig {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(jackson2JsonMessageConverter);
         template.setRetryTemplate(retryTemplate());
+        // Stamps x-tenant-id from TenantContext on every outbound message.
+        template.addBeforePublishPostProcessors(new TenantMessagePostProcessor());
         return template;
     }
 
@@ -160,6 +164,9 @@ public class RabbitMqConfig {
         factory.setMessageConverter(jackson2JsonMessageConverter);
         factory.setDefaultRequeueRejected(false); // rejected messages go to DLQ, not requeued
         factory.setPrefetchCount(10);
+        // Binds TenantContext from x-tenant-id for the listener call; a message without a valid
+        // header is rejected straight to the DLQ.
+        factory.setAdviceChain(new TenantMessageInterceptor());
         return factory;
     }
 

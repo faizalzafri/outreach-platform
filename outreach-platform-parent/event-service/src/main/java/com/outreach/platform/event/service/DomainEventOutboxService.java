@@ -117,11 +117,21 @@ public class DomainEventOutboxService {
                 event.getCreatedAt()
         );
 
-        rabbitTemplate.convertAndSend(
-                RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
-                routingKey,
-                message
-        );
+        // The poller runs on a scheduler thread with no request tenant; publish under the event's
+        // own tenant so the RabbitTemplate's post-processor stamps x-tenant-id. A tenant-less
+        // event goes out without the header and is dead-lettered by the consumer.
+        if (event.getTenantId() != null) {
+            TenantContext.setCurrentTenantId(event.getTenantId());
+        }
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
+                    routingKey,
+                    message
+            );
+        } finally {
+            TenantContext.clear();
+        }
 
         log.debug("Published domain event to RabbitMQ: type={}, id={}, routingKey={}",
                 event.getEventType(), event.getId(), routingKey);
