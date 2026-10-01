@@ -109,12 +109,12 @@ spring:
           filters:
             - StripPrefix=1
 
-        # Tenant/team/sharing/activity-feed controllers in event-service keep the full
+        # Tenants (auth-service) and team/sharing/activity-feed controllers (event-service) keep the full
         # /api/... prefix in their own @RequestMapping (unlike every other service's
         # controllers, which expect StripPrefix=1 to have already removed it) — no
         # StripPrefix filter here so the incoming path reaches them unchanged.
         - id: tenant-service
-          uri: lb://event-service
+          uri: lb://auth-service
           predicates:
             - Path=/api/tenants/**
 

@@ -53,7 +53,7 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain apiAuthSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/auth/**")
+                .securityMatcher("/api/auth/**", "/api/tenants/**")
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
@@ -105,6 +105,8 @@ public class SecurityConfig {
                         // Second sign-in step: the password was already checked; the parked
                         // authentication in this session is what the code completes
                         .requestMatchers("/login/otp", "/login/otp/resend").permitAll()
+                        // Gateway asks for a tenant's status on a cache miss (not routed publicly)
+                        .requestMatchers("/internal/tenants/*/status").permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )

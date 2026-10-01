@@ -16,9 +16,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 
 /** Maps account errors from the user-admin and profile APIs to the platform's shared error shape. */
-@RestControllerAdvice(assignableTypes = {UserAdminController.class, ProfileController.class, SecurityPolicyController.class})
+@RestControllerAdvice(assignableTypes = {UserAdminController.class, ProfileController.class,
+        SecurityPolicyController.class, TenantAdminController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class AccountApiControllerAdvice {
+
+    @ExceptionHandler(com.outreach.platform.auth.service.TenantAdminService.TenantNotFoundException.class)
+    public ResponseEntity<ErrorResponse> tenantNotFound(RuntimeException ex) {
+        return error(HttpStatus.NOT_FOUND, "TENANT_NOT_FOUND", "Organization not found");
+    }
 
     @ExceptionHandler(AccountNotFoundException.class)
     public ResponseEntity<ErrorResponse> notFound(AccountNotFoundException ex) {

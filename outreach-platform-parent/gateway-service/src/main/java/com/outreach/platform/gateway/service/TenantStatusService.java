@@ -5,12 +5,15 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.reactive.ReactorLoadBalancerExchangeFilterFunction;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-/** Resolves tenant status using two-tier caching: Caffeine (L1, 5s) → Redis (L2, 60s) → Database (L3). */
+/** Resolves tenant status: Caffeine (L1, 5s) → Redis (L2, 60s) → auth-service, which owns tenants. */
 @Service
 public class TenantStatusService {
 
@@ -28,8 +31,15 @@ public class TenantStatusService {
     /** L1 local cache: Caffeine with 5s TTL, max 1000 entries. */
     private final Cache<String, String> localCache;
 
-    public TenantStatusService(ReactiveStringRedisTemplate redisTemplate) {
+    private final WebClient webClient;
+    private final String statusUri;
+
+    public TenantStatusService(ReactiveStringRedisTemplate redisTemplate,
+                               ReactorLoadBalancerExchangeFilterFunction loadBalancer,
+                               @Value("${gateway.tenant-status-uri:http://auth-service/internal/tenants/{id}/status}") String statusUri) {
         this.redisTemplate = redisTemplate;
+        this.webClient = WebClient.builder().filter(loadBalancer).build();
+        this.statusUri = statusUri;
         this.localCache = Caffeine.newBuilder()
                 .maximumSize(1000)
                 .expireAfterWrite(Duration.ofSeconds(5))
@@ -38,7 +48,7 @@ public class TenantStatusService {
     }
 
     /**
-     * Resolves the tenant status using L1 (Caffeine) → L2 (Redis) → L3 (DB) lookup.
+     * Resolves the tenant status using L1 (Caffeine) → L2 (Redis) → auth-service.
      *
      * @param tenantId the tenant identifier
      * @return a Mono emitting the tenant status string
@@ -63,19 +73,30 @@ public class TenantStatusService {
                 .switchIfEmpty(Mono.defer(() -> resolveAndCache(tenantId, cacheKey)));
     }
 
-    /** Resolves tenant status on cache miss; currently defaults to ACTIVE. */
+    /**
+     * Cache miss: ask auth-service, which owns tenants. If it cannot be reached, the request is let
+     * through as ACTIVE (and not cached, so the next request asks again) so an auth-service outage doesn't take every
+     * tenant offline; a tenant auth-service reports as suspended or deactivated is refused.
+     */
     private Mono<String> resolveAndCache(String tenantId, String cacheKey) {
-        log.debug("Tenant status L1+L2 cache miss for {}; defaulting to ACTIVE", tenantId);
+        return webClient.get()
+                .uri(statusUri, tenantId)
+                .retrieve()
+                .bodyToMono(StatusResponse.class)
+                .map(StatusResponse::status)
+                .timeout(Duration.ofSeconds(2))
+                .flatMap(status -> {
+                    log.debug("Tenant status resolved from auth-service for {}: {}", tenantId, status);
+                    localCache.put(tenantId, status);
+                    return redisTemplate.opsForValue().set(cacheKey, status, REDIS_CACHE_TTL).thenReturn(status);
+                })
+                .onErrorResume(e -> {
+                    log.warn("Tenant status lookup failed for {}; allowing as ACTIVE: {}", tenantId, e.toString());
+                    return Mono.just(STATUS_ACTIVE);
+                });
+    }
 
-        // TODO: Replace with WebClient call to internal tenant status endpoint
-        String resolvedStatus = STATUS_ACTIVE;
-
-        // Populate both L1 and L2 caches
-        localCache.put(tenantId, resolvedStatus);
-
-        return redisTemplate.opsForValue()
-                .set(cacheKey, resolvedStatus, REDIS_CACHE_TTL)
-                .thenReturn(resolvedStatus);
+    private record StatusResponse(String status) {
     }
 
     /**

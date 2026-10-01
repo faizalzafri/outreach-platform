@@ -1,10 +1,18 @@
 package com.outreach.platform.auth.repo;
 
 import com.outreach.platform.auth.entity.Tenant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;
 
 /** Spring Data JPA repository for {@link Tenant} entities. */
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsBySlug(String slug);
+
+    Page<Tenant> findByNameContainingIgnoreCaseOrSlugContainingIgnoreCase(String name, String slug, Pageable pageable);
 }
