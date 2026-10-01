@@ -108,12 +108,21 @@ class DiscoveryServiceIntegrationTest {
         headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
-        // Use authenticated access since specific app lookups may behave differently
         ResponseEntity<String> response = restTemplate
-                .withBasicAuth("eurekaadmin", "eurekasecret")
                 .exchange("/eureka/apps/NON-EXISTENT-SERVICE", HttpMethod.GET, request, String.class);
 
         // Eureka returns 404 when the app does not exist in the registry
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("Heartbeat for an unknown instance returns 404 so the client re-registers")
+    void heartbeatForUnknownInstance_returns404() {
+        // What every client sees after the registry restarts: anything but 404 and it never re-registers.
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/eureka/apps/SOME-SERVICE/unknown-instance?status=UP&lastDirtyTimestamp=1",
+                HttpMethod.PUT, HttpEntity.EMPTY, String.class);
+
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
