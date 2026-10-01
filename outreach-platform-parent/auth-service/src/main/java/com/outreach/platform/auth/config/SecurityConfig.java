@@ -88,6 +88,11 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/.well-known/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // The browser fetches this automatically on the login page. If it reached
+                        // the login entry point it would be saved as the post-login redirect
+                        // (the custom request cache below has no favicon exclusion), replacing the
+                        // pending /oauth2/authorize request.
+                        .requestMatchers("/favicon.ico").permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )

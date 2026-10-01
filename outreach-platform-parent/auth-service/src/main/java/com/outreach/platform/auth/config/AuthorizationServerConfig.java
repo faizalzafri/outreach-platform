@@ -131,11 +131,12 @@ public class AuthorizationServerConfig {
     public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
         JdbcRegisteredClientRepository repository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
-        // Register outreach-dashboard (public client, PKCE, Authorization Code)
-        RegisteredClient dashboardClient = buildDashboardClient();
-        if (repository.findByClientId(dashboardClient.getClientId()) == null) {
-            repository.save(dashboardClient);
-        }
+        // Register outreach-dashboard (public client, PKCE, Authorization Code). Unlike the
+        // services client, an existing row is updated in place (same id) so configuration changes
+        // such as a new redirect URI reach databases created by an earlier version.
+        RegisteredClient existingDashboard = repository.findByClientId(properties.clients().dashboard().clientId());
+        repository.save(buildDashboardClient(
+                existingDashboard != null ? existingDashboard.getId() : UUID.randomUUID().toString()));
 
         // Register outreach-services (confidential client, Client Credentials)
         RegisteredClient servicesClient = buildServicesClient();
@@ -317,16 +318,19 @@ public class AuthorizationServerConfig {
         };
     }
 
-    private RegisteredClient buildDashboardClient() {
+    private RegisteredClient buildDashboardClient(String id) {
         var clientsProps = properties.clients();
         var tokenProps = properties.token();
 
-        return RegisteredClient.withId(UUID.randomUUID().toString())
+        return RegisteredClient.withId(id)
                 .clientId(clientsProps.dashboard().clientId())
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .redirectUri(clientsProps.dashboard().redirectUri())
+                // Public clients get no refresh token, so the SPA renews by re-authorizing in a
+                // hidden iframe that lands here.
+                .redirectUri(clientsProps.dashboard().silentRedirectUri())
                 .postLogoutRedirectUri(clientsProps.dashboard().postLogoutRedirectUri())
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)

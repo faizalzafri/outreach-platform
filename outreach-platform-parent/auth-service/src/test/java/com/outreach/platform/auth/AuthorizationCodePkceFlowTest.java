@@ -209,6 +209,36 @@ class AuthorizationCodePkceFlowTest extends BaseAuthIntegrationTest {
         assertThat(payloadJson).contains("\"sub\"");
     }
 
+    @Test
+    @DisplayName("Silent-renewal redirect URI is registered for the dashboard client")
+    void silentCallbackRedirectUri_isAcceptedByTheAuthorizeEndpoint() {
+        // Public clients get no refresh token, so the SPA renews by re-running this request in a
+        // hidden iframe; an unregistered redirect_uri would be rejected with 400.
+        String authorizeUrl = baseUrl() + "/oauth2/authorize"
+                + "?response_type=code"
+                + "&client_id=outreach-dashboard"
+                + "&redirect_uri=http://localhost:5173/silent-callback.html"
+                + "&scope=openid"
+                + "&code_challenge=" + codeChallenge
+                + "&code_challenge_method=S256"
+                + "&state=silent";
+
+        ResponseEntity<String> response = restTemplate.getForEntity(authorizeUrl, String.class);
+
+        assertThat(response.getStatusCode().value()).isNotEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("Browser favicon request is not treated as a protected page")
+    void faviconRequest_isNotSavedAsThePostLoginTarget() {
+        // The login page triggers an automatic /favicon.ico fetch. If that lands on the login
+        // entry point it is saved as the post-login redirect, replacing the pending
+        // /oauth2/authorize request, and the user ends up on a favicon 404 after signing in.
+        ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/favicon.ico", String.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+    }
+
     private String extractCsrfToken(String html) {
         if (html == null) return null;
         Pattern pattern = Pattern.compile("name=\"_csrf\"[^>]*value=\"([^\"]+)\"");

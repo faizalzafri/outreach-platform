@@ -34,6 +34,7 @@ public record AuthServiceProperties(
         public record DashboardClient(
                 @NotBlank String clientId,
                 @NotBlank String redirectUri,
+                @NotBlank String silentRedirectUri,
                 @NotBlank String postLogoutRedirectUri
         ) {}
 

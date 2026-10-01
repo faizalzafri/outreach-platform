@@ -58,6 +58,8 @@ auth-server:
     dashboard:
       client-id: outreach-dashboard
       redirect-uri: http://localhost:5173/callback
+      # Hidden-iframe session renewal target (the SPA's public/silent-callback.html)
+      silent-redirect-uri: http://localhost:5173/silent-callback.html
       post-logout-redirect-uri: http://localhost:5173/login
     services:
       client-id: outreach-services
