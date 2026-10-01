@@ -1,6 +1,7 @@
 package com.outreach.platform.event.integration;
 
 import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.event.model.DomainEventDocument;
 import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
@@ -92,13 +93,16 @@ class DomainEventOutboxIT {
                 event.id());
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // Verify domain event exists in the outbox collection
-        // The DomainEventPublisher saves to "domain_events" collection using DomainEvent class
-        long count = mongoTemplate.count(
-                Query.query(Criteria.where("eventType").is("EventStatusChanged")),
-                "domain_events");
+        // The outbox document must be readable by the poller: tenant-stamped, with a JSON string
+        // payload carrying the event id (not a nested map, which the poller can't parse).
+        DomainEventDocument saved = mongoTemplate.findOne(
+                Query.query(Criteria.where("eventType").is("EventStatusChanged")
+                        .and("payload").regex(event.id().toString())),
+                DomainEventDocument.class);
 
-        assertThat(count).isGreaterThanOrEqualTo(1);
+        assertThat(saved).isNotNull();
+        assertThat(saved.getTenantId()).isEqualTo(TenantConstants.DEFAULT_TENANT_ID);
+        assertThat(saved.getPayload()).contains("\"eventId\":\"" + event.id() + "\"");
     }
 
     @Test
@@ -116,12 +120,8 @@ class DomainEventOutboxIT {
         // Wait for the outbox poller to process the PENDING event
         // The poller runs every 1000ms in test config
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-            // Check that domain events with PUBLISHED status exist
-            // The DomainEventOutboxService uses DomainEventDocument/DomainEventRepository
-            // The DomainEventPublisher uses DomainEvent (different class) saved directly to collection
-            // Based on the code, DomainEventPublisher saves DomainEvent objects with status="PENDING"
-            // The outbox poller (DomainEventOutboxService) reads from DomainEventRepository (DomainEventDocument)
-            // These are different mechanisms — let's verify the direct save from DomainEventPublisher
+            // No RabbitMQ in this test context, so the poller can't reach PUBLISHED here; this only
+            // checks the event landed in the outbox it polls.
             long total = mongoTemplate.count(
                     Query.query(Criteria.where("eventType").is("EventStatusChanged")),
                     "domain_events");

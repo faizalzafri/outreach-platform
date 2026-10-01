@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outreach.platform.common.messaging.DomainEventMessage;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Outbox service for domain events. Persists events as PENDING and includes a
@@ -63,6 +63,15 @@ public class DomainEventOutboxService {
         DomainEventDocument saved = domainEventRepository.save(document);
         log.info("Domain event saved to outbox: type={}, id={}, tenantId={}", eventType, saved.getId(), saved.getTenantId());
         return saved;
+    }
+
+    /** Serializes the payload to JSON and saves it to the outbox with PENDING status. */
+    public DomainEventDocument save(String eventType, Map<String, Object> payload) {
+        try {
+            return save(eventType, objectMapper.writeValueAsString(payload));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Domain event payload is not serializable: " + eventType, e);
+        }
     }
 
     /**
@@ -128,7 +137,6 @@ public class DomainEventOutboxService {
         };
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> deserializePayload(String payload) {
         try {
             return objectMapper.readValue(payload, new TypeReference<Map<String, Object>>() {});
