@@ -4,6 +4,7 @@ import com.outreach.platform.common.tenant.TenantMessageInterceptor;
 import com.outreach.platform.common.tenant.TenantMessagePostProcessor;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
@@ -102,6 +103,40 @@ public class RabbitMqConfig {
                 .with(RabbitMqConstants.ROUTING_KEY_SEND_FEEDBACK_EMAILS);
     }
 
+    /** Identity emails (invitation, reset, password changed, OTP) are delivered by notification-service. */
+    @Bean
+    public Declarables notificationIdentityBindings() {
+        return new Declarables(java.util.stream.Stream.of(
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_USER_INVITED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_RESET_REQUESTED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_CHANGED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_OTP_ISSUED)
+                .map(key -> BindingBuilder.bind(notificationQueue()).to(outreachEventsExchange()).with(key))
+                .toList());
+    }
+
+    @Bean
+    public Queue eventIdentityQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_EVENT_IDENTITY)
+                .withArgument("x-dead-letter-exchange", RabbitMqConstants.EXCHANGE_DEAD_LETTER)
+                .withArgument("x-dead-letter-routing-key", RabbitMqConstants.ROUTING_KEY_EVENT_IDENTITY_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Queue eventIdentityDeadLetterQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_EVENT_IDENTITY_DLQ).build();
+    }
+
+    @Bean
+    public Declarables eventIdentityBindings() {
+        return new Declarables(
+                BindingBuilder.bind(eventIdentityQueue()).to(outreachEventsExchange())
+                        .with(RabbitMqConstants.ROUTING_KEY_IDENTITY_USER_CHANGED),
+                BindingBuilder.bind(eventIdentityDeadLetterQueue()).to(deadLetterExchange())
+                        .with(RabbitMqConstants.ROUTING_KEY_EVENT_IDENTITY_DLQ));
+    }
+
     @Bean
     public Binding reportBindingImportJobCompleted() {
         return BindingBuilder.bind(reportQueue())
@@ -158,8 +193,12 @@ public class RabbitMqConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            MessageConverter jackson2JsonMessageConverter) {
+            MessageConverter jackson2JsonMessageConverter,
+            // Boot's own property, which a hand-built factory would otherwise ignore (tests set it false)
+            @org.springframework.beans.factory.annotation.Value("${spring.rabbitmq.listener.simple.auto-startup:true}")
+            boolean autoStartup) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setAutoStartup(autoStartup);
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jackson2JsonMessageConverter);
         factory.setDefaultRequeueRejected(false); // rejected messages go to DLQ, not requeued

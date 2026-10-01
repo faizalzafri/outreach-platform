@@ -80,7 +80,7 @@ public class AesEncryptionConverter implements AttributeConverter<String, String
         }
     }
 
-    private byte[] getEncryptionKey() {
+    static byte[] getEncryptionKey() {
         String keyHex = System.getenv(ENV_KEY_NAME);
         if (keyHex == null || keyHex.isBlank()) {
             // Fallback to system property for testing
