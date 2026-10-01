@@ -50,4 +50,3 @@ notification-service:
   retry-backoff-minutes: 1,5,30
   from-address: test@outreach.com
   from-name: Test Platform
-  batch-size: 10

@@ -12,10 +12,8 @@ public record NotificationServiceProperties(
         int maxRetryAttempts,
         List<Integer> retryBackoffMinutes,
         String fromAddress,
-        String fromName,
-        int batchSize
+        String fromName
 ) {
-
 
     public NotificationServiceProperties {
         if (maxRetryAttempts <= 0) {
@@ -29,9 +27,6 @@ public record NotificationServiceProperties(
         }
         if (fromName == null || fromName.isBlank()) {
             fromName = "Outreach Platform";
-        }
-        if (batchSize <= 0) {
-            batchSize = 50;
         }
     }
 }

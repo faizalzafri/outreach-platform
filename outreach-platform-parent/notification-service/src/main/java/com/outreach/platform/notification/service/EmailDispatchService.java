@@ -5,7 +5,6 @@ import com.outreach.platform.notification.model.DeliveryStatus;
 import com.outreach.platform.notification.model.EmailDeliveryDocument;
 import com.outreach.platform.notification.repo.EmailDeliveryRepository;
 import jakarta.inject.Inject;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,8 +64,6 @@ public class EmailDispatchService {
 
             log.info("Email sent successfully to {} for event {}", delivery.getRecipientEmail(), delivery.getEventId());
 
-        } catch (MessagingException e) {
-            handleFailure(delivery, e.getMessage());
         } catch (Exception e) {
             handleFailure(delivery, e.getMessage());
         }

@@ -50,13 +50,6 @@ public class DeliveryTrackingService {
     }
 
     /**
-     * Returns paginated delivery history for a specific event.
-     */
-    public Page<EmailDeliveryDocument> getDeliveryHistoryByEvent(String eventId, Pageable pageable) {
-        return deliveryRepository.findByEventId(eventId, pageable);
-    }
-
-    /**
      * Computes delivery rate analytics: percentage of sent, failed, bounced, and delivered emails.
      */
     public DeliveryAnalyticsResponse getAnalytics() {

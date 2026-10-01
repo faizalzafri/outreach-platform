@@ -1,7 +1,5 @@
 package com.outreach.platform.notification.service;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -14,15 +12,9 @@ import java.util.Map;
 @Service
 public class TemplateRenderingService {
 
-    private final TemplateEngine stringTemplateEngine;
+    private final TemplateEngine stringTemplateEngine = new TemplateEngine();
 
-    @Inject
     public TemplateRenderingService() {
-        this.stringTemplateEngine = new TemplateEngine();
-    }
-
-    @PostConstruct
-    void configureEngine() {
         StringTemplateResolver resolver = new StringTemplateResolver();
         resolver.setTemplateMode(TemplateMode.HTML);
         resolver.setCacheable(false);

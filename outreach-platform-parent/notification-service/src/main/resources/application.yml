@@ -168,7 +168,6 @@ notification-service:
   retry-backoff-minutes: 1,5,30,120,720
   from-address: noreply@outreach.com
   from-name: Outreach Platform
-  batch-size: 50
 
 # SpringDoc OpenAPI
 springdoc:

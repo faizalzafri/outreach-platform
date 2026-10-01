@@ -19,7 +19,6 @@ class TemplateRenderingServiceTest {
     @BeforeEach
     void setUp() {
         renderingService = new TemplateRenderingService();
-        renderingService.configureEngine();
     }
 
     @Test

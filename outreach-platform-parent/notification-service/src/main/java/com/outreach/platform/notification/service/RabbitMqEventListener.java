@@ -60,18 +60,9 @@ public class RabbitMqEventListener {
         log.info("Processing SendFeedbackEmails via RabbitMQ: eventId={}, recipientCount={}", eventId, recipients.size());
 
         for (Map<String, String> recipient : recipients) {
-            EmailDeliveryDocument delivery = new EmailDeliveryDocument();
-            delivery.setEventId(eventId);
-            delivery.setRecipientEmail(recipient.getOrDefault("email", ""));
-            delivery.setRecipientName(recipient.getOrDefault("name", ""));
-            delivery.setSubject("We'd love your feedback!");
-            delivery.setBody("Please provide your feedback for the recent outreach event.");
-            delivery.setStatus(DeliveryStatus.PENDING);
-            delivery.setAttempts(0);
-            delivery.setCreatedAt(Instant.now());
-
-            EmailDeliveryDocument saved = emailDeliveryRepository.save(delivery);
-            emailDispatchService.dispatchEmail(saved);
+            queueEmail(eventId, recipient.getOrDefault("email", ""), recipient.getOrDefault("name", ""),
+                    "We'd love your feedback!",
+                    "Please provide your feedback for the recent outreach event.");
         }
     }
 
@@ -83,18 +74,11 @@ public class RabbitMqEventListener {
 
         log.info("Processing EventStatusChanged via RabbitMQ: eventId={}, newStatus={}", eventId, newStatus);
 
-        EmailDeliveryDocument delivery = new EmailDeliveryDocument();
-        delivery.setEventId(eventId);
-        delivery.setRecipientEmail(String.valueOf(payload.getOrDefault("notifyEmail", "")));
-        delivery.setRecipientName(String.valueOf(payload.getOrDefault("notifyName", "")));
-        delivery.setSubject("Event Update: " + eventName + " — " + newStatus);
-        delivery.setBody("The event '" + eventName + "' has been updated to status: " + newStatus);
-        delivery.setStatus(DeliveryStatus.PENDING);
-        delivery.setAttempts(0);
-        delivery.setCreatedAt(Instant.now());
-
-        EmailDeliveryDocument saved = emailDeliveryRepository.save(delivery);
-        emailDispatchService.dispatchEmail(saved);
+        queueEmail(eventId,
+                String.valueOf(payload.getOrDefault("notifyEmail", "")),
+                String.valueOf(payload.getOrDefault("notifyName", "")),
+                "Event Update: " + eventName + " — " + newStatus,
+                "The event '" + eventName + "' has been updated to status: " + newStatus);
     }
 
     @SuppressWarnings("unchecked")
@@ -106,18 +90,24 @@ public class RabbitMqEventListener {
         log.info("Processing VolunteersImported via RabbitMQ: eventId={}, volunteerCount={}", eventId, volunteers.size());
 
         for (Map<String, String> volunteer : volunteers) {
-            EmailDeliveryDocument delivery = new EmailDeliveryDocument();
-            delivery.setEventId(eventId);
-            delivery.setRecipientEmail(volunteer.getOrDefault("email", ""));
-            delivery.setRecipientName(volunteer.getOrDefault("name", ""));
-            delivery.setSubject("Welcome to the Outreach Platform!");
-            delivery.setBody("You have been registered as a volunteer. Thank you for your participation!");
-            delivery.setStatus(DeliveryStatus.PENDING);
-            delivery.setAttempts(0);
-            delivery.setCreatedAt(Instant.now());
-
-            EmailDeliveryDocument saved = emailDeliveryRepository.save(delivery);
-            emailDispatchService.dispatchEmail(saved);
+            queueEmail(eventId, volunteer.getOrDefault("email", ""), volunteer.getOrDefault("name", ""),
+                    "Welcome to the Outreach Platform!",
+                    "You have been registered as a volunteer. Thank you for your participation!");
         }
+    }
+
+    /** Persists a PENDING delivery record and hands it to the async dispatcher. */
+    private void queueEmail(String eventId, String email, String name, String subject, String body) {
+        EmailDeliveryDocument delivery = new EmailDeliveryDocument();
+        delivery.setEventId(eventId);
+        delivery.setRecipientEmail(email);
+        delivery.setRecipientName(name);
+        delivery.setSubject(subject);
+        delivery.setBody(body);
+        delivery.setStatus(DeliveryStatus.PENDING);
+        delivery.setAttempts(0);
+        delivery.setCreatedAt(Instant.now());
+
+        emailDispatchService.dispatchEmail(emailDeliveryRepository.save(delivery));
     }
 }

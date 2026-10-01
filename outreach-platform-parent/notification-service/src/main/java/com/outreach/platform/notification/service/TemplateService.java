@@ -42,11 +42,6 @@ public class TemplateService {
         return templateRepository.findAll(pageable).map(this::toDto);
     }
 
-    @Transactional(readOnly = true)
-    public TemplateDto getTemplate(UUID id) {
-        return toDto(findEntityOrThrow(id));
-    }
-
     @Transactional
     public TemplateDto createTemplate(TemplateCreateRequest request) {
         NotificationTemplateEntity entity = new NotificationTemplateEntity();
