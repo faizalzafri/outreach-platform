@@ -191,6 +191,8 @@ export function Sidebar({
           </div>
 
           <div className={styles.bottomActions}>
+            {/* Settings opens user administration, which only admins may use */}
+            {user.roles.includes('ROLE_ADMIN') && (
             <Link
               to="/admin"
               search={{ page: 1, size: 10 }}
@@ -206,6 +208,7 @@ export function Sidebar({
               </span>
               <span className={styles.bottomBtnLabel}>Settings</span>
             </Link>
+            )}
 
             <button
               type="button"
