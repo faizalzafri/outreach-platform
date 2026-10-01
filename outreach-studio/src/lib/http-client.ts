@@ -53,6 +53,18 @@ export function setToastHandler(handler: (toast: ToastPayload) => void): void {
 // --- Error normalization ---
 
 /**
+ * The shared backend ErrorResponse sends field errors as { field: [messages] }; flatten to one
+ * entry per message. An already-flat array is passed through.
+ */
+function toFieldErrors(raw: unknown): Array<{ field: string; message: string }> {
+  if (Array.isArray(raw)) return raw as Array<{ field: string; message: string }>;
+  if (!raw || typeof raw !== 'object') return [];
+  return Object.entries(raw as Record<string, unknown>).flatMap(([field, messages]) =>
+    (Array.isArray(messages) ? messages : [messages]).map((message) => ({ field, message: String(message) })),
+  );
+}
+
+/**
  * Transforms any AxiosError into a consistent NormalizedError structure.
  */
 export function normalizeError(error: AxiosError): NormalizedError {
@@ -81,9 +93,18 @@ export function normalizeError(error: AxiosError): NormalizedError {
         (typeof data.correlationId === 'string' ? data.correlationId : null) ??
         (response.headers['x-correlation-id'] as string | undefined) ??
         null,
-      fieldErrors: Array.isArray(data.fieldErrors)
-        ? (data.fieldErrors as Array<{ field: string; message: string }>)
-        : [],
+      fieldErrors: toFieldErrors(data.fieldErrors),
+    };
+  }
+
+  // RFC 7807 ProblemDetail, which several service-specific handlers return
+  if (data && typeof data.detail === 'string') {
+    return {
+      status: response.status,
+      type: typeof data.title === 'string' ? data.title : 'UNKNOWN_ERROR',
+      message: data.detail,
+      correlationId: (response.headers['x-correlation-id'] as string | undefined) ?? null,
+      fieldErrors: [],
     };
   }
 

@@ -139,7 +139,7 @@ function AuditLogIcon() {
  * Role-based visibility rules:
  * - ROLE_ADMIN: all sections
  * - ROLE_PMO: Dashboard, Events, Volunteers, Feedback, Reports
- * - ROLE_POC: Dashboard, Events (assigned), Volunteers (enrolled), Feedback
+ * - ROLE_POC: Events, Volunteers, Feedback
  *
  * Items with empty requiredRoles are visible to all authenticated users.
  */
@@ -147,7 +147,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Overview',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon, requiredRoles: [] },
+      { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO'] },
     ],
   },
   {
