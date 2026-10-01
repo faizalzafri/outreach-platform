@@ -23,9 +23,11 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -235,5 +237,9 @@ class ReportControllerTest {
                         .param("cities", "Mumbai", "Delhi"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+
+        verify(reportService).aggregateByEvent(new ReportQueryParams(
+                LocalDate.of(2024, 1, 1), LocalDate.of(2024, 6, 30),
+                null, List.of("Mumbai", "Delhi"), null, null, null));
     }
 }

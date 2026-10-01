@@ -44,11 +44,6 @@ public class ScheduledReportService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public Optional<ScheduledReportDto> getScheduledReport(UUID id) {
-        return findEntityById(id).map(this::toDto);
-    }
-
     @Transactional
     public ScheduledReportDto createScheduledReport(ScheduledReportCreateRequest request) {
         ReportScheduleEntity entity = new ReportScheduleEntity();

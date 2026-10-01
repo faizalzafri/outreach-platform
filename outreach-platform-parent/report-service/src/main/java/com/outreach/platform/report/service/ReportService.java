@@ -42,7 +42,7 @@ public class ReportService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Cacheable(value = "reportCache", key = "'byEvent:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'byEvent:' + #params")
     public List<EventScoreDto> aggregateByEvent(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.id::text AS event_id, e.event_name, e.city,
@@ -71,7 +71,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byBeneficiary:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'byBeneficiary:' + #params")
     public List<BeneficiaryScoreDto> aggregateByBeneficiary(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT b.id::text AS beneficiary_id, b.name AS beneficiary_name,
@@ -99,7 +99,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byCity:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'byCity:' + #params")
     public List<CityScoreDto> aggregateByCity(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.city,
@@ -126,7 +126,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'byPoc:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'byPoc:' + #params")
     public List<PocScoreDto> aggregateByPoc(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT u.id::text AS poc_id, u.username AS poc_name,
@@ -154,7 +154,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'dashboard:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'dashboard:' + #params")
     public DashboardSummaryDto getDashboardSummary(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT
@@ -180,7 +180,7 @@ public class ReportService {
         ));
     }
 
-    @Cacheable(value = "reportCache", key = "'trends:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'trends:' + #params")
     public TrendDataDto getTrends(ReportQueryParams params) {
         String granularity = params.effectiveGranularity();
         String truncExpr = mapGranularityToTrunc(granularity);
@@ -211,7 +211,7 @@ public class ReportService {
         return new TrendDataDto(granularity, points);
     }
 
-    @Cacheable(value = "reportCache", key = "'kpis:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'kpis:' + #params")
     public KpiDto getKpis(ReportQueryParams params) {
         LocalDate startOfMonth = YearMonth.now().atDay(1);
 
@@ -259,7 +259,7 @@ public class ReportService {
         ), Date.valueOf(startOfMonth), Date.valueOf(startOfMonth));
     }
 
-    @Cacheable(value = "reportCache", key = "'timeSeries:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'timeSeries:' + #params")
     public List<TimeSeriesDataPoint> getTimeSeries(ReportQueryParams params) {
         String granularity = params.effectiveGranularity();
         String truncExpr = mapGranularityToTrunc(granularity);
@@ -285,7 +285,7 @@ public class ReportService {
         ), args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'comparison:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'comparison:' + #params")
     public ComparisonResultDto getComparison(ReportQueryParams params) {
         if (params.eventIds() != null && !params.eventIds().isEmpty()) {
             return compareEvents(params);
@@ -293,7 +293,7 @@ public class ReportService {
         return comparePeriods(params);
     }
 
-    @Cacheable(value = "reportCache", key = "'heatmap:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'heatmap:' + #params")
     public List<HeatmapEntry> getHeatmap(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.city,
@@ -340,7 +340,7 @@ public class ReportService {
                 .toList();
     }
 
-    @Cacheable(value = "reportCache", key = "'sentiment:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'sentiment:' + #params")
     public SentimentBreakdownDto getSentiment(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT
@@ -370,7 +370,7 @@ public class ReportService {
         }, args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'participation:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'participation:' + #params")
     public ParticipationRateDto getParticipationRate(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT
@@ -401,7 +401,7 @@ public class ReportService {
         }, args.toArray());
     }
 
-    @Cacheable(value = "reportCache", key = "'nps:' + #params.hashCode()")
+    @Cacheable(value = "reportCache", key = "'nps:' + #params")
     public List<NpsResultDto> getNps(ReportQueryParams params) {
         StringBuilder sql = new StringBuilder("""
                 SELECT e.id::text AS event_id, e.event_name,

@@ -1,6 +1,7 @@
 package com.outreach.platform.report.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,9 +12,9 @@ import java.util.List;
 @Schema(description = "Common query parameters for report aggregation endpoints")
 public record ReportQueryParams(
         @Schema(description = "Start of date range", example = "2024-01-01")
-        LocalDate dateFrom,
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
         @Schema(description = "End of date range", example = "2024-12-31")
-        LocalDate dateTo,
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @Schema(description = "Filter by event IDs")
         List<String> eventIds,
         @Schema(description = "Filter by cities")

@@ -7,9 +7,9 @@ import com.outreach.platform.report.model.ExportJobStatus;
 import com.outreach.platform.report.model.ExportRequest;
 import com.outreach.platform.report.repo.ExportJobRepository;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 
 /**
  * Service handling asynchronous report export generation.
@@ -30,10 +31,13 @@ public class ExportService {
     private static final Logger log = LoggerFactory.getLogger(ExportService.class);
 
     private final ExportJobRepository exportJobRepository;
+    private final Executor exportTaskExecutor;
 
     @Inject
-    public ExportService(ExportJobRepository exportJobRepository) {
+    public ExportService(ExportJobRepository exportJobRepository,
+                         @Named("exportTaskExecutor") Executor exportTaskExecutor) {
         this.exportJobRepository = exportJobRepository;
+        this.exportTaskExecutor = exportTaskExecutor;
     }
 
     /** Submits a new export job and triggers async generation. */
@@ -50,7 +54,9 @@ public class ExportService {
 
         exportJobRepository.save(job);
 
-        generateExportAsync(jobId, request.format(), request.filters());
+        // Submitted to the executor directly: an @Async method called via `this` bypasses the proxy
+        // and would run synchronously on the request thread.
+        exportTaskExecutor.execute(() -> generateExport(jobId, request.format(), request.filters()));
 
         return jobId;
     }
@@ -70,8 +76,7 @@ public class ExportService {
                 .orElse(null);
     }
 
-    @Async("exportTaskExecutor")
-    public void generateExportAsync(String jobId, ExportFormat format, Map<String, Object> filters) {
+    private void generateExport(String jobId, ExportFormat format, Map<String, Object> filters) {
         log.info("Starting async export generation for job: {}, format: {}", jobId, format);
 
         ExportJobDocument job = exportJobRepository.findByJobId(jobId).orElse(null);
