@@ -59,7 +59,8 @@ public class TenantStatusService {
                     // Populate L1 cache on Redis hit
                     localCache.put(tenantId, status);
                 })
-                .switchIfEmpty(resolveAndCache(tenantId, cacheKey));
+                // defer: building the fallback eagerly puts ACTIVE into L1 before Redis has answered
+                .switchIfEmpty(Mono.defer(() -> resolveAndCache(tenantId, cacheKey)));
     }
 
     /** Resolves tenant status on cache miss; currently defaults to ACTIVE. */
