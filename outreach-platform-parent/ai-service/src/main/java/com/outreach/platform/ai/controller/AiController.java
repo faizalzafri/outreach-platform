@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /** REST controller for async AI operations (summarize, anomaly detection, NL queries). */
 @RestController
@@ -51,7 +52,7 @@ public class AiController {
                 "maxLength", request.maxLength() != null ? request.maxLength() : 500
         ));
 
-        aiService.summarize(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.summarize(request));
 
         return acceptedResponse(job.getId());
     }
@@ -68,7 +69,7 @@ public class AiController {
                 "threshold", request.threshold() != null ? request.threshold() : 0.5
         ));
 
-        aiService.detectAnomalies(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.detectAnomalies(request));
 
         return acceptedResponse(job.getId());
     }
@@ -85,7 +86,7 @@ public class AiController {
                 "context", request.context() != null ? request.context() : ""
         ));
 
-        aiService.query(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.query(request));
 
         return acceptedResponse(job.getId());
     }
@@ -131,6 +132,12 @@ public class AiController {
         Instant ttlExpires = Instant.now().plus(properties.jobResultTtlHours(), ChronoUnit.HOURS);
         AiJobDocument job = new AiJobDocument(TenantContext.getCurrentTenantId(), jobType, requestData, ttlExpires);
         return aiJobRepository.save(job);
+    }
+
+    /** Records the outcome either way — a failed future (e.g. provider fallback threw) must not leave the job PENDING. */
+    private void trackCompletion(AiJobDocument job, CompletableFuture<AiJobResult> future) {
+        future.whenComplete((result, ex) -> completeJob(job,
+                ex == null ? result : AiJobResult.failure("AI provider is currently unavailable")));
     }
 
     private void completeJob(AiJobDocument job, AiJobResult result) {
