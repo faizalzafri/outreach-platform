@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /** Extracts tenant ID from the JWT and propagates it as X-Tenant-ID header to downstream services. */
@@ -30,8 +31,13 @@ public class TenantExtractionFilter implements GlobalFilter, Ordered {
         return exchange.getPrincipal()
                 .filter(JwtAuthenticationToken.class::isInstance)
                 .cast(JwtAuthenticationToken.class)
-                .flatMap(auth -> processAuthenticatedRequest(exchange, chain, auth))
-                .switchIfEmpty(chain.filter(stripTenantHeader(exchange)));
+                // Optional instead of flatMap(chain).switchIfEmpty(chain): a successful chain
+                // completes empty, which would trigger switchIfEmpty and run the chain again.
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(auth -> auth.isPresent()
+                        ? processAuthenticatedRequest(exchange, chain, auth.get())
+                        : chain.filter(stripTenantHeader(exchange)));
     }
 
     private Mono<Void> processAuthenticatedRequest(ServerWebExchange exchange,

@@ -35,9 +35,13 @@ public class AdaptiveRateLimitFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Branch on "has a principal" rather than flatMap(chain).switchIfEmpty(...): a successful
+        // chain completes empty, which would trigger switchIfEmpty and run the chain a second time.
         return exchange.getPrincipal()
-                .flatMap(principal -> chain.filter(exchange))
-                .switchIfEmpty(applyUnauthenticatedRateLimit(exchange, chain));
+                .hasElement()
+                .flatMap(authenticated -> authenticated
+                        ? chain.filter(exchange)
+                        : applyUnauthenticatedRateLimit(exchange, chain));
     }
 
     private Mono<Void> applyUnauthenticatedRateLimit(ServerWebExchange exchange, GatewayFilterChain chain) {
