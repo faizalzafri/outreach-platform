@@ -3,6 +3,7 @@ package com.outreach.platform.event.service;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.config.EventServiceProperties;
 import com.outreach.platform.event.entity.EventEntity;
+import com.outreach.platform.event.entity.PocAssignmentEntity;
 import com.outreach.platform.event.mapper.EventMapper;
 import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
@@ -11,6 +12,7 @@ import com.outreach.platform.event.model.dto.EventSearchCriteria;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
 import com.outreach.platform.event.model.dto.LifecycleStatsDto;
 import com.outreach.platform.event.repo.EventRepository;
+import com.outreach.platform.event.repo.PocAssignmentRepository;
 import jakarta.inject.Inject;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -47,6 +50,7 @@ public class EventService {
     private final DomainEventOutboxService domainEventOutboxService;
     private final AuditLogService auditLogService;
     private final EventServiceProperties properties;
+    private final PocAssignmentRepository pocAssignmentRepository;
     private final AtomicLong eventCodeSequence = new AtomicLong(System.currentTimeMillis() % 100000);
 
     @Inject
@@ -54,12 +58,14 @@ public class EventService {
                         EventMapper eventMapper,
                         DomainEventOutboxService domainEventOutboxService,
                         AuditLogService auditLogService,
-                        EventServiceProperties properties) {
+                        EventServiceProperties properties,
+                        PocAssignmentRepository pocAssignmentRepository) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
         this.domainEventOutboxService = domainEventOutboxService;
         this.auditLogService = auditLogService;
         this.properties = properties;
+        this.pocAssignmentRepository = pocAssignmentRepository;
     }
 
     /**
@@ -143,7 +149,8 @@ public class EventService {
                 "eventName", entity.getEventName(),
                 "previousStatus", currentStatus.name(),
                 "newStatus", targetStatus.name(),
-                "transitionedAt", Instant.now().toString()
+                "transitionedAt", Instant.now().toString(),
+                "recipients", pocRecipients(eventId)
         ));
 
         auditLogService.log("system", "UPDATE_STATUS", "Event",
@@ -213,6 +220,15 @@ public class EventService {
                 ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
                 : eventRepository.findById(eventId);
         return entity.orElseThrow(() -> new EventNotFoundException(eventId));
+    }
+
+    /** The event's assigned POCs as {email, name} pairs — who a status-change email goes to. */
+    private List<Map<String, String>> pocRecipients(UUID eventId) {
+        return pocAssignmentRepository.findByEventId(eventId).stream()
+                .map(PocAssignmentEntity::getUser)
+                .filter(user -> user.getEmail() != null && !user.getEmail().isBlank())
+                .map(user -> Map.of("email", user.getEmail(), "name", user.getUsername()))
+                .toList();
     }
 
     private void applyStatusTimestamps(EventEntity entity, EventStatus targetStatus) {

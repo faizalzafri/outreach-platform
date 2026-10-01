@@ -2,17 +2,23 @@ package com.outreach.platform.event.integration;
 
 import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.event.model.AssignmentRole;
+import com.outreach.platform.event.model.DomainEventDocument;
+import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.BeneficiaryCreateRequest;
 import com.outreach.platform.event.model.dto.BeneficiaryDto;
 import com.outreach.platform.event.model.dto.BeneficiaryUpdateRequest;
 import com.outreach.platform.event.model.dto.PocAssignRequest;
 import com.outreach.platform.event.model.dto.PocAssignmentDto;
+import com.outreach.platform.event.model.dto.StatusTransitionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -67,6 +73,9 @@ class BeneficiaryAndPocIT {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
     /** Tenant sent on every request; tests switch it to simulate another tenant's caller. */
     private UUID requestTenant;
 
@@ -105,6 +114,26 @@ class BeneficiaryAndPocIT {
                 .isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(restTemplate.getForEntity("/beneficiaries/{id}/events", String.class, id).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void statusChange_addressesTheAssignedPocs() {
+        UUID eventId = UUID.fromString("b0000000-0000-0000-0000-000000000004"); // seeded, PUBLISHED
+        restTemplate.postForEntity("/events/{eventId}/pocs",
+                new PocAssignRequest(SEEDED_POC_USER, AssignmentRole.PRIMARY), String.class, eventId);
+
+        assertThat(restTemplate.exchange("/events/{id}/status", HttpMethod.PATCH,
+                new HttpEntity<>(new StatusTransitionRequest(EventStatus.ACTIVE)), String.class, eventId)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        DomainEventDocument outbox = mongoTemplate.findOne(
+                Query.query(Criteria.where("eventType").is("EventStatusChanged")
+                        .and("payload").regex(eventId.toString())),
+                DomainEventDocument.class);
+        assertThat(outbox).isNotNull();
+        assertThat(outbox.getPayload())
+                .contains("\"email\":\"anita.desai@outreach-platform.com\"")
+                .contains("\"name\":\"anita_desai\"");
     }
 
     @Test

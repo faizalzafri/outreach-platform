@@ -67,19 +67,23 @@ public class RabbitMqEventListener {
         }
     }
 
+    /** Emails the event's assigned POCs (the payload's recipients); nothing is queued if none are assigned. */
+    @SuppressWarnings("unchecked")
     private void handleEventStatusChanged(DomainEventMessage message) {
         Map<String, Object> payload = message.payload();
         String eventId = String.valueOf(payload.getOrDefault("eventId", ""));
         String newStatus = String.valueOf(payload.getOrDefault("newStatus", ""));
         String eventName = String.valueOf(payload.getOrDefault("eventName", ""));
+        List<Map<String, String>> recipients = (List<Map<String, String>>) payload.getOrDefault("recipients", List.of());
 
-        log.info("Processing EventStatusChanged via RabbitMQ: eventId={}, newStatus={}", eventId, newStatus);
+        log.info("Processing EventStatusChanged via RabbitMQ: eventId={}, newStatus={}, recipientCount={}",
+                eventId, newStatus, recipients.size());
 
-        queueEmail(eventId,
-                String.valueOf(payload.getOrDefault("notifyEmail", "")),
-                String.valueOf(payload.getOrDefault("notifyName", "")),
-                "Event Update: " + eventName + " — " + newStatus,
-                "The event '" + eventName + "' has been updated to status: " + newStatus);
+        for (Map<String, String> recipient : recipients) {
+            queueEmail(eventId, recipient.getOrDefault("email", ""), recipient.getOrDefault("name", ""),
+                    "Event Update: " + eventName + " — " + newStatus,
+                    "The event '" + eventName + "' has been updated to status: " + newStatus);
+        }
     }
 
     @SuppressWarnings("unchecked")
