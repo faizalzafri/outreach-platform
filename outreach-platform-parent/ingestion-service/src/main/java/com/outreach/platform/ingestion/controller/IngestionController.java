@@ -68,7 +68,26 @@ public class IngestionController {
     @PostMapping("/upload")
     public ResponseEntity<FileUploadResponse> uploadFile(
             @Parameter(description = "File to upload") @RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(acceptForImport(file));
+    }
 
+    /**
+     * Upload multiple files for processing. Returns 202 Accepted with a list of job IDs.
+     */
+    @Operation(summary = "Bulk upload", description = "Uploads multiple files for processing, returns 202 Accepted with job IDs")
+    @PostMapping("/upload/bulk")
+    public ResponseEntity<List<FileUploadResponse>> uploadBulk(
+            @Parameter(description = "Files to upload") @RequestParam("files") List<MultipartFile> files) throws IOException {
+
+        List<FileUploadResponse> responses = new ArrayList<>();
+        for (MultipartFile file : files) {
+            responses.add(acceptForImport(file));
+        }
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+    }
+
+    /** Validates the file, records a PENDING job, and hands it to the async import pipeline. */
+    private FileUploadResponse acceptForImport(MultipartFile file) throws IOException {
         validateNotEmpty(file);
         String extension = fileParserService.getExtension(file.getOriginalFilename());
         fileParserService.validateExtension(extension);
@@ -89,53 +108,7 @@ public class IngestionController {
         byte[] fileBytes = file.getBytes();
         importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
 
-        FileUploadResponse response = new FileUploadResponse(
-                jobId,
-                file.getOriginalFilename(),
-                "ACCEPTED",
-                Instant.now()
-        );
-
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
-    }
-
-    /**
-     * Upload multiple files for processing. Returns 202 Accepted with a list of job IDs.
-     */
-    @Operation(summary = "Bulk upload", description = "Uploads multiple files for processing, returns 202 Accepted with job IDs")
-    @PostMapping("/upload/bulk")
-    public ResponseEntity<List<FileUploadResponse>> uploadBulk(
-            @Parameter(description = "Files to upload") @RequestParam("files") List<MultipartFile> files) throws IOException {
-
-        List<FileUploadResponse> responses = new ArrayList<>();
-        for (MultipartFile file : files) {
-            validateNotEmpty(file);
-            String extension = fileParserService.getExtension(file.getOriginalFilename());
-            fileParserService.validateExtension(extension);
-
-            UUID jobId = UUID.randomUUID();
-            log.info("Accepted bulk file upload: {} (jobId={})", file.getOriginalFilename(), jobId);
-
-            jobTrackingService.createJob(
-                    jobId.toString(),
-                    "FILE_IMPORT",
-                    file.getOriginalFilename(),
-                    extension,
-                    file.getSize()
-            );
-
-            byte[] fileBytes = file.getBytes();
-            importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
-
-            responses.add(new FileUploadResponse(
-                    jobId,
-                    file.getOriginalFilename(),
-                    "ACCEPTED",
-                    Instant.now()
-            ));
-        }
-
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+        return new FileUploadResponse(jobId, file.getOriginalFilename(), "ACCEPTED", Instant.now());
     }
 
     /**
@@ -188,7 +161,6 @@ public class IngestionController {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
-            workbook.dispose();
             return out.toByteArray();
         }
     }

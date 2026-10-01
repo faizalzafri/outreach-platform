@@ -81,7 +81,6 @@ public class DomainEventOutboxPoller {
             case "VolunteersImported" -> RabbitMqConstants.ROUTING_KEY_VOLUNTEERS_IMPORTED;
             case "SendFeedbackEmails" -> RabbitMqConstants.ROUTING_KEY_SEND_FEEDBACK_EMAILS;
             case "ImportJobCompleted" -> RabbitMqConstants.ROUTING_KEY_IMPORT_JOB_COMPLETED;
-            case "EventSummaryImported" -> "event.event-summary-imported";
             default -> "event." + eventType.toLowerCase();
         };
     }

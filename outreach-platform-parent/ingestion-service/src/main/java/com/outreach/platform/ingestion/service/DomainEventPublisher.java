@@ -21,7 +21,6 @@ public class DomainEventPublisher {
     private static final Logger log = LoggerFactory.getLogger(DomainEventPublisher.class);
 
     public static final String EVENT_VOLUNTEERS_IMPORTED = "VolunteersImported";
-    public static final String EVENT_EVENT_SUMMARY_IMPORTED = "EventSummaryImported";
     public static final String EVENT_IMPORT_JOB_COMPLETED = "ImportJobCompleted";
 
     private final DomainEventRepository domainEventRepository;
@@ -60,17 +59,6 @@ public class DomainEventPublisher {
         publish(EVENT_VOLUNTEERS_IMPORTED, Map.of(
                 "eventId", eventId.toString(),
                 "volunteers", volunteers
-        ));
-    }
-
-    /**
-     * Publishes an EventSummaryImported event.
-     */
-    public void publishEventSummaryImported(String jobId, String fileName, int importedCount) {
-        publish(EVENT_EVENT_SUMMARY_IMPORTED, Map.of(
-                "jobId", jobId,
-                "fileName", fileName,
-                "importedCount", importedCount
         ));
     }
 

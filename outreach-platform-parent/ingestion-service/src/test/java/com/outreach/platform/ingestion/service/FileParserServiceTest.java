@@ -19,7 +19,7 @@ class FileParserServiceTest {
     @BeforeEach
     void setUp() {
         IngestionServiceProperties props = new IngestionServiceProperties(
-                "/tmp/input", 25, List.of(".xlsx", ".xls", ".csv"), 5
+                List.of(".xlsx", ".xls", ".csv")
         );
         service = new FileParserService(new ExcelParser(), new CsvParser(), new RowValidator(), props);
     }

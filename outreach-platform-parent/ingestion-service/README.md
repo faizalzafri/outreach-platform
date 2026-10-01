@@ -30,7 +30,6 @@ The server starts on **port 9003**.
 | `MONGODB_URI` | `mongodb://localhost:27017/outreach_nosql` | MongoDB connection URI |
 | `EUREKA_URI` | `http://localhost:8761/eureka` | Eureka discovery URL |
 | `JWT_JWK_SET_URI` | `http://localhost:8090/oauth2/jwks` | JWKS endpoint for token validation |
-| `INGESTION_INPUT_DIR` | (empty) | Optional filesystem directory for file pickup |
 
 Custom properties:
 

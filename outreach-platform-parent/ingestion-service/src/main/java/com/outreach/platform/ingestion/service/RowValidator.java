@@ -4,8 +4,6 @@ import com.outreach.platform.ingestion.model.ParsedRow;
 import com.outreach.platform.ingestion.model.ValidationError;
 import jakarta.inject.Named;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -74,20 +72,6 @@ public class RowValidator {
         }
 
         return errors;
-    }
-
-    /** Validates a date string is in ISO format (yyyy-MM-dd), returning an error if not. */
-    public ValidationError validateDate(int rowNumber, String columnName, String value) {
-        if (isBlank(value)) {
-            return null;
-        }
-        try {
-            LocalDate.parse(value);
-            return null;
-        } catch (DateTimeParseException e) {
-            return new ValidationError(rowNumber, columnName,
-                    "Date must be in ISO format (yyyy-MM-dd)", value);
-        }
     }
 
     private String getField(ParsedRow row, String key) {

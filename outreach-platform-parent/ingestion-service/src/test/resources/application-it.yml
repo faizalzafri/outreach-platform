@@ -33,10 +33,7 @@ eureka:
 
 # Ingestion service properties
 ingestion-service:
-  input-directory: ${java.io.tmpdir}
-  max-file-size-mb: 25
   allowed-extensions:
     - .xlsx
     - .xls
     - .csv
-  max-concurrent-jobs: 5

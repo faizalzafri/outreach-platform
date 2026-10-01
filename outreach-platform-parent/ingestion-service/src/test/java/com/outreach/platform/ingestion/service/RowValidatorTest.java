@@ -107,24 +107,6 @@ class RowValidatorTest {
                         && e.errorMessage().contains("alphanumeric with hyphens")));
     }
 
-    @Test
-    void validateDate_validIsoDate_returnsNull() {
-        assertNull(validator.validateDate(2, "eventDate", "2024-01-15"));
-    }
-
-    @Test
-    void validateDate_invalidDate_returnsError() {
-        ValidationError error = validator.validateDate(2, "eventDate", "15/01/2024");
-        assertNotNull(error);
-        assertEquals("eventDate", error.columnName());
-        assertTrue(error.errorMessage().contains("ISO format"));
-    }
-
-    @Test
-    void validateDate_blank_returnsNull() {
-        assertNull(validator.validateDate(2, "eventDate", ""));
-    }
-
     private ParsedRow validRowWith(String field, String value) {
         Map<String, String> fields = new java.util.LinkedHashMap<>(Map.of(
                 "employeeid", "EMP001",
