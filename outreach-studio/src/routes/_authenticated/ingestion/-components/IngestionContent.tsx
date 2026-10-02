@@ -332,6 +332,47 @@ function JobErrorDetails({ jobId }: { jobId: string }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
+const TEMPLATE_FORMATS = [
+  { format: 'xlsx', label: 'Excel (.xlsx)' },
+  { format: 'xls', label: 'Excel 97–2003 (.xls)' },
+  { format: 'csv', label: 'CSV' },
+] as const;
+
+/**
+ * Import templates in every accepted format. Fetched through the API client (it carries the
+ * sign-in token, which a plain link would not) and handed to the browser as a download.
+ */
+function TemplateDownloads() {
+  const [error, setError] = useState<string | null>(null);
+
+  const download = async (format: string) => {
+    setError(null);
+    try {
+      const response = await httpClient.get<Blob>('/ingestion/templates', { params: { format }, responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `volunteer-import-template.${format}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('The template could not be downloaded. Please try again.');
+    }
+  };
+
+  return (
+    <p className={styles['templates']}>
+      Need a template? It has the right columns and one example row.{' '}
+      {TEMPLATE_FORMATS.map(({ format, label }) => (
+        <button key={format} type="button" className={styles['templateLink']} onClick={() => void download(format)}>
+          {label}
+        </button>
+      ))}
+      {error && <span role="alert" className={styles['templateError']}>{error}</span>}
+    </p>
+  );
+}
+
 export function IngestionContent() {
   const { state, upload, reset } = useFileUpload();
   const [dragActive, setDragActive] = useState(false);
@@ -394,6 +435,7 @@ export function IngestionContent() {
   return (
     <div className={styles['container']}>
       <h1 className={styles['pageTitle']}>Data Ingestion</h1>
+      <TemplateDownloads />
 
       {/* Upload Section */}
       <section className={styles['uploadSection']}>

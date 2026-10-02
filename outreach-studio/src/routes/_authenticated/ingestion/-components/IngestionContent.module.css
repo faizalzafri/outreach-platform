@@ -228,3 +228,30 @@
   color: var(--text-primary);
   margin: 0 0 1rem;
 }
+
+/* ----------- Template downloads ----------- */
+
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.templateLink {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.templateError {
+  color: var(--color-danger-600);
+}
