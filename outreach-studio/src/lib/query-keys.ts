@@ -43,6 +43,8 @@ export const queryKeys = {
     dashboard: (params: DashboardParams) => ['reports', 'dashboard', params] as const,
     trends: (params: TrendParams) => ['reports', 'trends', params] as const,
     timeSeries: (params: TimeSeriesParams) => ['reports', 'time-series', params] as const,
+    scoreDistribution: (dateFrom: string, dateTo: string) =>
+      ['reports', 'score-distribution', dateFrom, dateTo] as const,
     export: (jobId: string) => ['reports', 'export', jobId] as const,
   },
   ingestion: {

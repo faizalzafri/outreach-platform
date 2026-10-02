@@ -236,6 +236,7 @@ export function createAuthModule(): AuthModule {
     return {
       user: {
         sub: claims.sub,
+        uid: claims.uid,
         name: claims.name ?? claims.preferred_username ?? 'Unknown',
         email: claims.email ?? '',
         roles: extractRoles(claims),

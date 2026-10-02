@@ -15,6 +15,11 @@ export const feedbackHandlers = [
     )
   }),
 
+  // GET /api/feedback/categories - the one list of categories
+  http.get('/api/feedback/categories', () =>
+    HttpResponse.json(['Communication', 'Organization', 'Content', 'Logistics', 'Overall']),
+  ),
+
   // GET /api/feedback - list feedback (paginated)
   http.get('/api/feedback', ({ request }) => {
     const url = new URL(request.url)

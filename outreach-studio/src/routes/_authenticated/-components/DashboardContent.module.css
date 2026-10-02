@@ -114,6 +114,15 @@
   margin: 0 0 1rem;
 }
 
+.emptyChart {
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .chartControls {
   display: flex;
   align-items: center;

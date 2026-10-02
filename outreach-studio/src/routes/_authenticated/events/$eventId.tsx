@@ -19,7 +19,7 @@ const EventDetailContent = lazy(() =>
 
 const eventDetailSearchSchema = z.object({
   tab: z
-    .enum(['overview', 'volunteers', 'feedback', 'notifications', 'audit'])
+    .enum(['overview', 'volunteers', 'pocs', 'beneficiaries', 'feedback', 'notifications', 'audit'])
     .default('overview')
     .catch('overview'),
 });

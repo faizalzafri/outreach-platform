@@ -19,6 +19,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -203,8 +205,8 @@ export function ReportsContent() {
     eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
     cities: selectedCities.length > 0 ? selectedCities : undefined,
     beneficiaryIds: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
-    pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
-  }), [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user?.sub]);
+    pocIds: isPocOnly ? [user?.uid ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
+  }), [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user?.uid]);
 
   const trendParams: TrendParams = useMemo(() => ({
     startDate,
@@ -232,7 +234,7 @@ export function ReportsContent() {
     error,
     refetch,
   } = useQuery<ReportResponse>({
-    queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.sub : null],
+    queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.uid : null],
     queryFn: async () => {
       const [rows, series] = await Promise.all([
         httpClient.get<ApiAggregationRow[]>(reportEndpoint, { params: queryParams }),
@@ -253,6 +255,15 @@ export function ReportsContent() {
         })),
       };
     },
+  });
+
+  // Responses per score 1–5 under the same filters.
+  const { data: scoreDistribution } = useQuery<{ score: number; count: number }[]>({
+    queryKey: [...queryKeys.reports.scoreDistribution(startDate, endDate), queryParams],
+    queryFn: async () =>
+      (await httpClient.get<{ score: number; count: number }[]>('/reports/score-distribution', {
+        params: queryParams,
+      })).data,
   });
 
   // Filter options are not available from a dedicated API endpoint.
@@ -300,7 +311,7 @@ export function ReportsContent() {
           eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
           cities: selectedCities.length > 0 ? selectedCities : undefined,
           beneficiaries: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
-          pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
+          pocIds: isPocOnly ? [user?.uid ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
         },
       });
 
@@ -456,7 +467,7 @@ export function ReportsContent() {
             id="report-pocs"
             className={styles['multiSelect']}
             multiple
-            value={isPocOnly ? [user?.sub ?? ''] : selectedPocs}
+            value={isPocOnly ? [user?.uid ?? ''] : selectedPocs}
             onChange={(e) => handleMultiSelectChange(e, setSelectedPocs)}
             disabled={isPocOnly}
             aria-label="Filter by POCs"
@@ -596,6 +607,21 @@ export function ReportsContent() {
               </LineChart>
             </ResponsiveContainer>
           </section>
+
+          {scoreDistribution && (
+            <section className={styles['chartSection']}>
+              <h2 className={styles['chartTitle']}>Score Distribution</h2>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={scoreDistribution} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
+                  <XAxis dataKey="score" tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
+                  <Tooltip labelFormatter={(score) => `Score ${String(score)}`} />
+                  <Bar dataKey="count" name="Responses" fill="var(--accent)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
 
           {/* Aggregated Data Table */}
           <section className={styles['tableSection']}>

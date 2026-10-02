@@ -158,6 +158,26 @@ describe('DashboardContent', () => {
     });
   });
 
+  describe('Feedback score distribution', () => {
+    it('asks for the dashboard date range, and says so when there is no feedback', async () => {
+      let asked: { from: string | null; to: string | null } | null = null;
+      server.use(
+        http.get('/api/reports/score-distribution', ({ request }) => {
+          const url = new URL(request.url);
+          asked = { from: url.searchParams.get('dateFrom'), to: url.searchParams.get('dateTo') };
+          return HttpResponse.json([1, 2, 3, 4, 5].map((score) => ({ score, count: 0 })));
+        }),
+      );
+
+      await renderDashboard();
+
+      expect(await screen.findByText('No feedback in this period.')).toBeInTheDocument();
+      expect(asked).not.toBeNull();
+      expect(asked!.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(asked!.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
   describe('Date range filter triggers refetch', () => {
     it('refetches trends when start date changes', async () => {
       const user = userEvent.setup();

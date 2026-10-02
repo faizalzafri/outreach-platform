@@ -568,6 +568,144 @@ describe('EventDetailContent', () => {
     });
   });
 
+  describe('cancelling and locked events', () => {
+    it('asks before cancelling, and does nothing when the answer is no', async () => {
+      setupEventDetailHandler({ status: 'PUBLISHED' });
+      const patched = vi.fn();
+      server.use(
+        http.patch('/api/events/:eventId/status', () => {
+          patched();
+          return HttpResponse.json({});
+        }),
+      );
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      await renderEventDetail();
+      await userEvent.click(await screen.findByRole('button', { name: /^Cancel$/ }));
+
+      expect(confirm).toHaveBeenCalled();
+      expect(patched).not.toHaveBeenCalled();
+      confirm.mockRestore();
+    });
+
+    it('offers no Edit for a cancelled event', async () => {
+      setupEventDetailHandler({ status: 'CANCELLED' });
+
+      await renderEventDetail();
+      await screen.findByText('Annual Volunteer Drive');
+
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('attendance', () => {
+    const enrollment = {
+      id: 'enr-1',
+      eventId: 'evt-001',
+      volunteerId: 'vol-1',
+      employeeId: 'EMP001',
+      volunteerName: 'Rajesh Kumar',
+      attendanceStatus: 'REGISTERED',
+      emailStatus: 'SENT',
+      registeredAt: '2024-05-20T10:00:00Z',
+    };
+
+    it('records attendance once the event is active', async () => {
+      setupEventDetailHandler({ status: 'ACTIVE' });
+      mockSearchParams.mockReturnValue({ tab: 'volunteers' });
+      let sent: unknown;
+      server.use(
+        http.get('/api/events/:eventId/volunteers', () => HttpResponse.json([enrollment])),
+        http.put('/api/events/:eventId/volunteers/attendance', async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json([{ ...enrollment, attendanceStatus: 'ATTENDED' }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await userEvent.selectOptions(
+        await screen.findByLabelText('Attendance for Rajesh Kumar'),
+        'ATTENDED',
+      );
+
+      await waitFor(() =>
+        expect(sent).toEqual({ entries: [{ volunteerId: 'vol-1', status: 'ATTENDED' }] }),
+      );
+    });
+
+    it('is not offered before the event starts', async () => {
+      setupEventDetailHandler({ status: 'PUBLISHED' });
+      mockSearchParams.mockReturnValue({ tab: 'volunteers' });
+      server.use(http.get('/api/events/:eventId/volunteers', () => HttpResponse.json([enrollment])));
+
+      await renderEventDetail();
+      await screen.findByText('Rajesh Kumar');
+
+      expect(screen.queryByLabelText('Attendance for Rajesh Kumar')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('POCs and beneficiaries', () => {
+    it('assigns a POC chosen from the organization', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'pocs' });
+      let assigned: unknown;
+      server.use(
+        http.get('/api/events/:eventId/pocs', () => HttpResponse.json([])),
+        http.get('/api/admin/users', () =>
+          HttpResponse.json({
+            content: [
+              { id: 'u-5', username: 'rahul_verma', displayName: 'Rahul Verma', email: 'r@x.dev', role: 'ROLE_POC', enabled: true },
+            ],
+            totalElements: 1,
+            totalPages: 1,
+            page: 0,
+            size: 200,
+          }),
+        ),
+        http.post('/api/events/:eventId/pocs', async ({ request }) => {
+          assigned = await request.json();
+          return HttpResponse.json({}, { status: 201 });
+        }),
+      );
+
+      await renderEventDetail();
+      const picker = await screen.findByLabelText('POC to assign');
+      await screen.findByRole('option', { name: 'Rahul Verma' });
+      await userEvent.selectOptions(picker, 'u-5');
+      await userEvent.click(screen.getByRole('button', { name: 'Assign' }));
+
+      await waitFor(() => expect(assigned).toEqual({ userId: 'u-5', role: 'PRIMARY' }));
+    });
+
+    it('creates a new beneficiary and links it to the event', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'beneficiaries' });
+      const linked: string[] = [];
+      server.use(
+        http.get('/api/events/:eventId/beneficiaries', () => HttpResponse.json([])),
+        http.get('/api/beneficiaries', () =>
+          HttpResponse.json({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 200 }),
+        ),
+        http.post('/api/beneficiaries', async ({ request }) =>
+          HttpResponse.json({ id: 'ben-9', active: true, ...((await request.json()) as object) }, { status: 201 }),
+        ),
+        http.put('/api/events/:eventId/beneficiaries/:id', ({ params }) => {
+          linked.push(params['id'] as string);
+          return HttpResponse.json([{ id: 'ben-9', name: 'Harbour Trust', city: 'Kochi', active: true }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await userEvent.type(await screen.findByLabelText('New beneficiary name'), 'Harbour Trust');
+      await userEvent.type(screen.getByLabelText('New beneficiary city'), 'Kochi');
+      await userEvent.click(screen.getByRole('button', { name: 'Add and link' }));
+
+      await waitFor(() => expect(linked).toEqual(['ben-9']));
+      expect(await screen.findByText('Harbour Trust')).toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     it('has no axe violations once loaded', async () => {
       setupEventDetailHandler();

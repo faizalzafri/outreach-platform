@@ -10,12 +10,26 @@ const MOCK_FEEDBACK = [
   {
     id: 'fb-001',
     eventName: 'Annual Volunteer Drive',
-    volunteerId: 'EMP001',
+    volunteerId: 'c0000000-0000-0000-0000-000000000001',
+    volunteerName: 'Rajesh Kumar',
+    anonymous: false,
     score: 4,
     category: 'Organization',
     sentiment: 'POSITIVE',
     status: 'SUBMITTED',
     submittedAt: '2024-06-02T10:00:00Z',
+  },
+  {
+    id: 'fb-002',
+    eventName: 'Annual Volunteer Drive',
+    volunteerId: 'c0000000-0000-0000-0000-000000000002',
+    volunteerName: null,
+    anonymous: true,
+    score: 2,
+    category: 'Overall',
+    sentiment: 'NEGATIVE',
+    status: 'SUBMITTED',
+    submittedAt: '2024-06-03T10:00:00Z',
   },
 ];
 
@@ -41,10 +55,12 @@ describe('FeedbackListContent', () => {
     await renderFeedbackList();
 
     await waitFor(() => {
-      expect(screen.getByText('Annual Volunteer Drive')).toBeInTheDocument();
+      expect(screen.getAllByText('Annual Volunteer Drive')).toHaveLength(2);
     });
+    expect(screen.getByText('Rajesh Kumar')).toBeInTheDocument();
+    expect(screen.getByText('Anonymous')).toBeInTheDocument();
+    expect(screen.queryByText('c0000000-0000-0000-0000-000000000001')).not.toBeInTheDocument();
     expect(screen.getByText('POSITIVE')).toBeInTheDocument();
-    expect(screen.getByText('SUBMITTED')).toBeInTheDocument();
   });
 
   it('shows the empty message when no feedback is returned', async () => {
@@ -78,7 +94,7 @@ describe('FeedbackListContent', () => {
       const { container } = await renderFeedbackList();
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Volunteer Drive')).toBeInTheDocument();
+        expect(screen.getAllByText('Annual Volunteer Drive')).not.toHaveLength(0);
       });
 
       expect(await axe(container)).toHaveNoViolations();

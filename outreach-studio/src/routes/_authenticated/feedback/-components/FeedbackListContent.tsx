@@ -12,6 +12,7 @@ import { DataTable } from '@/components/data-table/DataTable';
 import { queryKeys } from '@/lib/query-keys';
 
 import styles from './FeedbackListContent.module.css';
+import { useFeedbackCategories } from './use-feedback-categories';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,8 +20,10 @@ import styles from './FeedbackListContent.module.css';
 
 interface FeedbackRecord {
   id: string;
-  eventName: string;
+  eventName: string | null;
   volunteerId: string;
+  volunteerName: string | null;
+  anonymous: boolean;
   score: number;
   category: string;
   sentiment: string | null;
@@ -33,14 +36,6 @@ interface FeedbackRecord {
 // ---------------------------------------------------------------------------
 
 const EMOJI_LABELS = ['😞', '😕', '😐', '🙂', '😄'];
-
-const CATEGORY_OPTIONS = [
-  { label: 'Communication', value: 'Communication' },
-  { label: 'Organization', value: 'Organization' },
-  { label: 'Content', value: 'Content' },
-  { label: 'Logistics', value: 'Logistics' },
-  { label: 'Overall', value: 'Overall' },
-];
 
 const SENTIMENT_OPTIONS = [
   { label: 'Positive', value: 'POSITIVE' },
@@ -91,79 +86,82 @@ function StatusBadge({ status }: { status: string }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-const columns: ColumnDef<FeedbackRecord, unknown>[] = [
-  {
-    accessorKey: 'eventName',
-    header: 'Event Name',
-    enableSorting: true,
-    enableColumnFilter: true,
-    meta: {
-      filterType: 'text',
+function buildColumns(categories: string[]): ColumnDef<FeedbackRecord, unknown>[] {
+  return [
+    // Names come from event-service, so the server can neither sort nor filter on them.
+    {
+      accessorKey: 'eventName',
+      header: 'Event',
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ getValue }) => (getValue() as string | null) ?? '—',
     },
-  },
-  {
-    accessorKey: 'volunteerId',
-    header: 'Volunteer ID',
-    enableSorting: true,
-    enableColumnFilter: false,
-  },
-  {
-    accessorKey: 'score',
-    header: 'Score',
-    enableSorting: true,
-    enableColumnFilter: false,
-    cell: ({ getValue }) => <ScoreBadge score={getValue() as number} />,
-  },
-  {
-    accessorKey: 'category',
-    header: 'Category',
-    enableSorting: true,
-    enableColumnFilter: true,
-    meta: {
-      filterType: 'select',
-      filterOptions: CATEGORY_OPTIONS,
+    {
+      accessorKey: 'volunteerName',
+      header: 'Volunteer',
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ row }) =>
+        row.original.anonymous ? 'Anonymous' : (row.original.volunteerName ?? '—'),
     },
-  },
-  {
-    accessorKey: 'sentiment',
-    header: 'Sentiment',
-    enableSorting: true,
-    enableColumnFilter: true,
-    meta: {
-      filterType: 'select',
-      filterOptions: SENTIMENT_OPTIONS,
+    {
+      accessorKey: 'score',
+      header: 'Score',
+      enableSorting: true,
+      enableColumnFilter: false,
+      cell: ({ getValue }) => <ScoreBadge score={getValue() as number} />,
     },
-    cell: ({ getValue }) => <SentimentBadge sentiment={getValue() as string | null} />,
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    enableSorting: true,
-    enableColumnFilter: true,
-    meta: {
-      filterType: 'select',
-      filterOptions: STATUS_OPTIONS,
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      enableSorting: true,
+      enableColumnFilter: true,
+      meta: {
+        filterType: 'select',
+        filterOptions: categories.map((c) => ({ label: c, value: c })),
+      },
     },
-    cell: ({ getValue }) => <StatusBadge status={getValue() as string} />,
-  },
-  {
-    accessorKey: 'submittedAt',
-    header: 'Submitted At',
-    enableSorting: true,
-    enableColumnFilter: false,
-    cell: ({ getValue }) => {
-      const dateStr = getValue() as string;
-      if (!dateStr) return '—';
-      return new Date(dateStr).toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+    {
+      accessorKey: 'sentiment',
+      header: 'Sentiment',
+      enableSorting: true,
+      enableColumnFilter: true,
+      meta: {
+        filterType: 'select',
+        filterOptions: SENTIMENT_OPTIONS,
+      },
+      cell: ({ getValue }) => <SentimentBadge sentiment={getValue() as string | null} />,
     },
-  },
-];
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      enableSorting: true,
+      enableColumnFilter: true,
+      meta: {
+        filterType: 'select',
+        filterOptions: STATUS_OPTIONS,
+      },
+      cell: ({ getValue }) => <StatusBadge status={getValue() as string} />,
+    },
+    {
+      accessorKey: 'submittedAt',
+      header: 'Submitted At',
+      enableSorting: true,
+      enableColumnFilter: false,
+      cell: ({ getValue }) => {
+        const dateStr = getValue() as string;
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      },
+    },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -171,6 +169,8 @@ const columns: ColumnDef<FeedbackRecord, unknown>[] = [
 
 export function FeedbackListContent() {
   const queryKey = useMemo(() => queryKeys.feedback.lists(), []);
+  const categories = useFeedbackCategories();
+  const columns = useMemo(() => buildColumns(categories), [categories]);
 
   return (
     <div className={styles['container']}>

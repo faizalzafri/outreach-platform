@@ -75,6 +75,9 @@ export interface FeedbackSubmission {
   status: FeedbackStatus;
   anonymous: boolean;
   submittedAt: string;
+  /** Filled in by feedback-service from event-service on lists; null for anonymous feedback. */
+  eventName?: string | null;
+  volunteerName?: string | null;
 }
 
 export type AttendanceStatus = 'REGISTERED' | 'ATTENDED' | 'NOT_ATTENDED' | 'UNREGISTERED';
@@ -91,6 +94,33 @@ export interface EventEnrollment {
   emailStatus: EmailStatus;
   registeredAt: string;
   attendanceMarkedAt?: string;
+}
+
+/** An organisation an event serves. */
+export interface Beneficiary {
+  id: string;
+  name: string;
+  organization: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  city: string | null;
+  address: string | null;
+  description: string | null;
+  active: boolean;
+}
+
+export type AssignmentRole = 'PRIMARY' | 'SECONDARY';
+
+/** A user assigned to an event as one of its points of contact. */
+export interface PocAssignment {
+  id: string;
+  eventId: string;
+  eventName: string;
+  userId: string;
+  username: string;
+  assignmentRole: AssignmentRole;
+  assignedAt: string;
+  assignedBy: string | null;
 }
 
 export type ImportJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';

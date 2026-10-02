@@ -16,8 +16,6 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
   Cell,
   XAxis,
   YAxis,
@@ -63,14 +61,13 @@ interface ScoreDistribution {
 interface TrendsResponse {
   feedbackTrends: TrendDataPoint[];
   eventStatusDistribution: StatusDistribution[];
-  feedbackScoreDistribution: ScoreDistribution[];
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PIE_COLORS = [
+const SCORE_COLORS = [
   'var(--color-danger-500)',
   'var(--color-warning-500)',
   'var(--color-amber-500)',
@@ -371,30 +368,23 @@ function FeedbackScoreChart({
           onRetry={onRetry}
         />
       )}
-      {!isLoading && !isError && data && (
+      {!isLoading && !isError && data && data.every((d) => d.count === 0) && (
+        <p className={styles['emptyChart']}>No feedback in this period.</p>
+      )}
+      {/* Scores are ordered 1–5, so bars in score order, coloured from poor to great. */}
+      {!isLoading && !isError && data && data.some((d) => d.count > 0) && (
         <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="count"
-              nameKey="score"
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              label={(props) => {
-                const payload = props.payload as ScoreDistribution | undefined;
-                const percent = (props.percent as number) ?? 0;
-                const score = payload?.score ?? 0;
-                return `Score ${String(score)}: ${(percent * 100).toFixed(0)}%`;
-              }}
-            >
+          <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
+            <XAxis dataKey="score" tick={{ fontSize: 11 }} stroke="var(--text-muted)" />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--text-muted)" />
+            <Tooltip labelFormatter={(score) => `Score ${String(score)}`} />
+            <Bar dataKey="count" name="Responses">
               {data.map((entry, index) => (
-                <Cell key={`cell-${String(entry.score)}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                <Cell key={`cell-${String(entry.score)}`} fill={SCORE_COLORS[index % SCORE_COLORS.length]} />
               ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       )}
     </div>
@@ -447,10 +437,24 @@ export function DashboardContent() {
           avgScore: Number(p.averageScore),
         })),
         eventStatusDistribution: [],
-        // ponytail: no endpoint reports per-score counts yet, so this chart stays empty
-        feedbackScoreDistribution: [],
       };
     },
+  });
+
+  const {
+    data: scoreData,
+    isLoading: scoreLoading,
+    isError: scoreError,
+    error: scoreErrorObj,
+    refetch: refetchScores,
+  } = useQuery<ScoreDistribution[]>({
+    queryKey: queryKeys.reports.scoreDistribution(startDate, endDate),
+    queryFn: async () =>
+      (
+        await httpClient.get<ScoreDistribution[]>('/reports/score-distribution', {
+          params: { dateFrom: startDate, dateTo: endDate },
+        })
+      ).data,
   });
 
   // Separate query for event lifecycle stats (accurate status counts)
@@ -508,11 +512,11 @@ export function DashboardContent() {
 
           {/* Feedback Score Pie Chart */}
           <FeedbackScoreChart
-            data={Array.isArray(trendsData?.feedbackScoreDistribution) ? trendsData.feedbackScoreDistribution : []}
-            isLoading={trendsLoading}
-            isError={trendsError}
-            error={trendsErrorObj}
-            onRetry={() => void refetchTrends()}
+            data={scoreData}
+            isLoading={scoreLoading}
+            isError={scoreError}
+            error={scoreErrorObj}
+            onRetry={() => void refetchScores()}
           />
         </div>
       </div>

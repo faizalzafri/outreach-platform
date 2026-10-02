@@ -16,13 +16,20 @@ import { queryKeys } from '@/lib/query-keys';
 import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import { usePermission } from '@/hooks/usePermission';
 import { eventCreateSchema } from '@/lib/zod-schemas';
-import type { Event, EventStatus, EventEnrollment, FeedbackSubmission } from '@/types/domain';
+import type {
+  AttendanceStatus,
+  Event,
+  EventStatus,
+  EventEnrollment,
+  FeedbackSubmission,
+} from '@/types/domain';
 import { EVENT_TRANSITIONS } from '@/types/domain';
 import type { NormalizedError, PageResponse } from '@/types/api';
 
 import { Route } from '../$eventId';
 import type { EventDetailSearch } from '../$eventId';
 import styles from './EventDetailContent.module.css';
+import { BeneficiariesTab, PocsTab } from './EventPeopleTabs';
 
 // ---------------------------------------------------------------------------
 // Transition button labels
@@ -77,8 +84,17 @@ function DetailField({ label, value }: { label: string; value: string | number |
 // Volunteers Tab — Enrollment + List
 // ---------------------------------------------------------------------------
 
-function VolunteersTab({ eventId }: { eventId: string }) {
+function VolunteersTab({ eventId, status }: { eventId: string; status: EventStatus }) {
   const queryClient = useQueryClient();
+  // POCs record attendance too (for their own events; the API checks the assignment).
+  const { hasPermission: canMarkAttendance } = usePermission([
+    'ROLE_POC',
+    'ROLE_PMO',
+    'ROLE_ADMIN',
+    'ROLE_TENANT_ADMIN',
+    'ROLE_PLATFORM_ADMIN',
+  ]);
+  const attendanceOpen = status === 'ACTIVE' || status === 'COMPLETED';
   const [enrollEmployeeId, setEnrollEmployeeId] = useState('');
   const [enrollError, setEnrollError] = useState<string | null>(null);
   const [enrollSuccess, setEnrollSuccess] = useState(false);
@@ -143,6 +159,17 @@ function VolunteersTab({ eventId }: { eventId: string }) {
     },
   });
 
+  const attendanceMutation = useMutation<unknown, NormalizedError, { volunteerId: string; status: AttendanceStatus }>({
+    mutationFn: (entry) => httpClient.put(`/events/${eventId}/volunteers/attendance`, { entries: [entry] }),
+    onSuccess: () => {
+      setEnrollError(null);
+      void queryClient.invalidateQueries({ queryKey: enrollmentsQueryKey });
+      // The event's attended count follows attendance.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId), exact: true });
+    },
+    onError: (err) => setEnrollError(err.message || 'Failed to record attendance.'),
+  });
+
   const handleEnroll = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -202,7 +229,28 @@ function VolunteersTab({ eventId }: { eventId: string }) {
               <tr key={enrollment.id}>
                 <td>{enrollment.employeeId}</td>
                 <td>{enrollment.volunteerName}</td>
-                <td>{enrollment.attendanceStatus}</td>
+                <td>
+                  {canMarkAttendance && attendanceOpen ? (
+                    <select
+                      className={styles['enrollInput']}
+                      value={enrollment.attendanceStatus}
+                      disabled={attendanceMutation.isPending}
+                      aria-label={`Attendance for ${enrollment.volunteerName}`}
+                      onChange={(e) =>
+                        attendanceMutation.mutate({
+                          volunteerId: enrollment.volunteerId,
+                          status: e.target.value as AttendanceStatus,
+                        })
+                      }
+                    >
+                      <option value="REGISTERED">Not marked</option>
+                      <option value="ATTENDED">Attended</option>
+                      <option value="NOT_ATTENDED">Did not attend</option>
+                    </select>
+                  ) : (
+                    enrollment.attendanceStatus
+                  )}
+                </td>
                 <td>{new Date(enrollment.registeredAt).toLocaleDateString()}</td>
                 {canManage && (
                   <td>
@@ -235,7 +283,7 @@ function VolunteersTab({ eventId }: { eventId: string }) {
 
 const EMOJI_MAP = ['', '😞', '😕', '😐', '🙂', '😄'];
 
-function FeedbackTab({ eventId }: { eventId: string }) {
+function FeedbackTab({ eventId, status }: { eventId: string; status: EventStatus }) {
   const { data, isLoading, isError, error, refetch } = useQuery<PageResponse<FeedbackSubmission>>({
     queryKey: [...queryKeys.feedback.all, 'event', eventId],
     queryFn: async () => {
@@ -252,21 +300,12 @@ function FeedbackTab({ eventId }: { eventId: string }) {
     },
   });
 
-  // Feedback rows only carry a volunteerId (UUID) — resolve display names from the same
-  // event's enrollment list rather than round-tripping through a separate lookup.
-  const { data: enrollments } = useQuery<EventEnrollment[]>({
-    queryKey: [...queryKeys.events.detail(eventId), 'volunteers'],
-    queryFn: async () => {
-      const response = await httpClient.get<EventEnrollment[]>(`/events/${eventId}/volunteers`);
-      return response.data;
-    },
-  });
-  const volunteerNames = new Map((enrollments ?? []).map((e) => [e.volunteerId, e.volunteerName]));
-
   // /feedback renders the submission form only for ROLE_POC (ADMIN/PMO get a read-only list
-  // there instead) — only show this entry point to viewers who'll actually see the form.
+  // there instead) — only show this entry point to viewers who'll actually see the form, and
+  // only once the event is under way (feedback-service refuses it before that).
   const { hasPermission: canSubmitFeedback } = usePermission(['ROLE_POC']);
-  const giveFeedbackLink = canSubmitFeedback && (
+  const feedbackOpen = status === 'ACTIVE' || status === 'COMPLETED';
+  const giveFeedbackLink = canSubmitFeedback && feedbackOpen && (
     <Link
       to="/feedback"
       search={{ eventId, page: 1, size: 10 }}
@@ -315,7 +354,7 @@ function FeedbackTab({ eventId }: { eventId: string }) {
         <tbody>
           {data.content.map((fb) => (
             <tr key={fb.id}>
-              <td>{fb.anonymous ? '(anonymous)' : volunteerNames.get(fb.volunteerId) ?? fb.volunteerId}</td>
+              <td>{fb.anonymous ? '(anonymous)' : (fb.volunteerName ?? '—')}</td>
               <td>{EMOJI_MAP[fb.score] ?? fb.score}</td>
               <td>{fb.category}</td>
               <td>{new Date(fb.submittedAt).toLocaleString()}</td>
@@ -568,6 +607,12 @@ export function EventDetailContent() {
 
   const handleTransition = useCallback(
     (targetStatus: EventStatus) => {
+      if (
+        targetStatus === 'CANCELLED' &&
+        !window.confirm('Cancel this event? A cancelled event cannot be edited or reopened.')
+      ) {
+        return;
+      }
       transitionMutation.mutate(targetStatus);
     },
     [transitionMutation],
@@ -609,6 +654,21 @@ export function EventDetailContent() {
 
   const displayStatus = optimisticStatus ?? event.status;
   const validTransitions = EVENT_TRANSITIONS[event.status] ?? [];
+  // Cancelled and archived events are closed records; the API refuses edits to them too.
+  const locked = event.status === 'CANCELLED' || event.status === 'ARCHIVED';
+  const tabs = [
+    ['overview', 'Overview'],
+    ['volunteers', 'Volunteers'],
+    ...(canManage
+      ? ([
+          ['pocs', 'POCs'],
+          ['beneficiaries', 'Beneficiaries'],
+        ] as const)
+      : []),
+    ['feedback', 'Feedback'],
+    ['notifications', 'Notifications'],
+    ['audit', 'Audit'],
+  ] as const;
 
   return (
     <div className={styles['container']}>
@@ -620,7 +680,7 @@ export function EventDetailContent() {
         </div>
         <div className={styles['headerActions']}>
           <StatusBadge status={displayStatus} pending={optimisticStatus !== null} />
-          {canManage && tab === 'overview' && !isEditing && (
+          {canManage && !locked && tab === 'overview' && !isEditing && (
             <button
               type="button"
               className={styles['transitionBtn']}
@@ -661,19 +721,17 @@ export function EventDetailContent() {
 
       {/* Tabs */}
       <nav className={styles['tabs']} aria-label="Event sections">
-        {(['overview', 'volunteers', 'feedback', 'notifications', 'audit'] as const).map(
-          (tabName) => (
-            <button
-              key={tabName}
-              type="button"
-              className={`${styles['tab']} ${tab === tabName ? styles['tab--active'] : ''}`}
-              aria-current={tab === tabName ? 'page' : undefined}
-              onClick={() => handleTabChange(tabName)}
-            >
-              {tabName.charAt(0).toUpperCase() + tabName.slice(1)}
-            </button>
-          ),
-        )}
+        {tabs.map(([tabName, label]) => (
+          <button
+            key={tabName}
+            type="button"
+            className={`${styles['tab']} ${tab === tabName ? styles['tab--active'] : ''}`}
+            aria-current={tab === tabName ? 'page' : undefined}
+            onClick={() => handleTabChange(tabName)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
       {/* Tab content — Overview (primary) */}
@@ -707,10 +765,12 @@ export function EventDetailContent() {
 
       {/* Volunteers tab with enrollment */}
       {tab === 'volunteers' && (
-        <VolunteersTab eventId={eventId} />
+        <VolunteersTab eventId={eventId} status={event.status} />
       )}
+      {tab === 'pocs' && canManage && <PocsTab eventId={eventId} />}
+      {tab === 'beneficiaries' && canManage && <BeneficiariesTab eventId={eventId} />}
       {tab === 'feedback' && (
-        <FeedbackTab eventId={eventId} />
+        <FeedbackTab eventId={eventId} status={event.status} />
       )}
       {tab === 'notifications' && (
         <div className={styles['tabPlaceholder']}>
