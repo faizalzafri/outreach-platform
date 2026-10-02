@@ -11,6 +11,7 @@ import com.outreach.platform.report.model.NpsResultDto;
 import com.outreach.platform.report.model.ParticipationRateDto;
 import com.outreach.platform.report.model.PocScoreDto;
 import com.outreach.platform.report.model.ReportQueryParams;
+import com.outreach.platform.report.model.ScoreCountDto;
 import com.outreach.platform.report.model.SentimentBreakdownDto;
 import com.outreach.platform.report.model.TimeSeriesDataPoint;
 import com.outreach.platform.report.model.TrendDataDto;
@@ -28,7 +29,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
 
 /**
  * Business logic for report aggregation and analytics queries.
@@ -455,6 +459,27 @@ public class ReportService {
                     promoters, passives, detractors, nps, total
             );
         }, args.toArray());
+    }
+
+    /** Feedback counts for each score 1–5 (zero where none), leaving out archived feedback. */
+    @Cacheable(value = "reportCache", key = TENANT_KEY_PREFIX + "'score-distribution:' + #params")
+    public List<ScoreCountDto> getScoreDistribution(ReportQueryParams params) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT vf.score, COUNT(*) AS responses
+                FROM volunteer_feedback vf
+                JOIN events e ON e.id = vf.event_id
+                WHERE vf.status <> 'ARCHIVED'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendFilters(sql, args, params);
+        sql.append(" GROUP BY vf.score");
+
+        Map<Integer, Long> counts = new HashMap<>();
+        jdbcTemplate.query(sql.toString(),
+                rs -> { counts.put(rs.getInt("score"), rs.getLong("responses")); }, args.toArray());
+        return IntStream.rangeClosed(1, 5)
+                .mapToObj(score -> new ScoreCountDto(score, counts.getOrDefault(score, 0L)))
+                .toList();
     }
 
     /** Evicts all report cache entries. */

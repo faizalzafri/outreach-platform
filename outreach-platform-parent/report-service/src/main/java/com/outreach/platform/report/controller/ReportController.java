@@ -11,6 +11,7 @@ import com.outreach.platform.report.model.NpsResultDto;
 import com.outreach.platform.report.model.ParticipationRateDto;
 import com.outreach.platform.report.model.PocScoreDto;
 import com.outreach.platform.report.model.ReportQueryParams;
+import com.outreach.platform.report.model.ScoreCountDto;
 import com.outreach.platform.report.model.SentimentBreakdownDto;
 import com.outreach.platform.report.model.TimeSeriesDataPoint;
 import com.outreach.platform.report.model.TrendDataDto;
@@ -106,6 +107,12 @@ public class ReportController {
     @GetMapping("/sentiment")
     public SentimentBreakdownDto getSentiment(ReportQueryParams params) {
         return reportService.getSentiment(params);
+    }
+
+    @PreAuthorize(PMO_OR_ADMIN)
+    @GetMapping("/score-distribution")
+    public List<ScoreCountDto> getScoreDistribution(ReportQueryParams params) {
+        return reportService.getScoreDistribution(params);
     }
 
     @PreAuthorize(PMO_OR_ADMIN)

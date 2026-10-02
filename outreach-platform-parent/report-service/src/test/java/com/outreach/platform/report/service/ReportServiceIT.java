@@ -7,6 +7,7 @@ import com.outreach.platform.report.model.DashboardSummaryDto;
 import com.outreach.platform.report.model.EventScoreDto;
 import com.outreach.platform.report.model.NpsResultDto;
 import com.outreach.platform.report.model.ReportQueryParams;
+import com.outreach.platform.report.model.ScoreCountDto;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -174,6 +175,7 @@ class ReportServiceIT {
                     volunteer_id BIGINT NOT NULL REFERENCES volunteers(id),
                     score INT NOT NULL,
                     sentiment VARCHAR(20),
+                    status VARCHAR(20) DEFAULT 'SUBMITTED',
                     submitted_at TIMESTAMP DEFAULT NOW(),
                     tenant_id UUID
                 )
@@ -280,6 +282,18 @@ class ReportServiceIT {
         assertThat(treePlantation.totalResponses()).isEqualTo(2);
         // NPS = (0 - 2) * 100 / 2 = -100.0
         assertThat(treePlantation.npsScore()).isEqualTo(new BigDecimal("-100.0"));
+    }
+
+    @Test
+    void getScoreDistribution_countsEachScore_withoutArchivedFeedback() {
+        jdbcTemplate.update("UPDATE volunteer_feedback SET status = 'ARCHIVED' WHERE id = 5"); // the score of 1
+
+        List<ScoreCountDto> distribution = reportService.getScoreDistribution(
+                new ReportQueryParams(null, null, null, null, null, null, null));
+
+        assertThat(distribution).containsExactly(
+                new ScoreCountDto(1, 0), new ScoreCountDto(2, 1), new ScoreCountDto(3, 1),
+                new ScoreCountDto(4, 1), new ScoreCountDto(5, 1));
     }
 
     @Test
