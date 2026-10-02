@@ -14,6 +14,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -157,8 +158,16 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        // A ResponseStatusException is thrown on purpose, status and reason chosen for the caller.
         // Spring MVC's own client errors (unknown route, wrong method, missing parameter, ...)
-        // carry their status; reporting them as 500 hides caller mistakes behind a server fault.
+        // carry their status too; reporting them as 500 hides caller mistakes behind a server fault.
+        if (ex instanceof ResponseStatusException deliberate) {
+            log.warn("Request refused: {}", ex.getMessage());
+            HttpStatus status = HttpStatus.valueOf(deliberate.getStatusCode().value());
+            String reason = deliberate.getReason() != null ? deliberate.getReason() : status.getReasonPhrase();
+            return ResponseEntity.status(status)
+                    .body(ErrorResponse.of(status.value(), status.name(), reason, getCorrelationId()));
+        }
         if (ex instanceof org.springframework.web.ErrorResponse springError
                 && springError.getStatusCode().is4xxClientError()) {
             log.warn("Request rejected: {}", ex.getMessage());
