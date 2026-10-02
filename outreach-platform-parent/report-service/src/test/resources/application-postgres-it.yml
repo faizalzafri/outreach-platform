@@ -18,7 +18,7 @@ spring:
   # test-only Liquibase changelog enabled — unlike application-test.yml (static, non-Testcontainers
   # datasource, Liquibase disabled entirely since this service never owns its schema in
   # production), this profile exists specifically to prove ReportScheduleEntity's mapping matches
-  # a real engine (docs/specs/platform-hardening/, Task 1.5).
+  # a real engine (CLAUDE.md,).
   liquibase:
     change-log: classpath:db/changelog/db.changelog-test.xml
     enabled: true

@@ -55,7 +55,7 @@ class VolunteerEnrollmentServiceTest {
                 new EventVisibility(pocAssignmentRepository, teamAccessRepository));
         // Production requests always have TenantContext populated by TenantContextFilter — set it
         // here too so these tests exercise the tenant-scoped findByIdAndTenantId path. See
-        // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // CLAUDE.md.
         TenantContext.setCurrentTenantId(UUID.randomUUID());
     }
 

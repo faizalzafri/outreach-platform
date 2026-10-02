@@ -172,7 +172,7 @@ public class JobTrackingService {
      */
     public Page<JobTrackingDocument> listJobs(Pageable pageable) {
         // findAllByOrderByCreatedAtDesc() alone would return every tenant's jobs to any caller —
-        // see docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls
+        // see CLAUDE.md. Empty TenantContext falls
         // back to the unscoped listing only for the PLATFORM_ADMIN case.
         return TenantContext.isPresent()
                 ? jobTrackingRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.getCurrentTenantId(), pageable)
@@ -181,7 +181,7 @@ public class JobTrackingService {
 
     private Optional<JobTrackingDocument> findByIdTenantScoped(String jobId) {
         // findById() alone would let any caller read/cancel any tenant's job by ID — see
-        // docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls back to
+        // CLAUDE.md. Empty TenantContext falls back to
         // the unscoped lookup only for the PLATFORM_ADMIN case.
         return TenantContext.isPresent()
                 ? jobTrackingRepository.findByIdAndTenantId(jobId, TenantContext.getCurrentTenantId())

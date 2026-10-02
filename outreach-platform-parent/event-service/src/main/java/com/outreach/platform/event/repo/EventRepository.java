@@ -38,7 +38,7 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
      * <em>do</em> compile to JPQL and are correctly filtered, so this explicit tenant condition —
      * not the inherited filter — is what actually enforces isolation here. Use this instead of
      * {@code findById} for every tenant-scoped lookup; see
-     * {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0 for the
+     * CLAUDE.md for the
      * regression test that proved {@code findById} alone lets a cross-tenant read through.
      */
     Optional<EventEntity> findByIdAndTenantId(UUID id, UUID tenantId);

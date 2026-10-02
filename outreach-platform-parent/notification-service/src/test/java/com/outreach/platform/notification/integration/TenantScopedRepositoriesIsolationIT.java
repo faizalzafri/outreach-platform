@@ -29,10 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Cross-tenant leakage regression tests for {@link NotificationScheduleEntity}/
- * {@link NotificationTemplateEntity} (docs/specs/platform-hardening/ Task 0.5.6/1.4), run against
+ * {@link NotificationTemplateEntity} (CLAUDE.md), run against
  * a real Testcontainers Postgres with Liquibase enabled and {@code ddl-auto=validate} — unlike
  * this service's default {@code application-test.yml} (H2, {@code create-drop}), this profile
- * doubles as Task 1.5's schema-drift validation: if either entity's mapping didn't match what
+ * doubles as's schema-drift validation: if either entity's mapping didn't match what
  * Liquibase actually produces, the Spring context would fail to start here, not just silently
  * pass against H2's auto-generated schema.
  *

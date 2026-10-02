@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Cross-tenant leakage regression test for {@link EventEntity} — the concrete deliverable for
- * Requirement 1.4 (docs/specs/platform-hardening/requirements.md). {@code EventEntity} was
+ * (CLAUDE.md). {@code EventEntity} was
  * migrated to extend {@code TenantAwareBaseEntity} instead of hand-rolling its own
  * {@code @FilterDef}/{@code @Filter}; this test proves the inherited Hibernate tenant filter
  * actually blocks a cross-tenant read at the repository layer, not just that the annotations
@@ -83,7 +83,7 @@ class EventTenantIsolationIT {
 
         TenantContext.setCurrentTenantId(tenantB);
         // findByIdAndTenantId — NOT findById — is the fix: see EventRepository's Javadoc on that
-        // method and Requirement 0 in docs/specs/platform-hardening/. This is also what
+        // method and in CLAUDE.md. This is also what
         // EventService.findEntityOrThrow now calls internally.
         Optional<EventEntity> readAsTenantB = eventRepository.findByIdAndTenantId(eventId, tenantB);
 
@@ -109,11 +109,11 @@ class EventTenantIsolationIT {
 
     @Test
     void plainFindById_stillLeaksAcrossTenants_becauseItBypassesTheFilterEntirely() {
-        // This test documents a known, accepted-for-now limitation of the Requirement 0 fix
+        // This test documents a known, accepted-for-now limitation of the fix
         // rather than a regression: adding findByIdAndTenantId gives callers a safe method to use,
         // it does NOT make the inherited findById() itself tenant-safe — that method still compiles
         // to EntityManager.find(), which no Hibernate @Filter reaches. The real fix for *this* is
-        // Task 0.5.5 (audit every tenant-scoped repository) plus, ideally, an ArchUnit rule banning
+        //.5 (audit every tenant-scoped repository) plus, ideally, an ArchUnit rule banning
         // bare findById() on tenant-scoped repositories so a future caller can't reintroduce this
         // by simply not knowing to use the safe method. If this test ever starts failing (i.e.
         // findById starts correctly returning empty), that's good news — update it to assertThat
@@ -129,7 +129,7 @@ class EventTenantIsolationIT {
         Optional<EventEntity> readAsTenantB = eventRepository.findById(eventUnderTenantA.getId());
 
         assertThat(readAsTenantB)
-                .as("known limitation: bare findById() is not protected by Requirement 0's fix — callers must use findByIdAndTenantId")
+                .as("known limitation: bare findById() is not protected by the tenant filter — callers must use findByIdAndTenantId")
                 .isPresent();
     }
 

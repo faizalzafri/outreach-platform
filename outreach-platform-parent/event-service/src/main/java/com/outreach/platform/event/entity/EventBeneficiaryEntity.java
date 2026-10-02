@@ -26,7 +26,7 @@ import java.util.UUID;
  * {@code @FilterDef}s with the same name in one persistence unit as a boot-time conflict
  * ("Multiple '@FilterDef' annotations define a filter named 'tenantFilter'") — this is exactly
  * the bug that surfaced while adding a tenant-isolation regression test, see
- * docs/specs/platform-hardening/. Composite-key entities are a distinct case from the Bucket
+ * CLAUDE.md. Composite-key entities are a distinct case from the Bucket
  * A/B/C classification in that spec — not a candidate for extending the base class at all.
  */
 @Entity

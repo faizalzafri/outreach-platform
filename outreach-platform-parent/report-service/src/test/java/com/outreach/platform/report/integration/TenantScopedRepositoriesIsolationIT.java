@@ -25,10 +25,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Cross-tenant leakage regression test for {@link ReportScheduleEntity} (docs/specs/platform-hardening/
- * Task 0.5.6/1.4), run against a real Testcontainers Postgres with a test-only Liquibase changelog
+ * Cross-tenant leakage regression test for {@link ReportScheduleEntity} (see CLAUDE.md), run against a real Testcontainers Postgres with a test-only Liquibase changelog
  * (see {@code db.changelog-test.xml}, mirroring feedback-service's existing pattern for a service
- * that doesn't own its schema in production) and {@code ddl-auto=validate} — doubling as Task 1.5's
+ * that doesn't own its schema in production) and {@code ddl-auto=validate} — doubling as's
  * schema-drift validation, since report-service's own {@code application.yml} disables both
  * Liquibase and ddl-auto entirely (it's read-only-by-design; schema is owned by event-service).
  */

@@ -50,7 +50,7 @@
     <include file="db/changelog/20250122-003-add-tenant-id-to-team-memberships.sql"/>
 
     <!-- 11. Add missing audit/version columns so all remaining entities can extend TenantAwareBaseEntity
-         without a Hibernate "Multiple @FilterDef" conflict — see docs/specs/platform-hardening/ -->
+         without a Hibernate "Multiple @FilterDef" conflict — see CLAUDE.md -->
     <include file="db/changelog/20250122-004-add-missing-audit-columns.sql"/>
 
     <!-- 12. Ensure tenant_memberships exists in this service's own schema (owned by auth-service,

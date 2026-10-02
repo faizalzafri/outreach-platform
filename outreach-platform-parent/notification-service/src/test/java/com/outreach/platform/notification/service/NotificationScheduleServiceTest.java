@@ -49,7 +49,7 @@ class NotificationScheduleServiceTest {
         // Production requests always have TenantContext populated by TenantContextFilter — set it
         // here too so these tests exercise the tenant-scoped findByIdAndTenantId path rather than
         // the plain-findById fallback that only real PLATFORM_ADMIN requests should take. See
-        // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // CLAUDE.md.
         TenantContext.setCurrentTenantId(UUID.randomUUID());
     }
 

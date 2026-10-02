@@ -47,7 +47,7 @@ public class PocAssignmentService {
     @Transactional
     public PocAssignmentDto assignPoc(UUID eventId, PocAssignRequest request) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         UUID currentTenantId = TenantContext.isPresent() ? TenantContext.getCurrentTenantId() : null;
         EventEntity event = (currentTenantId != null
                 ? eventRepository.findByIdAndTenantId(eventId, currentTenantId)

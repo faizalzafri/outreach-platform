@@ -243,7 +243,7 @@ public class EventService {
         // to EntityManager.find()-style primary-key loads, only to query-based access. When
         // TenantContext is empty, the caller has already been established as PLATFORM_ADMIN
         // (TenantFilterAspect throws for anyone else), so an unscoped lookup is the intended
-        // cross-tenant behavior. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // cross-tenant behavior. See CLAUDE.md.
         Optional<EventEntity> entity = TenantContext.isPresent()
                 ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
                 : eventRepository.findById(eventId);

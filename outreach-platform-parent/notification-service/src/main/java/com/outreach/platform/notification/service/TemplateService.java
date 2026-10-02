@@ -91,7 +91,7 @@ public class TemplateService {
         // SimpleJpaRepository.deleteById() implementation internally calls findById() and then
         // removes the result — so this was not just a cross-tenant read risk but a cross-tenant
         // delete risk. Route through the same tenant-scoped lookup and an explicit delete(entity)
-        // call instead. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // call instead. See CLAUDE.md.
         templateRepository.delete(findEntityOrThrow(id));
     }
 
@@ -117,7 +117,7 @@ public class TemplateService {
 
     private NotificationTemplateEntity findEntityOrThrow(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<NotificationTemplateEntity> entity = TenantContext.isPresent()
                 ? templateRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : templateRepository.findById(id);

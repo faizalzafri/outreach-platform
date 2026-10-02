@@ -240,7 +240,7 @@ public class TeamService {
 
     private Team findTeamOrThrow(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<Team> team = TenantContext.isPresent()
                 ? teamRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : teamRepository.findById(id);

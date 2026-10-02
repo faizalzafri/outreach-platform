@@ -171,7 +171,7 @@ public class BeneficiaryService {
 
     private BeneficiaryEntity findOrThrow(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<BeneficiaryEntity> beneficiary = TenantContext.isPresent()
                 ? beneficiaryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : beneficiaryRepository.findById(id);

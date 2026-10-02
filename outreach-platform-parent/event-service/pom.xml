@@ -23,7 +23,7 @@
         <!--
             Pulls in common-lib's ArchitectureRulesTest so it runs against this service's own
             compiled classes, not just common-lib's. See ADR 0001
-            (docs/adr/0001-archunit-enforcement-scope.md).
+            (CLAUDE.md).
         -->
         <dependency>
             <groupId>com.outreach.platform</groupId>

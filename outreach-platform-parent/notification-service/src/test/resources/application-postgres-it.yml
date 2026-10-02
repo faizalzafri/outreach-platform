@@ -11,7 +11,7 @@ spring:
   # Real Postgres via Testcontainers (datasource URL/credentials set dynamically) with Liquibase
   # enabled and ddl-auto=validate — unlike application-test.yml's H2/create-drop, this profile
   # exists specifically to prove the entity mappings match what Liquibase actually produces
-  # against a real engine (docs/specs/platform-hardening/, Task 1.5).
+  # against a real engine (CLAUDE.md,).
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:

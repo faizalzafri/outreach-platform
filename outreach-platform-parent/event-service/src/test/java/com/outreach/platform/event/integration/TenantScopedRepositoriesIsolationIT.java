@@ -28,8 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Cross-tenant leakage regression tests for the remaining repositories {@code findByIdAndTenantId}
- * was added to as part of Requirement 0's fix (docs/specs/platform-hardening/requirements.md,
- * Finding 0 / Task 0.5.5) — {@link UserRepository}, {@link BeneficiaryRepository},
+ * was added to as part of the findById fix (see CLAUDE.md) — {@link UserRepository}, {@link BeneficiaryRepository},
  * {@link TeamRepository}. {@code EventEntity} already has
  * its own dedicated test ({@link EventTenantIsolationIT}); this class covers the rest of Task
  * 0.5.6 for event-service so every fixed repository has proof the fix actually blocks a

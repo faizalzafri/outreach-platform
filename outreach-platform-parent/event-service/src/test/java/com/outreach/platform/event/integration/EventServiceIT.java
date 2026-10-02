@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code IllegalStateException} on any JPA repository call made with no tenant context, and this
  * suite previously sent no tenant header at all, which meant it had never actually exercised a
  * single successful request end-to-end (discovered while adding a tenant-isolation regression
- * test, see {@code docs/specs/platform-hardening/}). The default tenant ID matches the row
+ * test, see {@code CLAUDE.md}). The default tenant ID matches the row
  * seeded by {@code 20250120-002-add-tenant-id-to-event-tables.sql} — required, since
  * {@code events.tenant_id} has a foreign key to {@code tenants(id)}.</p>
  */

@@ -162,7 +162,7 @@ public class VolunteerEnrollmentService {
 
     private EventEntity findEventOrThrow(UUID eventId) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<EventEntity> event = TenantContext.isPresent()
                 ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
                 : eventRepository.findById(eventId);
