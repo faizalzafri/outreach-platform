@@ -17,15 +17,20 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
 /**
  * Shared RabbitMQ infrastructure: declares exchanges, queues with DLQ, bindings, retry policy, and JSON message converter.
+ *
+ * <p>An auto-configuration (not a scanned @Configuration) so every service gets the same JSON
+ * converter and x-tenant-id handling regardless of its own {@code scanBasePackages}. Ordered
+ * before Boot's RabbitAutoConfiguration so Boot's plain RabbitTemplate backs off.
  */
-@Configuration
+@AutoConfiguration(before = RabbitAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.amqp.rabbit.core.RabbitTemplate")
 @ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class RabbitMqConfig {
