@@ -4,19 +4,11 @@
  * Displays paginated, filterable list of events.
  * Validates search params with Zod schema using .catch() to discard invalid params
  * and apply defaults gracefully.
- * Uses React.lazy + Suspense for code splitting.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
 import { z } from 'zod';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
-
-const EventListContent = lazy(() =>
-  import('./-components/EventListContent').then((mod) => ({
-    default: mod.EventListContent,
-  }))
-);
+import { EventListContent } from './-components/EventListContent';
 
 const eventListSearchSchema = z.object({
   page: z.number().int().positive().default(1).catch(1),
@@ -39,8 +31,6 @@ export const Route = createFileRoute('/_authenticated/events/')({
 
 function EventListPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Events" />}>
-      <EventListContent />
-    </Suspense>
+    <EventListContent />
   );
 }

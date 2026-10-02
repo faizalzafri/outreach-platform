@@ -85,7 +85,7 @@ describe('Authenticated Route Guard', () => {
         logout: vi.fn(),
       }),
     }));
-    vi.doMock('@/components/layout', () => ({
+    vi.doMock('@/components/layout/LayoutShell', () => ({
       LayoutShell: ({ children }: any) => <div data-testid="layout">{children}</div>,
     }));
     vi.doMock('@/components/feedback/PageSkeleton', () => ({
@@ -124,7 +124,7 @@ describe('Authenticated Route Guard', () => {
         logout: vi.fn(),
       }),
     }));
-    vi.doMock('@/components/layout', () => ({
+    vi.doMock('@/components/layout/LayoutShell', () => ({
       LayoutShell: ({ children }: any) => <div data-testid="layout">{children}</div>,
     }));
     vi.doMock('@/components/feedback/PageSkeleton', () => ({
@@ -169,7 +169,7 @@ describe('Authenticated Route Guard', () => {
         logout: vi.fn(),
       }),
     }));
-    vi.doMock('@/components/layout', () => ({
+    vi.doMock('@/components/layout/LayoutShell', () => ({
       LayoutShell: ({ children }: any) => <div data-testid="layout">{children}</div>,
     }));
     vi.doMock('@/components/feedback/PageSkeleton', () => ({

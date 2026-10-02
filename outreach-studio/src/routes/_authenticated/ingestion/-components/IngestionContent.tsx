@@ -5,13 +5,12 @@
  * job status polling, and a recent jobs list.
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useExponentialPolling } from '@/hooks/useExponentialPolling';
 import { DataTable } from '@/components/data-table/DataTable';
 import type { ImportJob, JobError } from '@/types/domain';
 
@@ -28,9 +27,8 @@ const ACCEPTED_MIME_TYPES = [
   'text/csv',
 ];
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-const BASE_POLL_INTERVAL = 3000; // 3 seconds initial
-const MAX_POLL_INTERVAL = 30000; // 30 seconds cap
-const MAX_POLL_ATTEMPTS = 60;
+const POLL_INTERVAL = 3000;
+const MAX_POLL_MS = 10 * 60 * 1000;
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
 
@@ -64,133 +62,73 @@ function getStatusClass(status: string): string {
 // Upload Hook
 // ---------------------------------------------------------------------------
 
-interface UploadState {
-  uploading: boolean;
-  uploadProgress: number;
-  polling: boolean;
-  pollCount: number;
-  jobId: string | null;
-  job: ImportJob | null;
-  error: string | null;
-  timeout: boolean;
-}
-
 function useFileUpload() {
-  const [state, setState] = useState<UploadState>({
-    uploading: false,
-    uploadProgress: 0,
-    polling: false,
-    pollCount: 0,
-    jobId: null,
-    job: null,
-    error: null,
-    timeout: false,
-  });
-
   const queryClient = useQueryClient();
-  const jobIdRef = useRef<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedAt, setUploadedAt] = useState(0);
 
-  // Exponential backoff polling: 3s → 6s → 12s → 24s → 30s (capped)
-  const polling = useExponentialPolling<ImportJob>({
-    queryFn: async () => {
-      const response = await httpClient.get<ImportJob>(`/ingestion/jobs/${jobIdRef.current}`);
-      return response.data;
-    },
-    isTerminal: (job) => TERMINAL_STATUSES.has(job.status),
-    baseInterval: BASE_POLL_INTERVAL,
-    maxInterval: MAX_POLL_INTERVAL,
-    maxAttempts: MAX_POLL_ATTEMPTS,
-    enabled: state.polling && !!state.jobId,
-    onData: (job) => {
-      setState((prev) => ({
-        ...prev,
-        job,
-        pollCount: polling.attemptCount,
-      }));
-    },
-    onComplete: () => {
-      setState((prev) => ({ ...prev, polling: false }));
-      void queryClient.invalidateQueries({ queryKey: queryKeys.ingestion.jobs() });
-    },
-    onError: () => {
-      // Transient errors are retried by the hook with exponential backoff.
-      // Only display a soft error; polling continues automatically.
-      setState((prev) => ({
-        ...prev,
-        error: 'Temporary issue checking job status. Retrying...',
-      }));
-    },
-    onTimeout: () => {
-      setState((prev) => ({ ...prev, polling: false, timeout: true }));
-    },
-  });
-
-  // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-
       const response = await httpClient.post<{ jobId: string }>('/ingestion/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
-          const percent = progressEvent.total
-            ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
-            : 0;
-          setState((prev) => ({ ...prev, uploadProgress: percent }));
-        },
+        onUploadProgress: (event) =>
+          setUploadProgress(event.total ? Math.round((event.loaded / event.total) * 100) : 0),
       });
       return response.data;
     },
     onMutate: () => {
-      setState({
-        uploading: true,
-        uploadProgress: 0,
-        polling: false,
-        pollCount: 0,
-        jobId: null,
-        job: null,
-        error: null,
-        timeout: false,
-      });
+      setJobId(null);
+      setUploadProgress(0);
     },
     onSuccess: (data) => {
-      jobIdRef.current = data.jobId;
-      setState((prev) => ({
-        ...prev,
-        uploading: false,
-        uploadProgress: 100,
-        jobId: data.jobId,
-        polling: true,
-      }));
-    },
-    onError: (err) => {
-      setState((prev) => ({
-        ...prev,
-        uploading: false,
-        error: (err as { message?: string })?.message ?? 'Upload failed. Please try again.',
-      }));
+      setJobId(data.jobId);
+      setUploadedAt(Date.now());
     },
   });
 
-  const upload = useCallback((file: File) => {
-    uploadMutation.mutate(file);
-  }, [uploadMutation]);
+  // The job is polled until it finishes, or until polling has gone on for too long.
+  const jobQuery = useQuery<ImportJob>({
+    queryKey: [...queryKeys.ingestion.jobs(), 'upload', jobId],
+    queryFn: async () => (await httpClient.get<ImportJob>(`/ingestion/jobs/${jobId}`)).data,
+    enabled: jobId !== null,
+    refetchInterval: (query) =>
+      (query.state.data && TERMINAL_STATUSES.has(query.state.data.status)) ||
+      query.state.dataUpdatedAt - uploadedAt > MAX_POLL_MS
+        ? false
+        : POLL_INTERVAL,
+  });
 
+  const job = jobQuery.data ?? null;
+  const finished = job !== null && TERMINAL_STATUSES.has(job.status);
+  const timedOut = !finished && jobQuery.dataUpdatedAt - uploadedAt > MAX_POLL_MS;
+
+  // Refresh the job list once this job is done.
+  useEffect(() => {
+    if (finished) void queryClient.invalidateQueries({ queryKey: queryKeys.ingestion.jobs() });
+  }, [finished, queryClient]);
+
+  const state = {
+    uploading: uploadMutation.isPending,
+    uploadProgress,
+    polling: jobId !== null && !finished && !timedOut,
+    job,
+    error: uploadMutation.error
+      ? (uploadMutation.error as { message?: string }).message ?? 'Upload failed. Please try again.'
+      : jobQuery.isError
+        ? 'Temporary issue checking job status. Retrying...'
+        : null,
+    timeout: timedOut,
+  };
+
+  const upload = useCallback((file: File) => uploadMutation.mutate(file), [uploadMutation]);
   const reset = useCallback(() => {
-    polling.stop();
-    jobIdRef.current = null;
-    setState({
-      uploading: false,
-      uploadProgress: 0,
-      polling: false,
-      pollCount: 0,
-      jobId: null,
-      job: null,
-      error: null,
-      timeout: false,
-    });
-  }, [polling]);
+    uploadMutation.reset();
+    setJobId(null);
+    setUploadProgress(0);
+  }, [uploadMutation]);
 
   return { state, upload, reset };
 }

@@ -5,14 +5,7 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
-
-const ProfileContent = lazy(() =>
-  import('./-components/ProfileContent').then((mod) => ({
-    default: mod.ProfileContent,
-  }))
-);
+import { ProfileContent } from './-components/ProfileContent';
 
 export const Route = createFileRoute('/_authenticated/settings/')({
   component: SettingsPage,
@@ -20,8 +13,6 @@ export const Route = createFileRoute('/_authenticated/settings/')({
 
 function SettingsPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Your profile" />}>
-      <ProfileContent />
-    </Suspense>
+    <ProfileContent />
   );
 }

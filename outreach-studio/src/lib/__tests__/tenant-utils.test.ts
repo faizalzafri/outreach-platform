@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { truncateName, formatSharedWith, isValidDateRange, formatRelativeTime } from '../tenant-utils';
+import { truncateName, formatSharedWith, formatRelativeTime } from '../tenant-utils';
 import type { ResourcePermissions } from '@/types/tenant';
 
 describe('tenant-utils', () => {
@@ -58,27 +58,6 @@ describe('tenant-utils', () => {
     });
   });
 
-  describe('isValidDateRange', () => {
-    it('accepts a range where end is after start and within 90 days', () => {
-      expect(isValidDateRange(new Date('2026-01-01'), new Date('2026-01-15'))).toBe(true);
-    });
-
-    it('accepts a range exactly 90 days apart', () => {
-      const start = new Date('2026-01-01');
-      const end = new Date(start.getTime() + 90 * 24 * 60 * 60 * 1000);
-      expect(isValidDateRange(start, end)).toBe(true);
-    });
-
-    it('rejects a range longer than 90 days', () => {
-      const start = new Date('2026-01-01');
-      const end = new Date(start.getTime() + 91 * 24 * 60 * 60 * 1000);
-      expect(isValidDateRange(start, end)).toBe(false);
-    });
-
-    it('rejects a range where end precedes start', () => {
-      expect(isValidDateRange(new Date('2026-01-15'), new Date('2026-01-01'))).toBe(false);
-    });
-  });
 
   describe('formatRelativeTime', () => {
     it('formats a past timestamp as "ago"', () => {

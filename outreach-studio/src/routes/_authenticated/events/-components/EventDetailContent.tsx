@@ -2,7 +2,7 @@
  * Event Detail Content (lazy-loaded)
  *
  * Displays event details with lifecycle transition buttons.
- * Implements optimistic status updates with rollback on server rejection.
+ * Shows the status the server confirms; a refused transition leaves it as it was.
  * Shows valid transitions based on current event status.
  */
 
@@ -13,7 +13,6 @@ import { useForm } from '@tanstack/react-form';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import { usePermission } from '@/hooks/usePermission';
 import { eventCreateSchema } from '@/lib/zod-schemas';
 import type {
@@ -551,7 +550,6 @@ export function EventDetailContent() {
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
 
-  const [optimisticStatus, setOptimisticStatus] = useState<EventStatus | null>(null);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { hasPermission: canManage } = usePermission([
@@ -577,32 +575,15 @@ export function EventDetailContent() {
     },
   });
 
-  // Status transition mutation with optimistic update and 1s rollback timeout
-  const transitionMutation = useOptimisticMutation<Event, EventStatus>({
-    mutationFn: async (targetStatus) => {
-      const response = await httpClient.patch<Event>(
-        `/events/${eventId}/status`,
-        { targetStatus },
-      );
-      return response.data;
-    },
-    queryKey: queryKeys.events.detail(eventId),
-    optimisticUpdate: (cached, targetStatus) => {
-      if (!cached) return cached;
-      setOptimisticStatus(targetStatus);
-      setTransitionError(null);
-      return { ...cached, status: targetStatus };
-    },
-    rollbackTimeout: 1000,
-    onSuccess: () => {
-      setOptimisticStatus(null);
+  const transitionMutation = useMutation<Event, NormalizedError, EventStatus>({
+    mutationFn: async (targetStatus) =>
+      (await httpClient.patch<Event>(`/events/${eventId}/status`, { targetStatus })).data,
+    onMutate: () => setTransitionError(null),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.events.detail(eventId), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.events.lists() });
     },
-    onError: (message) => {
-      setOptimisticStatus(null);
-      setTransitionError(message);
-    },
-    invalidateKeys: [queryKeys.events.lists()],
+    onError: (error) => setTransitionError(error.message),
   });
 
   const handleTransition = useCallback(
@@ -652,7 +633,7 @@ export function EventDetailContent() {
     );
   }
 
-  const displayStatus = optimisticStatus ?? event.status;
+  const pendingStatus = transitionMutation.isPending ? transitionMutation.variables : undefined;
   const validTransitions = EVENT_TRANSITIONS[event.status] ?? [];
   // Cancelled and archived events are closed records; the API refuses edits to them too.
   const locked = event.status === 'CANCELLED' || event.status === 'ARCHIVED';
@@ -679,7 +660,7 @@ export function EventDetailContent() {
           <p className={styles['eventCode']}>{event.eventCode}</p>
         </div>
         <div className={styles['headerActions']}>
-          <StatusBadge status={displayStatus} pending={optimisticStatus !== null} />
+          <StatusBadge status={event.status} pending={pendingStatus !== undefined} />
           {canManage && !locked && tab === 'overview' && !isEditing && (
             <button
               type="button"
@@ -710,7 +691,7 @@ export function EventDetailContent() {
               onClick={() => handleTransition(target)}
               disabled={transitionMutation.isPending}
             >
-              {transitionMutation.isPending && optimisticStatus === target && (
+              {pendingStatus === target && (
                 <span className={styles['transitionSpinner']} aria-hidden="true" />
               )}
               {TRANSITION_LABELS[target] ?? target}
@@ -750,7 +731,7 @@ export function EventDetailContent() {
       {tab === 'overview' && !isEditing && (
         <dl className={styles['detailGrid']}>
           <DetailField label="Description" value={event.description} />
-          <DetailField label="Status" value={displayStatus} />
+          <DetailField label="Status" value={event.status} />
           <DetailField label="Event Date" value={new Date(event.eventDate + 'T00:00:00').toLocaleDateString()} />
           <DetailField label="End Date" value={new Date(event.eventEndDate + 'T00:00:00').toLocaleDateString()} />
           <DetailField label="City" value={event.city} />

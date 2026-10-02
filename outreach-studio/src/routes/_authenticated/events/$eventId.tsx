@@ -3,19 +3,11 @@
  *
  * Displays details for a single event with lifecycle transition controls.
  * Supports nested tabs: Overview, Volunteers, Feedback, Notifications, Audit History.
- * Uses React.lazy + Suspense for code splitting.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
 import { z } from 'zod';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
-
-const EventDetailContent = lazy(() =>
-  import('./-components/EventDetailContent').then((mod) => ({
-    default: mod.EventDetailContent,
-  }))
-);
+import { EventDetailContent } from './-components/EventDetailContent';
 
 const eventDetailSearchSchema = z.object({
   tab: z
@@ -34,8 +26,6 @@ export const Route = createFileRoute('/_authenticated/events/$eventId')({
 
 function EventDetailPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Event Detail" />}>
-      <EventDetailContent />
-    </Suspense>
+    <EventDetailContent />
   );
 }

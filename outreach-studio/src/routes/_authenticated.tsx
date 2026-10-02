@@ -8,7 +8,7 @@
 
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { LayoutShell } from '@/components/layout';
+import { LayoutShell } from '@/components/layout/LayoutShell';
 import { PageSkeleton } from '@/components/feedback/PageSkeleton';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { useEffect } from 'react';

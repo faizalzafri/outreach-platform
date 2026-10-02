@@ -14,7 +14,6 @@
 
 import axios from 'axios';
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 
 import { authModule } from '@/lib/auth';
 import { useTenantStore } from '@/stores/tenant-store';
@@ -195,7 +194,7 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
 
   // Attach correlation ID for request tracing
-  config.headers['X-Correlation-ID'] = uuidv4();
+  config.headers['X-Correlation-ID'] = crypto.randomUUID();
 
   // Platform Admin tenant override: when set, every outbound request carries the admin's chosen
   // tenant as a query param so the gateway can scope the request to it instead of (or in addition

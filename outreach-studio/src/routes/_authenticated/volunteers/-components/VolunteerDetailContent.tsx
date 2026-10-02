@@ -3,19 +3,18 @@
  *
  * Displays volunteer profile: employee ID, name, email, department,
  * location, skills. Shows paginated participation history.
- * Provides availability status with optimistic update action, gated to
+ * Provides an availability status action, gated to
  * PMO/ADMIN/TENANT_ADMIN/PLATFORM_ADMIN — POC sees a read-only badge.
  */
 
 import { useState, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
 import { usePermission } from '@/hooks/usePermission';
 import type { AttendanceStatus, Volunteer, VolunteerAvailability, VolunteerHistoryEntry } from '@/types/domain';
-import type { PageResponse } from '@/types/api';
+import type { NormalizedError, PageResponse } from '@/types/api';
 
 import { Route } from '../$employeeId';
 import styles from './VolunteerDetailContent.module.css';
@@ -55,7 +54,6 @@ export function VolunteerDetailContent() {
     'ROLE_PLATFORM_ADMIN',
   ]);
 
-  const [optimisticAvailability, setOptimisticAvailability] = useState<VolunteerAvailability | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
 
@@ -81,32 +79,15 @@ export function VolunteerDetailContent() {
     enabled: !!volunteer,
   });
 
-  // Availability mutation with optimistic update and rollback on server rejection
-  const availabilityMutation = useOptimisticMutation<Volunteer, VolunteerAvailability>({
-    mutationFn: async (newAvailability) => {
-      const response = await httpClient.put<Volunteer>(
-        `/volunteers/${employeeId}`,
-        { availability: newAvailability },
-      );
-      return response.data;
-    },
-    queryKey: queryKeys.volunteers.detail(employeeId),
-    optimisticUpdate: (cached, newAvailability) => {
-      if (!cached) return cached;
-      setOptimisticAvailability(newAvailability);
-      setAvailabilityError(null);
-      return { ...cached, availability: newAvailability };
-    },
-    rollbackTimeout: 1000,
-    onSuccess: () => {
-      setOptimisticAvailability(null);
+  const availabilityMutation = useMutation<Volunteer, NormalizedError, VolunteerAvailability>({
+    mutationFn: async (availability) =>
+      (await httpClient.put<Volunteer>(`/volunteers/${employeeId}`, { availability })).data,
+    onMutate: () => setAvailabilityError(null),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.volunteers.detail(employeeId), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.lists() });
     },
-    onError: (message) => {
-      setOptimisticAvailability(null);
-      setAvailabilityError(message);
-    },
-    invalidateKeys: [queryKeys.volunteers.lists()],
+    onError: (error) => setAvailabilityError(error.message),
   });
 
   const handleAvailabilityChange = useCallback(
@@ -147,7 +128,7 @@ export function VolunteerDetailContent() {
     );
   }
 
-  const displayAvailability = optimisticAvailability ?? volunteer.availability;
+  const displayAvailability = volunteer.availability;
   const skills = volunteer.skills
     ? volunteer.skills.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
@@ -217,7 +198,7 @@ export function VolunteerDetailContent() {
       {/* Availability */}
       <div className={styles['availabilitySection']}>
         <span
-          className={`${styles['availabilityBadge']} ${styles[`availabilityBadge--${displayAvailability.toLowerCase()}`]} ${optimisticAvailability ? styles['availabilityBadge--pending'] : ''}`}
+          className={`${styles['availabilityBadge']} ${styles[`availabilityBadge--${displayAvailability.toLowerCase()}`]} ${availabilityMutation.isPending ? styles['availabilityBadge--pending'] : ''}`}
         >
           {AVAILABILITY_LABEL[displayAvailability]}
         </span>

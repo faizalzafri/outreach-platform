@@ -5,15 +5,8 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-
-const TenantListContent = lazy(() =>
-  import('./-components/TenantListContent').then((mod) => ({
-    default: mod.TenantListContent,
-  }))
-);
+import { TenantListContent } from './-components/TenantListContent';
 
 export const Route = createFileRoute('/_authenticated/platform/tenants/')({
   component: TenantsPage,
@@ -22,9 +15,7 @@ export const Route = createFileRoute('/_authenticated/platform/tenants/')({
 function TenantsPage() {
   return (
     <ProtectedRoute requiredRoles={['ROLE_PLATFORM_ADMIN']}>
-      <Suspense fallback={<PageSkeleton title="Organizations" />}>
-        <TenantListContent />
-      </Suspense>
+      <TenantListContent />
     </ProtectedRoute>
   );
 }

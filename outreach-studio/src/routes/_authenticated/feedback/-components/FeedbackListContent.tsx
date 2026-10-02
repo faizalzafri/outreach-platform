@@ -183,7 +183,6 @@ export function FeedbackListContent() {
         queryKey={queryKey}
         endpoint="/feedback/search"
         defaultPageSize={10}
-        searchPlaceholder="Search feedback..."
         enableColumnVisibility={true}
         emptyMessage="No feedback records found."
         caption="Submitted volunteer feedback listing"

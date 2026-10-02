@@ -1,8 +1,5 @@
 import type { ResourcePermissions } from '@/types/tenant';
 
-const MAX_DATE_RANGE_DAYS = 90;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 /** Truncates a name to maxLength characters, appending an ellipsis if it was cut. */
 export function truncateName(name: string, maxLength: number): string {
   if (name.length <= maxLength) {
@@ -31,15 +28,6 @@ export function formatSharedWith(permissions: ResourcePermissions): string {
   const shown = teamPermissions.slice(0, 3).map((p) => p.teamName).join(', ');
   const overflow = teamPermissions.length - 3;
   return `${shown} +${overflow} more`;
-}
-
-/** Validates an activity feed date range: end must not precede start, and span must not exceed 90 days. */
-export function isValidDateRange(start: Date, end: Date): boolean {
-  if (end < start) {
-    return false;
-  }
-  const spanDays = (end.getTime() - start.getTime()) / MS_PER_DAY;
-  return spanDays <= MAX_DATE_RANGE_DAYS;
 }
 
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });

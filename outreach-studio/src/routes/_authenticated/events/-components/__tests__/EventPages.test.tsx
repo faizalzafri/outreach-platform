@@ -490,8 +490,8 @@ describe('EventDetailContent', () => {
     });
   });
 
-  describe('lifecycle transition optimistic update and rollback', () => {
-    it('applies optimistic status update immediately on transition click', async () => {
+  describe('lifecycle transitions', () => {
+    it('shows the new status once the server accepts the transition', async () => {
       const user = userEvent.setup();
       let patchCalled = false;
 
@@ -540,7 +540,7 @@ describe('EventDetailContent', () => {
       expect(patchCalled).toBe(true);
     });
 
-    it('rolls back status on server rejection and shows error', async () => {
+    it('keeps the status and shows the error when the server refuses', async () => {
       const user = userEvent.setup();
 
       setupEventDetailHandler({ status: 'PUBLISHED' });

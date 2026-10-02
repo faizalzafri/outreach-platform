@@ -1,4 +1,4 @@
-// Multi-tenancy, team, sharing, and activity feed types for the Outreach Studio SPA
+// Multi-tenancy, team and sharing types for the Outreach Studio SPA
 
 export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
 
@@ -60,25 +60,6 @@ export interface ResourcePermissions {
   teamPermissions: ResourcePermission[];
 }
 
-export type ActivityActionType = 'created' | 'modified' | 'shared' | 'activated';
-export type ActivityResourceType = 'sequence' | 'template' | 'contact_list';
-
-export interface ActivityEvent {
-  id: string;
-  actorName: string;
-  actionType: ActivityActionType;
-  resourceType: ActivityResourceType;
-  resourceName: string;
-  timestamp: string;
-  teamName?: string;
-}
-
-export interface ActivityFeedResponse {
-  items: ActivityEvent[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
-
 export interface TenantSelectionResponse {
   tenant_selection_required: boolean;
   available_tenants: TenantMembership[];
@@ -99,12 +80,4 @@ export interface TeamListParams {
 export interface TeamMemberListParams {
   page?: number;
   size?: number;
-}
-
-export interface ActivityFilters {
-  teamId?: string;
-  actionTypes?: ActivityActionType[];
-  resourceTypes?: ActivityResourceType[];
-  startDate?: string;
-  endDate?: string;
 }

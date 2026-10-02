@@ -3,20 +3,12 @@
  *
  * Provides Excel/CSV upload with drag-and-drop and import job tracking.
  * Validates search params with Zod schema using .catch() to discard invalid params.
- * Uses React.lazy + Suspense for code splitting.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
 import { z } from 'zod';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-
-const IngestionContent = lazy(() =>
-  import('./-components/IngestionContent').then((mod) => ({
-    default: mod.IngestionContent,
-  }))
-);
+import { IngestionContent } from './-components/IngestionContent';
 
 const ingestionSearchSchema = z.object({
   page: z.number().int().positive().default(1).catch(1),
@@ -38,9 +30,7 @@ export const Route = createFileRoute('/_authenticated/ingestion/')({
 function IngestionPage() {
   return (
     <ProtectedRoute requiredRoles={['ROLE_ADMIN']}>
-      <Suspense fallback={<PageSkeleton title="Data Ingestion" />}>
-        <IngestionContent />
-      </Suspense>
+      <IngestionContent />
     </ProtectedRoute>
   );
 }

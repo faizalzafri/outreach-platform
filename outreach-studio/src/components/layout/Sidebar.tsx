@@ -10,7 +10,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { UserProfile } from '@/types/auth';
-import { usePrefetch } from '@/hooks/usePrefetch';
 import styles from './Sidebar.module.css';
 import { formatRole } from '@/lib/format-role';
 
@@ -49,7 +48,6 @@ export function Sidebar({
 }: SidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const isMobile = useIsMobile();
-  const { handleMouseEnter, handleMouseLeave } = usePrefetch();
 
   const firstRole = user.roles[0];
   const primaryRole = firstRole ? formatRole(firstRole) : 'User';
@@ -154,8 +152,6 @@ export function Sidebar({
                     className={`${styles.navItem} ${active ? styles.active : ''}`}
                     aria-current={active ? 'page' : undefined}
                     data-tooltip={collapsed ? item.label : undefined}
-                    onMouseEnter={() => handleMouseEnter(item.href)}
-                    onMouseLeave={handleMouseLeave}
                     onClick={() => {
                       if (isMobile && !collapsed) {
                         onToggle();
