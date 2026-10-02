@@ -365,3 +365,20 @@
   font-size: 0.8125rem;
   color: var(--color-danger-600);
 }
+
+.insightTiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.insightTiles dt {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.insightTiles dd {
+  margin: 0;
+  color: var(--text-primary);
+}

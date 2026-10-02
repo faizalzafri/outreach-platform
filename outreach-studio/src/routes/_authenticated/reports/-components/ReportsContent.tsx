@@ -37,6 +37,7 @@ import type { TrendParams } from '@/types/api';
 
 import { Route } from '../index';
 import styles from './ReportsContent.module.css';
+import { ReportInsights } from './ReportInsights';
 import { ReportSchedules } from './ReportSchedules';
 
 // ---------------------------------------------------------------------------
@@ -657,6 +658,7 @@ export function ReportsContent() {
         </>
       )}
 
+      {!isPocOnly && <ReportInsights params={queryParams} />}
       {!isPocOnly && <ReportSchedules />}
     </div>
   );
