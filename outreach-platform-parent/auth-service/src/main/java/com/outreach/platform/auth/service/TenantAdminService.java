@@ -1,5 +1,7 @@
 package com.outreach.platform.auth.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.auth.entity.Tenant;
 import com.outreach.platform.auth.entity.TenantMembership;
 import com.outreach.platform.auth.model.TenantRole;
@@ -136,9 +138,9 @@ public class TenantAdminService {
                 tenant.getCreatedDate(), members);
     }
 
-    public static class TenantNotFoundException extends RuntimeException {
+    public static class TenantNotFoundException extends ResponseStatusException {
         public TenantNotFoundException(UUID id) {
-            super("Organization " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "Organization not found");
         }
     }
 }

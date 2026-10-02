@@ -1,5 +1,7 @@
 package com.outreach.platform.auth.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.auth.entity.Tenant;
 import com.outreach.platform.auth.entity.TenantMembership;
 import com.outreach.platform.auth.model.TenantStatus;
@@ -127,15 +129,15 @@ public class TenantMembershipService {
     public record TenantSummary(UUID tenantId, String tenantName, TenantStatus tenantStatus, String role) {
     }
 
-    public static class MembershipNotFoundException extends RuntimeException {
+    public static class MembershipNotFoundException extends ResponseStatusException {
         public MembershipNotFoundException(UUID userId, UUID tenantId) {
-            super("User " + userId + " has no membership in tenant " + tenantId);
+            super(HttpStatus.NOT_FOUND, "User " + userId + " has no membership in tenant " + tenantId);
         }
     }
 
-    public static class TenantNotActiveException extends RuntimeException {
+    public static class TenantNotActiveException extends ResponseStatusException {
         public TenantNotActiveException(UUID tenantId) {
-            super("Tenant " + tenantId + " is not active");
+            super(HttpStatus.CONFLICT, "Tenant " + tenantId + " is not active");
         }
     }
 }

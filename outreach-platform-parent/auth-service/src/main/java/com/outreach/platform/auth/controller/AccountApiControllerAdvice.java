@@ -1,7 +1,5 @@
 package com.outreach.platform.auth.controller;
 
-import com.outreach.platform.auth.service.AccountAdminService.AccountConflictException;
-import com.outreach.platform.auth.service.AccountAdminService.AccountNotFoundException;
 import com.outreach.platform.auth.service.PasswordService.PasswordPolicyViolationException;
 import com.outreach.platform.common.error.ErrorResponse;
 import com.outreach.platform.common.filter.CorrelationIdFilter;
@@ -21,22 +19,7 @@ import java.util.Map;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class AccountApiControllerAdvice {
 
-    @ExceptionHandler(com.outreach.platform.auth.service.TenantAdminService.TenantNotFoundException.class)
-    public ResponseEntity<ErrorResponse> tenantNotFound(RuntimeException ex) {
-        return error(HttpStatus.NOT_FOUND, "TENANT_NOT_FOUND", "Organization not found");
-    }
-
-    @ExceptionHandler(AccountNotFoundException.class)
-    public ResponseEntity<ErrorResponse> notFound(AccountNotFoundException ex) {
-        return error(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", ex.getMessage());
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> badRequest(IllegalArgumentException ex) {
-        return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", ex.getMessage());
-    }
-
-    @ExceptionHandler({AccountConflictException.class, IllegalStateException.class})
+    @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> conflict(RuntimeException ex) {
         return error(HttpStatus.CONFLICT, "USER_CONFLICT", ex.getMessage());
     }

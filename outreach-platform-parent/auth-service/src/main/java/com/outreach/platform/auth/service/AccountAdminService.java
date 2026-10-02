@@ -1,5 +1,7 @@
 package com.outreach.platform.auth.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.auth.config.AuthServiceProperties;
 import com.outreach.platform.auth.entity.TenantMembership;
 import com.outreach.platform.auth.entity.UserAccount;
@@ -237,15 +239,15 @@ public class AccountAdminService {
                 account.getLastLoginAt(), account.getCreatedDate());
     }
 
-    public static class AccountNotFoundException extends RuntimeException {
+    public static class AccountNotFoundException extends ResponseStatusException {
         public AccountNotFoundException(UUID userId) {
-            super("User " + userId + " not found");
+            super(HttpStatus.NOT_FOUND, "User " + userId + " not found");
         }
     }
 
-    public static class AccountConflictException extends RuntimeException {
+    public static class AccountConflictException extends ResponseStatusException {
         public AccountConflictException(String message) {
-            super(message);
+            super(HttpStatus.CONFLICT, message);
         }
     }
 }
