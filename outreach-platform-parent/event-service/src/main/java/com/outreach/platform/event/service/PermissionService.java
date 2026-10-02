@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.outreach.platform.common.security.CurrentUser;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.ResourcePermission;
 import com.outreach.platform.event.model.PermissionLevel;
@@ -273,11 +274,7 @@ public class PermissionService {
 
     /** Extracts the current user's UUID from the SecurityContext. */
     private UUID getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new IllegalStateException("No authenticated user found in SecurityContext");
-        }
-        return UUID.fromString(authentication.getName());
+        return CurrentUser.requireId();
     }
 
     /** Checks if the current user has ADMIN or PLATFORM_ADMIN role. */

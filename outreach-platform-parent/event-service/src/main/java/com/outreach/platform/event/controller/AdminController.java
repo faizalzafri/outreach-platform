@@ -50,6 +50,7 @@ public class AdminController {
     // ─── User Directory (read-only; accounts are managed in auth-service) ──────
 
     @Operation(summary = "List users", description = "Lists all platform users with pagination, optionally filtered by role")
+    @PreAuthorize("hasAnyRole('PMO', 'TENANT_ADMIN', 'ADMIN', 'PLATFORM_ADMIN')") // PMOs pick an event's POCs from it
     @GetMapping("/users")
     public ResponseEntity<Page<UserDto>> listUsers(
             Pageable pageable,

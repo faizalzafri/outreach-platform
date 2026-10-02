@@ -8,6 +8,7 @@ import com.outreach.platform.event.model.AttendanceStatus;
 import com.outreach.platform.event.model.dto.EnrollmentDto;
 import com.outreach.platform.event.repo.EventEnrollmentRepository;
 import com.outreach.platform.event.repo.EventRepository;
+import com.outreach.platform.event.repo.PocAssignmentRepository;
 import com.outreach.platform.event.repo.VolunteerRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,12 +41,15 @@ class VolunteerEnrollmentServiceTest {
     private EventRepository eventRepository;
     @Mock
     private VolunteerRepository volunteerRepository;
+    @Mock
+    private PocAssignmentRepository pocAssignmentRepository;
 
     private VolunteerEnrollmentService enrollmentService;
 
     @BeforeEach
     void setUp() {
-        enrollmentService = new VolunteerEnrollmentService(enrollmentRepository, eventRepository, volunteerRepository);
+        enrollmentService = new VolunteerEnrollmentService(enrollmentRepository, eventRepository, volunteerRepository,
+                new EventVisibility(pocAssignmentRepository));
         // Production requests always have TenantContext populated by TenantContextFilter — set it
         // here too so these tests exercise the tenant-scoped findByIdAndTenantId path. See
         // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
@@ -61,7 +65,7 @@ class VolunteerEnrollmentServiceTest {
     @DisplayName("listEnrolledVolunteers should map enrollments to DTOs")
     void listEnrolledVolunteersShouldMapToDtos() {
         UUID eventId = UUID.randomUUID();
-        when(eventRepository.existsById(eventId)).thenReturn(true);
+        when(eventRepository.findByIdAndTenantId(eq(eventId), any())).thenReturn(Optional.of(new EventEntity()));
         when(enrollmentRepository.findByEventId(eventId)).thenReturn(List.of(buildEnrollment(eventId)));
 
         List<EnrollmentDto> result = enrollmentService.listEnrolledVolunteers(eventId);
@@ -74,14 +78,14 @@ class VolunteerEnrollmentServiceTest {
     @DisplayName("listEnrolledVolunteers should throw when event does not exist")
     void listEnrolledVolunteersShouldThrowWhenEventMissing() {
         UUID eventId = UUID.randomUUID();
-        when(eventRepository.existsById(eventId)).thenReturn(false);
+        when(eventRepository.findByIdAndTenantId(eq(eventId), any())).thenReturn(Optional.empty());
 
         assertThatExceptionOfType(NoSuchElementException.class)
                 .isThrownBy(() -> enrollmentService.listEnrolledVolunteers(eventId));
     }
 
     @Test
-    @DisplayName("enrollVolunteers should save an enrollment and bump registeredCount")
+    @DisplayName("enrollVolunteers should save an enrollment and bump registeredCount via refreshCounts")
     void enrollVolunteersShouldSaveAndBumpCount() {
         UUID eventId = UUID.randomUUID();
         EventEntity event = new EventEntity();
@@ -102,7 +106,7 @@ class VolunteerEnrollmentServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).employeeId()).isEqualTo("EMP001");
-        assertThat(event.getRegisteredCount()).isEqualTo(3);
+        verify(enrollmentRepository).refreshCounts(event);
         verify(enrollmentRepository).save(any(EventEnrollmentEntity.class));
     }
 
@@ -137,7 +141,7 @@ class VolunteerEnrollmentServiceTest {
     }
 
     @Test
-    @DisplayName("removeVolunteer should delete the enrollment and decrement registeredCount")
+    @DisplayName("removeVolunteer should delete the enrollment and decrement registeredCount via refreshCounts")
     void removeVolunteerShouldDeleteAndDecrementCount() {
         UUID eventId = UUID.randomUUID();
         EventEntity event = new EventEntity();
@@ -154,13 +158,14 @@ class VolunteerEnrollmentServiceTest {
         enrollmentService.removeVolunteer(eventId, "EMP001");
 
         verify(enrollmentRepository).delete(enrollment);
-        assertThat(event.getRegisteredCount()).isEqualTo(2);
+        verify(enrollmentRepository).refreshCounts(event);
     }
 
     @Test
     @DisplayName("removeVolunteer should throw when the enrollment does not exist")
     void removeVolunteerShouldThrowWhenEnrollmentMissing() {
         UUID eventId = UUID.randomUUID();
+        when(eventRepository.findByIdAndTenantId(eq(eventId), any())).thenReturn(Optional.of(new EventEntity()));
         VolunteerEntity volunteer = buildVolunteer("EMP001");
 
         when(volunteerRepository.findByEmployeeId("EMP001")).thenReturn(Optional.of(volunteer));

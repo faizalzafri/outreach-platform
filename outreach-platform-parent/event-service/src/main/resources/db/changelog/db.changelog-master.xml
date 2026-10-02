@@ -68,4 +68,7 @@
     <!-- 15. Users become a directory synced from auth-service (credentials move there) -->
     <include file="db/changelog/20261002-001-users-become-directory.sql"/>
 
+    <!-- 16. Event counts follow enrollments, including imported ones -->
+    <include file="db/changelog/20261002-002-recount-event-enrollments.sql"/>
+
 </databaseChangeLog>

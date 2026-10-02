@@ -10,6 +10,7 @@ import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.EventSearchCriteria;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
+import com.outreach.platform.event.model.dto.FeedbackEligibilityDto;
 import com.outreach.platform.event.model.dto.LifecycleStatsDto;
 import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.PocAssignmentRepository;
@@ -21,9 +22,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +58,7 @@ public class EventService {
     private final AuditLogService auditLogService;
     private final EventServiceProperties properties;
     private final PocAssignmentRepository pocAssignmentRepository;
+    private final EventVisibility visibility;
     private final AtomicLong eventCodeSequence = new AtomicLong(System.currentTimeMillis() % 100000);
 
     @Inject
@@ -59,13 +67,15 @@ public class EventService {
                         DomainEventOutboxService domainEventOutboxService,
                         AuditLogService auditLogService,
                         EventServiceProperties properties,
-                        PocAssignmentRepository pocAssignmentRepository) {
+                        PocAssignmentRepository pocAssignmentRepository,
+                        EventVisibility visibility) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
         this.domainEventOutboxService = domainEventOutboxService;
         this.auditLogService = auditLogService;
         this.properties = properties;
         this.pocAssignmentRepository = pocAssignmentRepository;
+        this.visibility = visibility;
     }
 
     /**
@@ -105,6 +115,10 @@ public class EventService {
     @Transactional
     public EventDto updateEvent(UUID eventId, EventUpdateRequest request) {
         EventEntity entity = findEntityOrThrow(eventId);
+        if (entity.getStatus() == EventStatus.CANCELLED || entity.getStatus() == EventStatus.ARCHIVED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A " + entity.getStatus().name().toLowerCase(Locale.ROOT) + " event can no longer be edited");
+        }
         eventMapper.updateEntityFromRequest(request, entity);
         EventEntity saved = eventRepository.save(entity);
         return eventMapper.toDto(saved);
@@ -172,6 +186,7 @@ public class EventService {
                 criteria.category(),
                 criteria.dateFrom(),
                 criteria.dateTo(),
+                visibility.pocScope(),
                 pageable
         );
         return page.map(eventMapper::toDto);
@@ -182,7 +197,7 @@ public class EventService {
      */
     @Transactional(readOnly = true)
     public Page<EventDto> searchEvents(String query, Pageable pageable) {
-        Page<EventEntity> page = eventRepository.search(query, pageable);
+        Page<EventEntity> page = eventRepository.search(query, visibility.pocScope(), pageable);
         return page.map(eventMapper::toDto);
     }
 
@@ -191,7 +206,7 @@ public class EventService {
      */
     @Transactional(readOnly = true)
     public Page<EventDto> getCalendarView(LocalDate from, LocalDate to, Pageable pageable) {
-        Page<EventEntity> page = eventRepository.findByDateRange(from, to, pageable);
+        Page<EventEntity> page = eventRepository.findByDateRange(from, to, visibility.pocScope(), pageable);
         return page.map(eventMapper::toDto);
     }
 
@@ -208,6 +223,27 @@ public class EventService {
                 eventRepository.countByStatus(EventStatus.ARCHIVED),
                 eventRepository.countByStatus(EventStatus.CANCELLED)
         );
+    }
+
+    /**
+     * Whether feedback may be given for an event, as seen by feedback-service: the event's status
+     * and whether the given user is one of its POCs.
+     */
+    @Transactional(readOnly = true)
+    public FeedbackEligibilityDto feedbackEligibility(UUID eventId, UUID userId) {
+        EventEntity entity = findEntityOrThrow(eventId);
+        return new FeedbackEligibilityDto(eventId, entity.getStatus(),
+                userId != null && visibility.isAssigned(eventId, userId));
+    }
+
+    /** Event names by id, for services that store only the id. Unknown ids are left out. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> names(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return eventRepository.findNames(ids).stream()
+                .collect(Collectors.toMap(row -> (UUID) row[0], row -> (String) row[1]));
     }
 
     private EventEntity findEntityOrThrow(UUID eventId) {
@@ -249,7 +285,7 @@ public class EventService {
     /**
      * Thrown when an event is not found by its ID.
      */
-    public static class EventNotFoundException extends RuntimeException {
+    public static class EventNotFoundException extends java.util.NoSuchElementException {
         public EventNotFoundException(UUID eventId) {
             super("Event not found: " + eventId);
         }

@@ -1,5 +1,6 @@
 package com.outreach.platform.event.controller;
 
+import com.outreach.platform.common.security.CurrentUser;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.model.ActionType;
 import com.outreach.platform.event.model.dto.ActivityFeedFilter;
@@ -11,8 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -80,10 +79,6 @@ public class ActivityFeedController {
      * Extracts the current user's UUID from the SecurityContext authentication principal.
      */
     private UUID getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new IllegalStateException("No authenticated user found in SecurityContext");
-        }
-        return UUID.fromString(authentication.getName());
+        return CurrentUser.requireId();
     }
 }

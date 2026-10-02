@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,10 @@ import java.util.UUID;
  */
 @Repository
 public interface EventRepository extends JpaRepository<EventEntity, UUID> {
+
+    /** Limits a query to the events a POC is assigned to; a null {@code :pocUserId} means no limit. */
+    String POC_SCOPE = "(:pocUserId IS NULL OR EXISTS (SELECT 1 FROM PocAssignmentEntity p "
+            + "WHERE p.event = e AND p.user.id = :pocUserId))";
 
     /**
      * Tenant-scoped primary-key lookup. {@link #findById(Object)} (inherited from
@@ -38,32 +43,38 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
     Optional<EventEntity> findByEventCode(String eventCode);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
-            "LOWER(e.eventName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "(LOWER(e.eventName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(e.city) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(e.eventCode) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<EventEntity> search(@Param("query") String query, Pageable pageable);
+            "LOWER(e.eventCode) LIKE LOWER(CONCAT('%', :query, '%'))) AND " + POC_SCOPE)
+    Page<EventEntity> search(@Param("query") String query, @Param("pocUserId") UUID pocUserId, Pageable pageable);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
             "(:status IS NULL OR e.status = :status) AND " +
             "(:city IS NULL OR LOWER(e.city) = LOWER(CAST(:city AS string))) AND " +
             "(:category IS NULL OR LOWER(e.category) = LOWER(CAST(:category AS string))) AND " +
             "(:dateFrom IS NULL OR e.eventDate >= :dateFrom) AND " +
-            "(:dateTo IS NULL OR e.eventDate <= :dateTo)")
+            "(:dateTo IS NULL OR e.eventDate <= :dateTo) AND " + POC_SCOPE)
     Page<EventEntity> findByFilters(
             @Param("status") EventStatus status,
             @Param("city") String city,
             @Param("category") String category,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo,
+            @Param("pocUserId") UUID pocUserId,
             Pageable pageable);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
-            "e.eventDate >= :rangeStart AND e.eventDate <= :rangeEnd " +
-            "ORDER BY e.eventDate ASC")
+            "e.eventDate >= :rangeStart AND e.eventDate <= :rangeEnd AND " + POC_SCOPE +
+            " ORDER BY e.eventDate ASC")
     Page<EventEntity> findByDateRange(
             @Param("rangeStart") LocalDate rangeStart,
             @Param("rangeEnd") LocalDate rangeEnd,
+            @Param("pocUserId") UUID pocUserId,
             Pageable pageable);
+
+    /** {id, name} rows for the given events, for showing names where only ids are stored. */
+    @Query("SELECT e.id, e.eventName FROM EventEntity e WHERE e.id IN :ids")
+    List<Object[]> findNames(@Param("ids") Collection<UUID> ids);
 
     long countByStatus(EventStatus status);
 
