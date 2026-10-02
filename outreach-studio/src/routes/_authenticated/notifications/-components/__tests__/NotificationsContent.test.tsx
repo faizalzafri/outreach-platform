@@ -206,6 +206,25 @@ describe('NotificationsContent', () => {
 
       expect(screen.getByText('Template Preview')).toBeInTheDocument();
       expect(screen.getByText('You are registered for Annual Volunteer Drive')).toBeInTheDocument();
+      // The body is rendered HTML in a sandboxed frame, not escaped text
+      const frame = screen.getByTitle('Email body preview');
+      expect(frame).toHaveAttribute('sandbox', '');
+      expect(frame.getAttribute('srcdoc')).toContain('<h1>Hello Anita!</h1>');
+    });
+
+    it('sends sample values for the template placeholders', async () => {
+      const user = userEvent.setup();
+      let body: { variables?: Record<string, string> } = {};
+      server.use(http.post('/api/notifications/templates/:id/preview', async ({ request }) => {
+        body = (await request.json()) as typeof body;
+        return HttpResponse.json({ renderedSubject: 's', renderedBody: '<p>b</p>' });
+      }));
+      await renderNotifications();
+      await screen.findByText('Event Registration Confirmation');
+
+      await user.click(screen.getAllByRole('button', { name: /Preview/i })[0]!);
+
+      await waitFor(() => expect(body.variables?.['eventName']).toBe('Coastal Cleanup Drive'));
     });
 
     it('closes preview modal when Close button is clicked', async () => {

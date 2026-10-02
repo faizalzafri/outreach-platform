@@ -72,4 +72,14 @@ class TemplateRenderingServiceTest {
 
         assertEquals("No variables needed here", result);
     }
+
+    @Test
+    void rendersDoubleBracePlaceholders_escapingTheirValues() {
+        // The seeded templates are written with {{name}}; Thymeleaf alone left them in the email verbatim.
+        String result = renderingService.render(
+                "<p>Hi {{volunteerName}}, see you at {{ venue }}.</p>",
+                Map.of("volunteerName", "Priya <b>Sharma</b>", "venue", "Juhu Beach"));
+
+        assertEquals("<p>Hi Priya &lt;b&gt;Sharma&lt;/b&gt;, see you at Juhu Beach.</p>", result);
+    }
 }

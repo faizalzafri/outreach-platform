@@ -19,6 +19,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { NotificationTemplate, DeliveryRecord, NotificationType } from '@/types/domain';
 
 import styles from './NotificationsContent.module.css';
+import { sampleVariables } from '@/lib/template-preview';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -291,14 +292,20 @@ function PreviewModal({
     <div className={styles['previewOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Template preview">
       <div ref={previewRef} className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles['previewTitle']}>Template Preview</h2>
+        <p className={styles['previewHint']}>Filled with sample values; real emails use each recipient's details.</p>
         {data.renderedSubject && (
-          <div style={{ marginBottom: '1rem' }}>
+          <div className={styles['previewSubject']}>
             <strong>Subject:</strong> {data.renderedSubject}
           </div>
         )}
-        <div className={styles['previewContent']}>
-          {data.renderedBody ?? ''}
-        </div>
+        {/* The rendered email as the recipient sees it. sandbox="" blocks scripts, forms and
+            same-origin access, so template HTML cannot touch this page. */}
+        <iframe
+          className={styles['previewFrame']}
+          title="Email body preview"
+          sandbox=""
+          srcDoc={data.renderedBody ?? ''}
+        />
         <div className={styles['formActions']}>
           <button type="button" className={styles['btnSecondary']} onClick={onClose}>Close</button>
         </div>
@@ -333,10 +340,10 @@ function TemplatesTab() {
   };
 
   const previewMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (template: NotificationTemplate) => {
       const response = await httpClient.post<PreviewResponse>(
-        `/notifications/templates/${id}/preview`,
-        { templateId: id, variables: {} }
+        `/notifications/templates/${template.id}/preview`,
+        { templateId: template.id, variables: sampleVariables(template) }
       );
       return response.data;
     },
@@ -409,7 +416,7 @@ function TemplatesTab() {
             <button
               type="button"
               className={styles['actionBtn']}
-              onClick={() => previewMutation.mutate(template.id)}
+              onClick={() => previewMutation.mutate(template)}
               disabled={previewMutation.isPending}
             >
               Preview
