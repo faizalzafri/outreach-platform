@@ -1,6 +1,7 @@
 package com.outreach.platform.ingestion.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -13,12 +14,14 @@ import java.util.UUID;
  * MongoDB document tracking the lifecycle of an import job.
  */
 @Document("job_tracking")
+@CompoundIndex(name = "idx_job_tracking_status_createdAt", def = "{'status': 1, 'createdAt': -1}")
 public class JobTrackingDocument {
 
     @Id
     private String id;
     @Indexed
     private UUID tenantId;
+    @Indexed(name = "idx_job_tracking_jobType")
     private String jobType;
     private String fileName;
     private JobStatus status;
@@ -27,6 +30,7 @@ public class JobTrackingDocument {
     private int processedRows;
     private int errorCount;
     private List<ValidationError> errors = new ArrayList<>();
+    @Indexed(name = "idx_job_tracking_ttl_60d", expireAfter = "60d")
     private Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
