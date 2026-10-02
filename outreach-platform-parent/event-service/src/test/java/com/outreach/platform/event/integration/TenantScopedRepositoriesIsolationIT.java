@@ -4,22 +4,20 @@ import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.BeneficiaryEntity;
 import com.outreach.platform.event.entity.ResourcePermission;
 import com.outreach.platform.event.entity.Team;
-import com.outreach.platform.event.entity.TenantEntity;
 import com.outreach.platform.event.entity.UserEntity;
 import com.outreach.platform.event.model.PermissionLevel;
 import com.outreach.platform.event.model.ResourceType;
-import com.outreach.platform.event.model.TenantStatus;
 import com.outreach.platform.event.model.UserRole;
 import com.outreach.platform.event.model.Visibility;
 import com.outreach.platform.event.repo.BeneficiaryRepository;
 import com.outreach.platform.event.repo.ResourcePermissionRepository;
 import com.outreach.platform.event.repo.TeamRepository;
-import com.outreach.platform.event.repo.TenantRepository;
 import com.outreach.platform.event.repo.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -73,7 +71,7 @@ class TenantScopedRepositoriesIsolationIT {
     }
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -210,16 +208,13 @@ class TenantScopedRepositoriesIsolationIT {
         assertThat(readBack.get().getTenantId()).isEqualTo(tenantA);
     }
 
+    // Organizations belong to auth-service; event tables only need the row their tenant_id
+    // foreign key points at.
     private UUID seedTenant(String name, String slug) {
-        // See EventTenantIsolationIT's seedTenant Javadoc note: an arbitrary non-empty
-        // TenantContext value satisfies TenantFilterAspect's pointcut for this non-tenant-scoped
-        // TenantEntity save and has no bearing on the row being created.
-        TenantContext.setCurrentTenantId(UUID.randomUUID());
-        TenantEntity tenant = new TenantEntity();
-        tenant.setName(name);
-        tenant.setSlug(slug);
-        tenant.setStatus(TenantStatus.ACTIVE);
-        return tenantRepository.save(tenant).getId();
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO tenants (id, name, slug, status, created_date, created_by, version) "
+                + "VALUES (?, ?, ?, 'ACTIVE', now(), 'test', 0)", id, name, slug);
+        return id;
     }
 
     private UserEntity newUser(String username) {

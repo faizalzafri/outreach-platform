@@ -1,5 +1,7 @@
 package com.outreach.platform.event.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.Team;
 import com.outreach.platform.event.entity.TeamMembership;
@@ -271,33 +273,33 @@ public class TeamService {
 
     // ─── Exceptions ─────────────────────────────────────────────────────────────
 
-    public static class TeamNotFoundException extends RuntimeException {
+    public static class TeamNotFoundException extends ResponseStatusException {
         public TeamNotFoundException(UUID id) {
-            super("Team with ID " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "Team with ID " + id + " not found");
         }
     }
 
-    public static class UserNotFoundException extends RuntimeException {
+    public static class UserNotFoundException extends ResponseStatusException {
         public UserNotFoundException(UUID id) {
-            super("User with ID " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "User with ID " + id + " not found");
         }
     }
 
-    public static class DuplicateTeamNameException extends RuntimeException {
+    public static class DuplicateTeamNameException extends ResponseStatusException {
         public DuplicateTeamNameException(String name) {
-            super("Team with name '" + name + "' already exists in this tenant");
+            super(HttpStatus.CONFLICT, "Team with name '" + name + "' already exists in this tenant");
         }
     }
 
-    public static class DuplicateTeamMemberException extends RuntimeException {
+    public static class DuplicateTeamMemberException extends ResponseStatusException {
         public DuplicateTeamMemberException(UUID teamId, UUID userId) {
-            super("User " + userId + " is already a member of team " + teamId);
+            super(HttpStatus.CONFLICT, "User " + userId + " is already a member of team " + teamId);
         }
     }
 
-    public static class MemberNotFoundException extends RuntimeException {
+    public static class MemberNotFoundException extends ResponseStatusException {
         public MemberNotFoundException(UUID teamId, UUID userId) {
-            super("User " + userId + " is not a member of team " + teamId);
+            super(HttpStatus.NOT_FOUND, "User " + userId + " is not a member of team " + teamId);
         }
     }
 }

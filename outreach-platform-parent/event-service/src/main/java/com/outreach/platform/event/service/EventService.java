@@ -194,15 +194,6 @@ public class EventService {
     }
 
     /**
-     * Full-text search across event name, city, and event code.
-     */
-    @Transactional(readOnly = true)
-    public Page<EventDto> searchEvents(String query, Pageable pageable) {
-        Page<EventEntity> page = eventRepository.search(query, visibility.pocScope(), pageable);
-        return page.map(eventMapper::toDto);
-    }
-
-    /**
      * Calendar view: retrieves events within the specified date range.
      */
     @Transactional(readOnly = true)
@@ -286,31 +277,18 @@ public class EventService {
     /**
      * Thrown when an event is not found by its ID.
      */
-    public static class EventNotFoundException extends java.util.NoSuchElementException {
+    public static class EventNotFoundException extends ResponseStatusException {
         public EventNotFoundException(UUID eventId) {
-            super("Event not found: " + eventId);
+            super(HttpStatus.NOT_FOUND, "Event not found: " + eventId);
         }
     }
 
     /**
      * Thrown when an invalid lifecycle status transition is attempted.
      */
-    public static class InvalidStatusTransitionException extends RuntimeException {
-        private final EventStatus from;
-        private final EventStatus to;
-
+    public static class InvalidStatusTransitionException extends ResponseStatusException {
         public InvalidStatusTransitionException(EventStatus from, EventStatus to) {
-            super("Invalid status transition from " + from + " to " + to);
-            this.from = from;
-            this.to = to;
-        }
-
-        public EventStatus getFrom() {
-            return from;
-        }
-
-        public EventStatus getTo() {
-            return to;
+            super(HttpStatus.BAD_REQUEST, "Invalid status transition from " + from + " to " + to);
         }
     }
 }

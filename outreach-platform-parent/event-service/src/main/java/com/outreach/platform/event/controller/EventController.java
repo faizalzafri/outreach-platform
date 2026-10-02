@@ -114,15 +114,6 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Search events", description = "Full-text search across event name, city, and event code")
-    @GetMapping("/search")
-    public ResponseEntity<Page<EventDto>> searchEvents(
-            @Parameter(description = "Search query") @RequestParam String query,
-            Pageable pageable) {
-        Page<EventDto> page = eventService.searchEvents(query, pageable);
-        return ResponseEntity.ok(page);
-    }
-
     @Operation(summary = "Calendar view", description = "Events within a date range for calendar display")
     @GetMapping("/calendar")
     public ResponseEntity<Page<EventDto>> calendarView(

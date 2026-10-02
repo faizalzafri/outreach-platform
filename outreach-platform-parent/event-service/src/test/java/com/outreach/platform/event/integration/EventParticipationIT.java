@@ -191,8 +191,6 @@ class EventParticipationIT {
         List<UUID> listed = eventService.listEvents(new EventSearchCriteria(null, null, null, null, null, null),
                 Pageable.ofSize(50)).map(EventDto::id).getContent();
         assertThat(listed).contains(POC_ONLY_EVENT).doesNotContain(ACTIVE_EVENT, DRAFT_EVENT);
-        assertThat(eventService.searchEvents("", Pageable.ofSize(50)).map(EventDto::id).getContent())
-                .containsExactlyInAnyOrderElementsOf(listed);
     }
 
     private EventDto event(UUID id) {

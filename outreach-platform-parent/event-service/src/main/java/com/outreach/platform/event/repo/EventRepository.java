@@ -43,12 +43,6 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
     Optional<EventEntity> findByEventCode(String eventCode);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
-            "(LOWER(e.eventName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(e.city) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(e.eventCode) LIKE LOWER(CONCAT('%', :query, '%'))) AND " + POC_SCOPE)
-    Page<EventEntity> search(@Param("query") String query, @Param("pocUserId") UUID pocUserId, Pageable pageable);
-
-    @Query("SELECT e FROM EventEntity e WHERE " +
             "(:status IS NULL OR e.status = :status) AND " +
             "(:city IS NULL OR LOWER(e.city) = LOWER(CAST(:city AS string))) AND " +
             "(:category IS NULL OR LOWER(e.category) = LOWER(CAST(:category AS string))) AND " +

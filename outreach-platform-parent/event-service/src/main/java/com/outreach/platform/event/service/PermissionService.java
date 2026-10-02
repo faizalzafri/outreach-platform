@@ -1,5 +1,7 @@
 package com.outreach.platform.event.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.common.security.CurrentUser;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.ResourcePermission;
@@ -290,34 +292,34 @@ public class PermissionService {
 
     // ─── Exceptions ─────────────────────────────────────────────────────────────
 
-    public static class ResourceNotFoundException extends RuntimeException {
+    public static class ResourceNotFoundException extends ResponseStatusException {
         public ResourceNotFoundException(ResourceType type, UUID id) {
-            super("Resource " + type + " with ID " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "Resource " + type + " with ID " + id + " not found");
         }
     }
 
-    public static class AccessDeniedException extends RuntimeException {
+    public static class AccessDeniedException extends ResponseStatusException {
         public AccessDeniedException(ResourceType type, UUID id) {
-            super("Access denied to resource " + type + " with ID " + id);
+            super(HttpStatus.FORBIDDEN, "Access denied to resource " + type + " with ID " + id);
         }
     }
 
-    public static class TeamMembershipRequiredException extends RuntimeException {
+    public static class TeamMembershipRequiredException extends ResponseStatusException {
         public TeamMembershipRequiredException(UUID teamId) {
-            super("Cannot share with team " + teamId + " — user is not a member of that team");
+            super(HttpStatus.FORBIDDEN, "Cannot share with team " + teamId + " — user is not a member of that team");
         }
     }
 
-    public static class NoTeamGrantedException extends RuntimeException {
+    public static class NoTeamGrantedException extends ResponseStatusException {
         public NoTeamGrantedException(ResourceType type, UUID id) {
-            super("Cannot set visibility to TEAM for resource " + type + ":" + id
+            super(HttpStatus.BAD_REQUEST, "Cannot set visibility to TEAM for resource " + type + ":" + id
                     + " — at least one team must be granted access first");
         }
     }
 
-    public static class PermissionNotFoundException extends RuntimeException {
+    public static class PermissionNotFoundException extends ResponseStatusException {
         public PermissionNotFoundException(UUID permissionId) {
-            super("Permission with ID " + permissionId + " not found");
+            super(HttpStatus.NOT_FOUND, "Permission with ID " + permissionId + " not found");
         }
     }
 }

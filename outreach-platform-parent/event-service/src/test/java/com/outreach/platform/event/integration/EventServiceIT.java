@@ -301,7 +301,7 @@ class EventServiceIT {
         createTestEvent("Unique Searchable Event XYZ");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/events/search?query=Unique+Searchable&page=0&size=10", String.class);
+                "/events?query=Unique+Searchable&page=0&size=10", String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("Unique Searchable Event XYZ");
@@ -312,7 +312,7 @@ class EventServiceIT {
         createTestEvent("City Search Event", "Chennai");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/events/search?query=Chennai&page=0&size=10", String.class);
+                "/events?query=Chennai&page=0&size=10", String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("City Search Event");

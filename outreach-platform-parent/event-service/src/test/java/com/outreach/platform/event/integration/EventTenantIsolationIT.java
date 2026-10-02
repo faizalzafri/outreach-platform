@@ -2,15 +2,13 @@ package com.outreach.platform.event.integration;
 
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.EventEntity;
-import com.outreach.platform.event.entity.TenantEntity;
 import com.outreach.platform.event.model.EventStatus;
-import com.outreach.platform.event.model.TenantStatus;
 import com.outreach.platform.event.repo.EventRepository;
-import com.outreach.platform.event.repo.TenantRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -65,7 +63,7 @@ class EventTenantIsolationIT {
     private EventRepository eventRepository;
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @AfterEach
     void clearTenantContext() {
@@ -153,23 +151,23 @@ class EventTenantIsolationIT {
         assertThat(eventService.listEvents(criteria, pageable).getContent())
                 .extracting(com.outreach.platform.event.model.dto.EventDto::eventName)
                 .doesNotContain("Tenant F Private Gala");
-        assertThat(eventService.searchEvents("Private Gala", pageable).getTotalElements()).isZero();
+        assertThat(eventService.listEvents(byText("Private Gala"), pageable).getTotalElements()).isZero();
 
         TenantContext.setCurrentTenantId(tenantA);
-        assertThat(eventService.searchEvents("Private Gala", pageable).getTotalElements()).isEqualTo(1);
+        assertThat(eventService.listEvents(byText("Private Gala"), pageable).getTotalElements()).isEqualTo(1);
     }
 
+    private static com.outreach.platform.event.model.dto.EventSearchCriteria byText(String query) {
+        return new com.outreach.platform.event.model.dto.EventSearchCriteria(null, null, null, null, null, query);
+    }
+
+    // Organizations belong to auth-service; event tables only need the row their tenant_id
+    // foreign key points at.
     private UUID seedTenant(String name, String slug) {
-        // Creating a TenantEntity (extends plain BaseEntity, not tenant-scoped) still runs
-        // TenantFilterAspect's @Before advice, since the aspect's pointcut matches every
-        // JpaRepository method regardless of the target entity — an arbitrary non-empty
-        // TenantContext value satisfies it here and has no bearing on the row being created.
-        TenantContext.setCurrentTenantId(UUID.randomUUID());
-        TenantEntity tenant = new TenantEntity();
-        tenant.setName(name);
-        tenant.setSlug(slug);
-        tenant.setStatus(TenantStatus.ACTIVE);
-        return tenantRepository.save(tenant).getId();
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO tenants (id, name, slug, status, created_date, created_by, version) "
+                + "VALUES (?, ?, ?, 'ACTIVE', now(), 'test', 0)", id, name, slug);
+        return id;
     }
 
     private EventEntity newDraftEvent(String eventName) {
