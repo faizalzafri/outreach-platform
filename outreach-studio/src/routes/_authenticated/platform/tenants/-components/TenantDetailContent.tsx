@@ -21,8 +21,8 @@ import styles from './PlatformTenants.module.css';
 
 const STATUS_ACTIONS: { target: TenantStatus; path: string; label: string; confirm: string; danger: boolean }[] = [
   { target: 'ACTIVE', path: 'activate', label: 'Reactivate', confirm: 'Members will be able to sign in again.', danger: false },
-  { target: 'SUSPENDED', path: 'suspend', label: 'Suspend', confirm: 'Members will be signed out within a minute and cannot sign in until you reactivate it.', danger: true },
-  { target: 'DEACTIVATED', path: 'deactivate', label: 'Deactivate', confirm: 'Use this for organizations that have left. Their data is kept, but nobody can sign in.', danger: true },
+  { target: 'SUSPENDED', path: 'suspend', label: 'Suspend', confirm: 'Members cannot sign in until you reactivate it. Anyone already signed in can only view, not change, data until their session ends.', danger: true },
+  { target: 'DEACTIVATED', path: 'deactivate', label: 'Deactivate', confirm: 'Use this for organizations that have left. Their data is kept, but nobody can sign in or use the platform.', danger: true },
 ];
 
 export function TenantDetailContent({ tenantId }: { tenantId: string }) {

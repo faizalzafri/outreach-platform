@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import type { UserProfile } from '@/types/auth';
 import { usePrefetch } from '@/hooks/usePrefetch';
 import styles from './Sidebar.module.css';
+import { formatRole } from '@/lib/format-role';
 
 export interface NavigationItem {
   label: string;
@@ -37,12 +38,6 @@ export interface SidebarProps {
 /**
  * Formats a role string for display (e.g., "ROLE_ADMIN" → "Admin")
  */
-function formatRole(role: string): string {
-  return role
-    .replace(/^ROLE_/, '')
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
 
 export function Sidebar({
   collapsed,
