@@ -170,6 +170,14 @@ class EventParticipationIT {
     }
 
     @Test
+    void listing_filtersByTextTogetherWithStatus() {
+        String active = restTemplate.getForObject("/events?query=women&status=ACTIVE", String.class);
+        assertThat(active).contains("Women Empowerment Seminar").doesNotContain("Coastal Cleanup Drive");
+        assertThat(restTemplate.getForObject("/events?query=women&status=DRAFT", String.class))
+                .doesNotContain("Women Empowerment Seminar");
+    }
+
+    @Test
     void aPoc_seesOnlyTheirOwnEvents() {
         restTemplate.postForEntity("/events/{id}/pocs", new PocAssignRequest(POC_USER, AssignmentRole.PRIMARY),
                 String.class, POC_ONLY_EVENT);

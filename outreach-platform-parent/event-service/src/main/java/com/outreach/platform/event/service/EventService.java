@@ -186,6 +186,7 @@ public class EventService {
                 criteria.category(),
                 criteria.dateFrom(),
                 criteria.dateTo(),
+                criteria.query() == null || criteria.query().isBlank() ? null : criteria.query().trim(),
                 visibility.pocScope(),
                 pageable
         );

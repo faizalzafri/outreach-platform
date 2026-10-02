@@ -117,6 +117,21 @@ describe('EventListContent', () => {
       expect(screen.getByText('DRAFT')).toBeInTheDocument();
     });
 
+    it('sends the search box text to the API', async () => {
+      const queries: (string | null)[] = [];
+      server.use(
+        http.get('/api/events', ({ request }) => {
+          queries.push(new URL(request.url).searchParams.get('query'));
+          return HttpResponse.json(createEventPage([]));
+        }),
+      );
+
+      await renderEventList();
+      await userEvent.type(screen.getByLabelText('Search events'), 'women');
+
+      await waitFor(() => expect(queries).toContain('women'));
+    });
+
     it('renders the Create Event link', async () => {
       server.use(
         http.get('/api/events', () => {

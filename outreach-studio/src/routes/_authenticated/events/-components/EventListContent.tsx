@@ -180,6 +180,8 @@ export function EventListContent() {
     [search.page, search.size, search.status, debouncedSearch],
   );
 
+  const searchParams = useMemo(() => ({ query: debouncedSearch || undefined }), [debouncedSearch]);
+
   const deleteMutation = useMutation({
     mutationFn: async (eventId: string) => {
       await httpClient.delete(`/events/${eventId}`);
@@ -220,7 +222,11 @@ export function EventListContent() {
           className={styles['searchInput']}
           placeholder="Search events by name, code, or city..."
           value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+            // New results start on their first page.
+            if (search.page !== 1) void navigate({ search: (prev) => ({ ...prev, page: 1 }), replace: true });
+          }}
           aria-label="Search events"
         />
       </div>
@@ -229,6 +235,7 @@ export function EventListContent() {
         columns={columns}
         queryKey={queryKey}
         endpoint="/events"
+        params={searchParams}
         defaultPageSize={search.size}
         page={search.page}
         onPaginationChange={(page, size) =>

@@ -52,6 +52,8 @@ export interface DataTableProps<TData> {
    */
   page?: number;
   onPaginationChange?: (page: number, pageSize: number) => void;
+  /** Extra query parameters sent with every request, such as a page-level search box. */
+  params?: Record<string, string | undefined>;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,7 @@ export function DataTable<TData>({
   caption,
   page,
   onPaginationChange,
+  params: extraParams,
 }: DataTableProps<TData>) {
   // --- Table state ---
   const [internalPagination, setInternalPagination] = useState<PaginationState>({
@@ -144,6 +147,9 @@ export function DataTable<TData>({
       page: pagination.pageIndex, // 0-based for Spring Boot Pageable
       size: pagination.pageSize,
     };
+    for (const [key, value] of Object.entries(extraParams ?? {})) {
+      if (value) params[key] = value;
+    }
 
     // Sorting — Spring Boot Pageable format: "fieldName,direction"
     if (sorting.length > 0) {
@@ -161,7 +167,7 @@ export function DataTable<TData>({
     }
 
     return params;
-  }, [pagination, sorting, debouncedFilters]);
+  }, [pagination, sorting, debouncedFilters, extraParams]);
 
   // --- Data fetching ---
   const { data, isLoading, isError, error, refetch } = useQuery<PageResponse<TData>>({

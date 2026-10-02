@@ -72,9 +72,10 @@ public class EventController {
             @Parameter(description = "Filter by category") @RequestParam(required = false) String category,
             @Parameter(description = "Start of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @Parameter(description = "End of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @Parameter(description = "Text matched against name, city and event code") @RequestParam(required = false) String query,
             Pageable pageable) {
 
-        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, null);
+        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, query);
         Page<EventDto> page = eventService.listEvents(criteria, pageable);
         return ResponseEntity.ok(page);
     }

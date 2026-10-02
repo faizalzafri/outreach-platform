@@ -53,13 +53,17 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
             "(:city IS NULL OR LOWER(e.city) = LOWER(CAST(:city AS string))) AND " +
             "(:category IS NULL OR LOWER(e.category) = LOWER(CAST(:category AS string))) AND " +
             "(:dateFrom IS NULL OR e.eventDate >= :dateFrom) AND " +
-            "(:dateTo IS NULL OR e.eventDate <= :dateTo) AND " + POC_SCOPE)
+            "(:dateTo IS NULL OR e.eventDate <= :dateTo) AND " +
+            "(:query IS NULL OR LOWER(e.eventName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) " +
+            "OR LOWER(e.city) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) " +
+            "OR LOWER(e.eventCode) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))) AND " + POC_SCOPE)
     Page<EventEntity> findByFilters(
             @Param("status") EventStatus status,
             @Param("city") String city,
             @Param("category") String category,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo,
+            @Param("query") String query,
             @Param("pocUserId") UUID pocUserId,
             Pageable pageable);
 
