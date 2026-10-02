@@ -97,17 +97,6 @@ export function normalizeError(error: AxiosError): NormalizedError {
     };
   }
 
-  // RFC 7807 ProblemDetail, which several service-specific handlers return
-  if (data && typeof data.detail === 'string') {
-    return {
-      status: response.status,
-      type: typeof data.title === 'string' ? data.title : 'UNKNOWN_ERROR',
-      message: data.detail,
-      correlationId: (response.headers['x-correlation-id'] as string | undefined) ?? null,
-      fieldErrors: [],
-    };
-  }
-
   // Non-standard error body — produce UNKNOWN_ERROR
   return {
     status: response.status,

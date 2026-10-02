@@ -17,7 +17,7 @@ export function OfflineBanner() {
     >
       <span className={styles.icon} aria-hidden="true">⚡</span>
       <p className={styles.message}>
-        You are offline. Changes will be saved and synced when your connection is restored.
+        You are offline. Changes can't be saved until your connection is restored.
       </p>
     </div>
   );

@@ -10,7 +10,6 @@ export function buildNotificationTemplate(overrides: Partial<NotificationTemplat
     type: 'EMAIL',
     subjectTemplate: `Notification Subject ${counter}`,
     bodyTemplate: `Hello {{name}}, this is notification template ${counter}.`,
-    engine: 'THYMELEAF',
     active: true,
     version: 1,
     variablesSchema: JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } }),

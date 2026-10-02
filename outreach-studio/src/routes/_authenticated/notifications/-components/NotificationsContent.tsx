@@ -32,7 +32,6 @@ interface TemplateFormData {
   type: NotificationType;
   subject: string;
   body: string;
-  engine: string;
   variables: Array<{ name: string; dataType: string }>;
 }
 
@@ -80,7 +79,6 @@ function TemplateEditor({
     type: template?.type ?? 'EMAIL',
     subject: template?.subjectTemplate ?? '',
     body: template?.bodyTemplate ?? '',
-    engine: template?.engine ?? 'THYMELEAF',
     variables: parseVariablesSchema(template?.variablesSchema ?? null),
   });
   const [errors, setErrors] = useState<Partial<Record<keyof TemplateFormData, string>>>({});
@@ -104,7 +102,6 @@ function TemplateEditor({
         type: form.type,
         subjectTemplate: form.subject.trim(),
         bodyTemplate: form.body,
-        engine: form.engine,
         variablesSchema: buildVariablesSchema(form.variables.filter((v) => v.name.trim())),
       };
       if (template) {
@@ -180,19 +177,6 @@ function TemplateEditor({
               <option value="EMAIL">Email</option>
               <option value="SMS">SMS</option>
               <option value="PUSH">Push</option>
-            </select>
-          </div>
-
-          <div className={styles['formGroup']}>
-            <label className={styles['formLabel']} htmlFor="tpl-engine">Engine</label>
-            <select
-              id="tpl-engine"
-              className={styles['formSelect']}
-              value={form.engine}
-              onChange={(e) => setForm((prev) => ({ ...prev, engine: e.target.value }))}
-            >
-              <option value="THYMELEAF">Thymeleaf</option>
-              <option value="FREEMARKER">Freemarker</option>
             </select>
           </div>
 
@@ -389,7 +373,6 @@ function TemplatesTab() {
       },
     },
     { accessorKey: 'subjectTemplate', header: 'Subject' },
-    { accessorKey: 'engine', header: 'Engine', enableColumnFilter: false },
     {
       accessorKey: 'active',
       header: 'Status',

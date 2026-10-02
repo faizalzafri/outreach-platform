@@ -151,7 +151,6 @@ export interface NotificationTemplate {
   type: NotificationType;
   subjectTemplate: string | null;
   bodyTemplate: string;
-  engine: string;
   active: boolean;
   version: number;
   variablesSchema: string | null;

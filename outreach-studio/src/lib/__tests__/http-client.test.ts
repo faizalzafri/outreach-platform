@@ -180,19 +180,6 @@ describe('HTTP Client - Error Normalization', () => {
       ]);
     });
 
-    it('should read the explanation from an RFC 7807 ProblemDetail body', () => {
-      const error = createAxiosError({
-        response: {
-          status: 409,
-          statusText: 'Conflict',
-          data: { type: 'about:blank', title: 'Feedback Already Exists', status: 409, detail: 'Feedback already exists for this volunteer' },
-        },
-      });
-      const normalized = normalizeError(error);
-
-      expect(normalized.message).toBe('Feedback already exists for this volunteer');
-      expect(normalized.type).toBe('Feedback Already Exists');
-    });
   });
 });
 
