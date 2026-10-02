@@ -721,6 +721,33 @@ describe('EventDetailContent', () => {
     });
   });
 
+  describe('sharing with teams', () => {
+    it('shares the event with a team at the chosen access', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'teams' });
+      let sent: unknown;
+      server.use(
+        http.get('/api/events/:eventId/teams', () => HttpResponse.json([])),
+        http.get('/api/teams', () =>
+          HttpResponse.json({ content: [{ id: 't-1', name: 'Mumbai Crew' }], totalElements: 1, totalPages: 1, page: 0, size: 200 }),
+        ),
+        http.put('/api/events/:eventId/teams/:teamId', async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json([{ teamId: 't-1', teamName: 'Mumbai Crew', accessLevel: 'EDIT' }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await screen.findByRole('option', { name: 'Mumbai Crew' });
+      await userEvent.selectOptions(screen.getByLabelText('Team to share with'), 't-1');
+      await userEvent.selectOptions(screen.getByLabelText('Access'), 'EDIT');
+      await userEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+      await waitFor(() => expect(sent).toEqual({ accessLevel: 'EDIT' }));
+      expect(await screen.findByText('Mumbai Crew')).toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     it('has no axe violations once loaded', async () => {
       setupEventDetailHandler();

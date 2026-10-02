@@ -28,7 +28,7 @@ import type { NormalizedError, PageResponse } from '@/types/api';
 import { Route } from '../$eventId';
 import type { EventDetailSearch } from '../$eventId';
 import styles from './EventDetailContent.module.css';
-import { BeneficiariesTab, PocsTab } from './EventPeopleTabs';
+import { BeneficiariesTab, PocsTab, TeamsTab } from './EventPeopleTabs';
 
 // ---------------------------------------------------------------------------
 // Transition button labels
@@ -644,6 +644,7 @@ export function EventDetailContent() {
       ? ([
           ['pocs', 'POCs'],
           ['beneficiaries', 'Beneficiaries'],
+          ['teams', 'Teams'],
         ] as const)
       : []),
     ['feedback', 'Feedback'],
@@ -750,6 +751,7 @@ export function EventDetailContent() {
       )}
       {tab === 'pocs' && canManage && <PocsTab eventId={eventId} />}
       {tab === 'beneficiaries' && canManage && <BeneficiariesTab eventId={eventId} />}
+      {tab === 'teams' && canManage && <TeamsTab eventId={eventId} />}
       {tab === 'feedback' && (
         <FeedbackTab eventId={eventId} status={event.status} />
       )}

@@ -11,7 +11,7 @@ import { EventDetailContent } from './-components/EventDetailContent';
 
 const eventDetailSearchSchema = z.object({
   tab: z
-    .enum(['overview', 'volunteers', 'pocs', 'beneficiaries', 'feedback', 'notifications', 'audit'])
+    .enum(['overview', 'volunteers', 'pocs', 'beneficiaries', 'teams', 'feedback', 'notifications', 'audit'])
     .default('overview')
     .catch('overview'),
 });

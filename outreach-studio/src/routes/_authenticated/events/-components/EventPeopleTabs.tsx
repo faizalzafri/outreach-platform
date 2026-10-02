@@ -10,6 +10,7 @@ import { httpClient } from '@/lib/http-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { NormalizedError, PageResponse } from '@/types/api';
 import type { AssignmentRole, Beneficiary, PocAssignment, User } from '@/types/domain';
+import type { Team } from '@/types/tenant';
 
 import styles from './EventDetailContent.module.css';
 
@@ -301,6 +302,122 @@ export function BeneficiariesTab({ eventId }: { eventId: string }) {
         </table>
       ) : (
         !isLoading && <p className={styles['tabPlaceholder']}>No beneficiaries linked yet.</p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Teams the event is shared with
+// ---------------------------------------------------------------------------
+
+type AccessLevel = 'VIEW' | 'EDIT';
+interface TeamAccess {
+  teamId: string;
+  teamName: string;
+  accessLevel: AccessLevel;
+}
+
+const ACCESS_LABELS: Record<AccessLevel, string> = {
+  VIEW: 'View and give feedback',
+  EDIT: 'Also record attendance',
+};
+
+export function TeamsTab({ eventId }: { eventId: string }) {
+  const queryClient = useQueryClient();
+  const [teamId, setTeamId] = useState('');
+  const [level, setLevel] = useState<AccessLevel>('VIEW');
+  const [error, setError] = useState<string | null>(null);
+  const sharedKey = [...queryKeys.events.detail(eventId), 'teams'];
+
+  const { data: shared, isLoading } = useQuery<TeamAccess[]>({
+    queryKey: sharedKey,
+    queryFn: async () => (await httpClient.get<TeamAccess[]>(`/events/${eventId}/teams`)).data,
+  });
+  // ponytail: first 200 teams; a search box when tenants have more
+  const { data: teams } = useQuery<PageResponse<Team>>({
+    queryKey: ['teams', 'all-for-sharing'],
+    queryFn: async () => (await httpClient.get<PageResponse<Team>>('/teams', { params: { size: 200 } })).data,
+  });
+
+  const share = useMutation<TeamAccess[], NormalizedError, { teamId: string; accessLevel: AccessLevel }>({
+    mutationFn: async ({ teamId: id, accessLevel }) =>
+      (await httpClient.put<TeamAccess[]>(`/events/${eventId}/teams/${id}`, { accessLevel })).data,
+    onSuccess: (list) => {
+      setError(null);
+      setTeamId('');
+      queryClient.setQueryData(sharedKey, list);
+    },
+    onError: (err) => setError(err.message),
+  });
+  const unshare = useMutation<unknown, NormalizedError, string>({
+    mutationFn: (id) => httpClient.delete(`/events/${eventId}/teams/${id}`),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: sharedKey }),
+    onError: (err) => setError(err.message),
+  });
+
+  const sharedIds = new Set(shared?.map((s) => s.teamId));
+  const available = teams?.content.filter((t) => !sharedIds.has(t.id)) ?? [];
+
+  return (
+    <div>
+      <p className={styles['tabPlaceholder']}>
+        POCs in a team the event is shared with can work on it as if assigned.
+      </p>
+      <form
+        className={styles['enrollForm']}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (teamId) share.mutate({ teamId, accessLevel: level });
+        }}
+      >
+        <select className={styles['enrollInput']} value={teamId} onChange={(e) => setTeamId(e.target.value)}
+          aria-label="Team to share with">
+          <option value="">Choose a team…</option>
+          {available.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+        <select className={styles['enrollInput']} value={level}
+          onChange={(e) => setLevel(e.target.value as AccessLevel)} aria-label="Access">
+          <option value="VIEW">{ACCESS_LABELS.VIEW}</option>
+          <option value="EDIT">{ACCESS_LABELS.EDIT}</option>
+        </select>
+        <button type="submit" className={styles['enrollBtn']} disabled={!teamId || share.isPending}>Share</button>
+      </form>
+      {error && <p className={styles['enrollError']} role="alert">{error}</p>}
+      {isLoading && <p className={styles['tabPlaceholder']}>Loading teams...</p>}
+      {shared && shared.length > 0 ? (
+        <table className={styles['volunteerTable']}>
+          <thead>
+            <tr>
+              <th scope="col">Team</th>
+              <th scope="col">Access</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shared.map((s) => (
+              <tr key={s.teamId}>
+                <td>{s.teamName}</td>
+                <td>
+                  <select className={styles['enrollInput']} value={s.accessLevel}
+                    aria-label={`Access for ${s.teamName}`}
+                    onChange={(e) => share.mutate({ teamId: s.teamId, accessLevel: e.target.value as AccessLevel })}>
+                    <option value="VIEW">{ACCESS_LABELS.VIEW}</option>
+                    <option value="EDIT">{ACCESS_LABELS.EDIT}</option>
+                  </select>
+                </td>
+                <td>
+                  <button type="button" className={styles['enrollBtn']} disabled={unshare.isPending}
+                    onClick={() => unshare.mutate(s.teamId)}>Stop sharing</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        !isLoading && <p className={styles['tabPlaceholder']}>Not shared with any team yet.</p>
       )}
     </div>
   );
