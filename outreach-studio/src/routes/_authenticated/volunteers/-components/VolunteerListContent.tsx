@@ -93,6 +93,7 @@ const columns: ColumnDef<Volunteer, unknown>[] = [
 
 export function VolunteerListContent() {
   const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [searchText, setSearchText] = useState(search.search ?? '');
   const debouncedSearch = useDebounce(searchText, 300);
 
@@ -132,6 +133,9 @@ export function VolunteerListContent() {
         queryKey={queryKey}
         endpoint={endpoint}
         defaultPageSize={search.size}
+        page={search.page}
+        onPaginationChange={(page, size) =>
+          void navigate({ search: (prev) => ({ ...prev, page, size }), replace: true })}
         emptyMessage="No volunteers found."
       />
     </div>

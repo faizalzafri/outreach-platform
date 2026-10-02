@@ -158,6 +158,7 @@ function buildColumns(
 
 export function EventListContent() {
   const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [searchText, setSearchText] = useState(search.search ?? '');
   const debouncedSearch = useDebounce(searchText, 300);
   const queryClient = useQueryClient();
@@ -229,6 +230,9 @@ export function EventListContent() {
         queryKey={queryKey}
         endpoint="/events"
         defaultPageSize={search.size}
+        page={search.page}
+        onPaginationChange={(page, size) =>
+          void navigate({ search: (prev) => ({ ...prev, page, size }), replace: true })}
         emptyMessage="No events found."
       />
     </div>

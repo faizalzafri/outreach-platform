@@ -46,6 +46,12 @@ export interface DataTableProps<TData> {
   emptyMessage?: string;
   /** Accessible caption describing the table contents */
   caption?: string;
+  /**
+   * Controlled pagination (1-based page). Pass both to keep the page in the URL: the table shows
+   * this page and reports changes instead of holding its own. Page size comes from defaultPageSize.
+   */
+  page?: number;
+  onPaginationChange?: (page: number, pageSize: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,12 +106,30 @@ export function DataTable<TData>({
   enableColumnVisibility = true,
   emptyMessage = 'No records found.',
   caption,
+  page,
+  onPaginationChange,
 }: DataTableProps<TData>) {
   // --- Table state ---
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [internalPagination, setInternalPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: defaultPageSize,
   });
+  const controlled = page !== undefined && onPaginationChange !== undefined;
+  const pagination: PaginationState = useMemo(
+    () => (controlled ? { pageIndex: page - 1, pageSize: defaultPageSize } : internalPagination),
+    [controlled, page, defaultPageSize, internalPagination],
+  );
+  const setPagination = useCallback(
+    (updater: PaginationState | ((previous: PaginationState) => PaginationState)) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      if (controlled) {
+        onPaginationChange(next.pageIndex + 1, next.pageSize);
+      } else {
+        setInternalPagination(next);
+      }
+    },
+    [controlled, onPaginationChange, pagination],
+  );
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});

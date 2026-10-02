@@ -257,6 +257,9 @@ export function TeamListContent() {
         queryKey={queryKey}
         endpoint="/teams"
         defaultPageSize={search.size}
+        page={search.page}
+        onPaginationChange={(page, size) =>
+          void navigate({ to: '/teams', search: (prev) => ({ ...prev, page, size }), replace: true })}
         emptyMessage="No teams found."
       />
 

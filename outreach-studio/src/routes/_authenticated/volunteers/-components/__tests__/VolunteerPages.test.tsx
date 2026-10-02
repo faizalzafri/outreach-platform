@@ -29,6 +29,7 @@ vi.mock('@tanstack/react-router', () => ({
 // Mock the route modules that components import for useSearch/useParams
 vi.mock('../../index', () => ({
   Route: {
+    useNavigate: () => vi.fn(),
     useSearch: () => mockSearchParams(),
   },
 }));
@@ -44,6 +45,7 @@ vi.mock('../../$employeeId', () => ({
 // src/routes/_authenticated/events/$eventId.tsx
 vi.mock('@/routes/_authenticated/events/$eventId', () => ({
   Route: {
+    useNavigate: () => vi.fn(),
     useSearch: () => mockSearchParams(),
     useParams: () => mockRouteParams(),
     fullPath: '/_authenticated/events/$eventId',
