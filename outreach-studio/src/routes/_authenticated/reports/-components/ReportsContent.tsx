@@ -37,6 +37,7 @@ import type { TrendParams } from '@/types/api';
 
 import { Route } from '../index';
 import styles from './ReportsContent.module.css';
+import { ReportSchedules } from './ReportSchedules';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -655,6 +656,8 @@ export function ReportsContent() {
           </section>
         </>
       )}
+
+      {!isPocOnly && <ReportSchedules />}
     </div>
   );
 }

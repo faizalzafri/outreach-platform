@@ -35,6 +35,9 @@ public final class RabbitMqConstants {
     public static final String ROUTING_KEY_IDENTITY_PASSWORD_RESET_REQUESTED = "identity.password-reset-requested";
     public static final String ROUTING_KEY_IDENTITY_PASSWORD_CHANGED = "identity.password-changed";
     public static final String ROUTING_KEY_IDENTITY_OTP_ISSUED = "identity.otp-issued";
+
+    /** A scheduled report is ready to be emailed (report-service to notification-service). */
+    public static final String ROUTING_KEY_REPORT_SCHEDULED = "report.scheduled";
     public static final String ROUTING_KEY_IDENTITY_USER_CHANGED = "identity.user-changed";
 
     /** Identity events consumed by event-service to keep its user directory in sync. */

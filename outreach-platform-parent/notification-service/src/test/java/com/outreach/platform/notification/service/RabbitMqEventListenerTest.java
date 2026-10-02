@@ -45,7 +45,20 @@ class RabbitMqEventListenerTest {
     void setUp() {
         IdentityNotificationService identity = new IdentityNotificationService(
                 new MessageChannels(List.of(email)), emailDeliveryRepository);
-        listener = new RabbitMqEventListener(emailDeliveryRepository, emailDispatchService, identity);
+        listener = new RabbitMqEventListener(emailDeliveryRepository, emailDispatchService, identity,
+                new ScheduledReportMailer(new MessageChannels(List.of(email))));
+    }
+
+    @Test
+    void aScheduledReport_isEmailedToEachRecipient_withTheFileAttached() {
+        listener.onMessage(new DomainEventMessage("m-1", "ScheduledReportReady", java.util.Map.of(
+                "name", "Monthly scores", "fileName", "report.csv",
+                "content", java.util.Base64.getEncoder().encodeToString("a,b".getBytes()),
+                "recipients", List.of("pmo@example.com", "lead@example.com"))));
+
+        assertThat(email.sent).extracting(OutboundMessage::address).containsExactly("pmo@example.com", "lead@example.com");
+        assertThat(email.sent.get(0).attachment().fileName()).isEqualTo("report.csv");
+        assertThat(new String(email.sent.get(0).attachment().content())).isEqualTo("a,b");
     }
 
     @Test

@@ -13,9 +13,11 @@ import com.outreach.platform.report.repo.ReportScheduleRepository;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +52,7 @@ public class ScheduledReportService {
         entity.setName(request.name());
         entity.setReportType(request.reportType());
         entity.setCronExpression(request.cronExpression());
+        entity.setNextRunAt(nextRun(request.cronExpression()));
         entity.setExportFormat(request.exportFormat());
         entity.setFilterCriteria(serializeJson(request.filterCriteria()));
         entity.setRecipients(serializeJson(request.recipients()));
@@ -71,6 +74,7 @@ public class ScheduledReportService {
             }
             if (request.cronExpression() != null) {
                 entity.setCronExpression(request.cronExpression());
+                entity.setNextRunAt(nextRun(request.cronExpression()));
             }
             if (request.exportFormat() != null) {
                 entity.setExportFormat(request.exportFormat());
@@ -83,6 +87,9 @@ public class ScheduledReportService {
             }
             if (request.status() != null) {
                 entity.setStatus(request.status());
+                if (request.status() == ScheduleStatus.ACTIVE) {
+                    entity.setNextRunAt(nextRun(entity.getCronExpression()));
+                }
             }
 
             ReportScheduleEntity saved = scheduleRepository.save(entity);
@@ -163,5 +170,14 @@ public class ScheduledReportService {
             log.warn("Failed to deserialize JSON list", e);
             return List.of();
         }
+    }
+
+    /** When a schedule next runs; a cron Spring cannot read is the caller's mistake (400). */
+    static Instant nextRun(String cron) {
+        if (!CronExpression.isValidExpression(cron)) {
+            throw new IllegalArgumentException("Not a valid schedule: " + cron
+                    + " (six fields: second minute hour day-of-month month day-of-week)");
+        }
+        return CronExpression.parse(cron).next(java.time.ZonedDateTime.now()).toInstant();
     }
 }

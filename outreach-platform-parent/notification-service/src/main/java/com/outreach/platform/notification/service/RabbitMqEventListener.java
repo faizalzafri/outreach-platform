@@ -25,11 +25,14 @@ public class RabbitMqEventListener {
     private final EmailDeliveryRepository emailDeliveryRepository;
     private final EmailDispatchService emailDispatchService;
     private final IdentityNotificationService identityNotifications;
+    private final ScheduledReportMailer scheduledReports;
 
     @Inject
     public RabbitMqEventListener(EmailDeliveryRepository emailDeliveryRepository,
                                  EmailDispatchService emailDispatchService,
-                                 IdentityNotificationService identityNotifications) {
+                                 IdentityNotificationService identityNotifications,
+                                 ScheduledReportMailer scheduledReports) {
+        this.scheduledReports = scheduledReports;
         this.emailDeliveryRepository = emailDeliveryRepository;
         this.emailDispatchService = emailDispatchService;
         this.identityNotifications = identityNotifications;
@@ -50,6 +53,7 @@ public class RabbitMqEventListener {
                 case "SendFeedbackEmails" -> handleSendFeedbackEmails(message);
                 case "EventStatusChanged" -> handleEventStatusChanged(message);
                 case "VolunteersImported" -> handleVolunteersImported(message);
+                case ScheduledReportMailer.EVENT_TYPE -> scheduledReports.send(message);
                 default -> log.warn("Unrecognized event type from RabbitMQ: {}", message.eventType());
             }
         } catch (Exception e) {

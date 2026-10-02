@@ -115,7 +115,8 @@ public class RabbitMqConfig {
                         RabbitMqConstants.ROUTING_KEY_IDENTITY_USER_INVITED,
                         RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_RESET_REQUESTED,
                         RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_CHANGED,
-                        RabbitMqConstants.ROUTING_KEY_IDENTITY_OTP_ISSUED)
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_OTP_ISSUED,
+                        RabbitMqConstants.ROUTING_KEY_REPORT_SCHEDULED)
                 .map(key -> BindingBuilder.bind(notificationQueue()).to(outreachEventsExchange()).with(key))
                 .toList());
     }

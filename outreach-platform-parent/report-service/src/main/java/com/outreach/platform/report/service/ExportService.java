@@ -159,7 +159,7 @@ public class ExportService {
         return value instanceof List<?> items ? items.stream().map(String::valueOf).toList() : null;
     }
 
-    private static byte[] render(ExportFormat format, List<EventScoreDto> rows) throws IOException {
+    static byte[] render(ExportFormat format, List<EventScoreDto> rows) throws IOException {
         List<List<String>> table = rows.stream().map(ExportService::cells).toList();
         return switch (format) {
             case CSV -> renderCsv(table);
@@ -241,7 +241,7 @@ public class ExportService {
         return value == null ? "" : value;
     }
 
-    private String buildFileName(ExportFormat format) {
+    static String buildFileName(ExportFormat format) {
         String timestamp = Instant.now().toString().replace(":", "-").replace(".", "-");
         return switch (format) {
             case CSV -> "report_" + timestamp + ".csv";
