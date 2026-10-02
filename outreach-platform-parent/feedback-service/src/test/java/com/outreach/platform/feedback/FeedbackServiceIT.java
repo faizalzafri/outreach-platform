@@ -102,6 +102,24 @@ class FeedbackServiceIT {
     }
 
     @Test
+    @DisplayName("Categories come from one list: case is normalized, unknown ones are refused")
+    void submitFeedback_categoryMustBeOneOfTheList() {
+        ResponseEntity<FeedbackDto> accepted = restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, volunteerId, 5, "Great", "None", null, "logistics", null, false), FeedbackDto.class);
+        assertThat(accepted.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(accepted.getBody().category()).isEqualTo("Logistics");
+
+        ResponseEntity<String> refused = restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, UUID.randomUUID(), 5, "Great", "None", null, "Vibes", null, false), String.class);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(refused.getBody()).contains("Unknown feedback category");
+
+        ResponseEntity<String[]> categories = restTemplate.getForEntity("/feedback/categories", String[].class);
+        assertThat(categories.getBody()).containsExactly("Communication", "Organization", "Content", "Logistics",
+                "Teamwork", "Leadership", "Impact", "Safety", "Overall");
+    }
+
+    @Test
     @DisplayName("POST /feedback with invalid score returns 400 with field errors")
     void submitFeedback_invalidScore_returnsBadRequest() {
         FeedbackSubmitRequest invalidLow = new FeedbackSubmitRequest(

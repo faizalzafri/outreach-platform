@@ -2,6 +2,7 @@ package com.outreach.platform.feedback.service;
 
 import com.outreach.platform.feedback.entity.VolunteerFeedbackEntity;
 import com.outreach.platform.feedback.mapper.FeedbackMapper;
+import com.outreach.platform.feedback.model.FeedbackCategory;
 import com.outreach.platform.feedback.model.FeedbackStatus;
 import com.outreach.platform.feedback.model.dto.FeedbackDto;
 import com.outreach.platform.feedback.model.dto.FeedbackSearchRequest;
@@ -42,6 +43,7 @@ public class FeedbackService {
         }
 
         VolunteerFeedbackEntity entity = feedbackMapper.toEntity(request);
+        entity.setCategory(FeedbackCategory.normalize(request.category()));
         VolunteerFeedbackEntity saved = feedbackRepository.save(entity);
         return feedbackMapper.toDto(saved);
     }
@@ -52,6 +54,9 @@ public class FeedbackService {
                 .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
 
         feedbackMapper.updateEntityFromRequest(request, entity);
+        if (request.category() != null) {
+            entity.setCategory(FeedbackCategory.normalize(request.category()));
+        }
 
         try {
             VolunteerFeedbackEntity saved = feedbackRepository.save(entity);
@@ -113,10 +118,7 @@ public class FeedbackService {
     }
 
     public List<String> getCategories() {
-        return List.of(
-                "Leadership", "Communication", "Teamwork",
-                "Organization", "Impact", "Safety", "General"
-        );
+        return FeedbackCategory.labels();
     }
 
     public List<String> getTags() {
