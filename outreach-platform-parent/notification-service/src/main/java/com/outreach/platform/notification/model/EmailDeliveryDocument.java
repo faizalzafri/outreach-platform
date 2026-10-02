@@ -12,7 +12,8 @@ import java.util.UUID;
  * MongoDB document tracking individual email delivery attempts and status.
  */
 @Document("email_deliveries")
-@CompoundIndex(name = "idx_event_status", def = "{'eventId': 1, 'status': 1}")
+@CompoundIndex(name = "idx_email_deliveries_eventId_status", def = "{'eventId': 1, 'status': 1}")
+@CompoundIndex(name = "idx_email_deliveries_status_lastAttemptAt", def = "{'status': 1, 'lastAttemptAt': 1}")
 public class EmailDeliveryDocument {
 
     @Id
@@ -21,12 +22,11 @@ public class EmailDeliveryDocument {
     @Indexed
     private UUID tenantId;
 
-    @Indexed
     private String eventId;
 
     private String templateId;
 
-    @Indexed
+    @Indexed(name = "idx_email_deliveries_recipientEmail")
     private String recipientEmail;
 
     private String recipientName;
@@ -45,6 +45,7 @@ public class EmailDeliveryDocument {
 
     private String errorMessage;
 
+    @Indexed(name = "idx_email_deliveries_ttl_90d", expireAfter = "90d")
     private Instant createdAt;
 
     private Instant sentAt;

@@ -1,7 +1,6 @@
 package com.outreach.platform.notification.model.dto;
 
 import com.outreach.platform.notification.model.NotificationType;
-import com.outreach.platform.notification.model.TemplateEngine;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,8 +19,6 @@ public record TemplateCreateRequest(
         @Size(max = 100) String subjectTemplate,
         @Schema(description = "Body template content", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank String bodyTemplate,
-        @Schema(description = "Template engine", example = "THYMELEAF", requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotNull TemplateEngine engine,
         @Schema(description = "JSON schema for template variables")
         String variablesSchema
 ) {

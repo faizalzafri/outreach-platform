@@ -1,5 +1,7 @@
 package com.outreach.platform.notification.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.entity.NotificationTemplateEntity;
 import com.outreach.platform.notification.model.dto.TemplateCreateRequest;
@@ -49,7 +51,6 @@ public class TemplateService {
         entity.setType(request.type());
         entity.setSubjectTemplate(request.subjectTemplate());
         entity.setBodyTemplate(request.bodyTemplate());
-        entity.setEngine(request.engine());
         entity.setVariablesSchema(request.variablesSchema());
         entity.setActive(true);
 
@@ -72,9 +73,6 @@ public class TemplateService {
         }
         if (request.bodyTemplate() != null) {
             entity.setBodyTemplate(request.bodyTemplate());
-        }
-        if (request.engine() != null) {
-            entity.setEngine(request.engine());
         }
         if (request.variablesSchema() != null) {
             entity.setVariablesSchema(request.variablesSchema());
@@ -133,7 +131,6 @@ public class TemplateService {
                 entity.getType(),
                 entity.getSubjectTemplate(),
                 entity.getBodyTemplate(),
-                entity.getEngine(),
                 entity.getVariablesSchema(),
                 entity.isActive(),
                 entity.getVersion(),
@@ -146,25 +143,18 @@ public class TemplateService {
     /**
      * Thrown when a template is not found by ID.
      */
-    public static class TemplateNotFoundException extends RuntimeException {
+    public static class TemplateNotFoundException extends ResponseStatusException {
         public TemplateNotFoundException(UUID id) {
-            super("Notification template not found: " + id);
+            super(HttpStatus.NOT_FOUND, "Notification template not found: " + id);
         }
     }
 
     /**
      * Thrown when template variables fail schema validation.
      */
-    public static class TemplateVariableValidationException extends RuntimeException {
-        private final List<String> errors;
-
+    public static class TemplateVariableValidationException extends ResponseStatusException {
         public TemplateVariableValidationException(List<String> errors) {
-            super("Template variable validation failed: " + String.join("; ", errors));
-            this.errors = errors;
-        }
-
-        public List<String> getErrors() {
-            return errors;
+            super(HttpStatus.UNPROCESSABLE_ENTITY, "Template variable validation failed: " + String.join("; ", errors));
         }
     }
 }

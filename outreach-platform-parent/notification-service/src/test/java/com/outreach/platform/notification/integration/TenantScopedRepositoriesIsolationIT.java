@@ -5,7 +5,6 @@ import com.outreach.platform.notification.entity.NotificationScheduleEntity;
 import com.outreach.platform.notification.entity.NotificationTemplateEntity;
 import com.outreach.platform.notification.model.NotificationType;
 import com.outreach.platform.notification.model.ScheduleStatus;
-import com.outreach.platform.notification.model.TemplateEngine;
 import com.outreach.platform.notification.model.TriggerType;
 import com.outreach.platform.notification.repo.NotificationScheduleRepository;
 import com.outreach.platform.notification.repo.NotificationTemplateRepository;
@@ -164,7 +163,6 @@ class TenantScopedRepositoriesIsolationIT {
         template.setName(name + "-" + UUID.randomUUID());
         template.setType(NotificationType.EMAIL);
         template.setBodyTemplate("Hello {{name}}");
-        template.setEngine(TemplateEngine.THYMELEAF);
         template.setActive(true);
         return template;
     }
