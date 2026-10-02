@@ -16,7 +16,7 @@
   "dependencies": {
     "@tanstack/react-form": "^1.33.2",
     "@tanstack/react-query": "^5.102.8",
-    "@tanstack/react-router": "^1.170.18",
+    "@tanstack/react-router": "^1.170.40",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.18.1",
     "react": "^19.2.7",
