@@ -13,7 +13,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](outreach-platform-parent/docker-compose.yml)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](outreach-platform-parent/docker-compose.yml)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](outreach-platform-parent/docker-compose.yml)
-[![Keycloak](https://img.shields.io/badge/Keycloak-26-4D4D4D?logo=keycloak&logoColor=white)](outreach-platform-parent/docker-compose.yml)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600?logo=rabbitmq&logoColor=white)](outreach-platform-parent/docker-compose.yml)
 
 Multi-tenant SaaS platform for corporate volunteer outreach management. Manages community events, volunteer enrollment, feedback collection, notifications, analytics, and AI-powered insights — with complete data isolation between tenant organizations.
 
@@ -21,34 +21,35 @@ Multi-tenant SaaS platform for corporate volunteer outreach management. Manages 
 
 The platform supports multiple organizations (NGOs, corporates, schools) on a shared deployment. Tenant isolation is enforced at every layer:
 - **Database:** Shared schema with `tenant_id` column on all tables; Hibernate filters scope all queries
-- **Gateway:** Extracts tenant from JWT, forwards `X-Tenant-ID` header to downstream services
+- **Gateway:** Extracts tenant from JWT, forwards `X-Tenant-ID` header to downstream services, and enforces organization status (suspended = read-only, deactivated = blocked)
 - **Caching:** Redis keys prefixed with tenant ID
 - **Messaging:** RabbitMQ messages carry `x-tenant-id` header
 
 ## Functional Overview
 
-**Event Management** — Create, publish, and track outreach events through their lifecycle (Draft → Published → Active → Completed → Archived). Assign POC coordinators, enroll volunteers, mark attendance.
+**Event Management** — Create, publish, and track outreach events through their lifecycle (Draft → Published → Active → Completed → Archived, or Cancelled). Assign POCs, share events with teams, link beneficiaries, enroll volunteers, record attendance. List and calendar views; cancelled and archived events are locked.
 
 **Volunteer Management** — Maintain volunteer profiles with skills, department, and availability. Track participation history and leaderboard rankings. Search by skills and location.
 
 **Bulk Data Import** — Upload Excel/CSV files to import volunteers and event data. Row-level validation with structured error reporting. Job tracking with progress.
 
-**Feedback Collection** — Volunteers rate events (1-5) with open-ended answers. One submission per volunteer per event. Categorization, tagging, sentiment tracking. Multi-criteria search and export.
+**Feedback Collection** — Volunteers rate events (1-5) with open-ended answers. One submission per volunteer per event, only once the event is active. Fixed categories, tags, sentiment tracking. Multi-criteria search (including by tag) and CSV export per event.
 
-**Email Notifications** — Template-based emails triggered by events (welcome, feedback request, status changes). Delivery tracking with retry. Scheduling and preference management.
+**Email Notifications** — Template-based emails triggered by events (feedback request, status changes) and account emails (invitations, password resets, one-time codes). Delivery tracking with retry. Channels are pluggable (email today).
 
-**Analytics & Reporting** — Dashboard with KPIs, trends, NPS, sentiment breakdown. Aggregate by event, city, beneficiary, or POC. Time-series with configurable granularity. Async export (PDF/CSV/Excel).
+**Analytics & Reporting** — Dashboard with KPIs, trends and score distribution. Insights: attendance and feedback rates, NPS, sentiment, activity by city, comparisons. Aggregate by event, city, beneficiary, or POC. Export (PDF/CSV/Excel) on demand or emailed on a schedule.
 
 **AI Insights (Admin)** — Feedback summarization, anomaly detection, natural language queries. Feature-toggled. Provider-agnostic (OpenAI, mock).
 
-**Administration** — User CRUD with roles (Admin/PMO/POC). Audit log. System configuration.
+**Identity & Administration** — Users are invited by email and set their own password; forgot/reset password by link. Password policy and one-time codes (sign-in, reset, password change) configurable per organization. Platform admins create and manage organizations from the UI. Profile settings, audit log.
 
 ## Tech Stack
 
 - Java 21, Spring Boot 3.4, Spring Cloud 2024.0
-- PostgreSQL 16 (domain data), MongoDB 7 (events outbox, audit, jobs), Redis 7 (caching, rate limiting)
-- Keycloak 26 / Spring Authorization Server (OAuth2/OIDC)
-- Docker Compose for local development
+- PostgreSQL 16 (domain data), MongoDB 7 (events outbox, audit, jobs), Redis 7 (caching, rate limiting), RabbitMQ (domain events)
+- Spring Authorization Server (OAuth2/OIDC, in auth-service)
+- React 19 + TypeScript frontend (`outreach-studio`)
+- Docker Compose for local development, MailHog to catch emails
 
 ## Services
 
@@ -56,42 +57,45 @@ The platform supports multiple organizations (NGOs, corporates, schools) on a sh
 |---------|------|---------------|
 | discovery-service | 8761 | Eureka service registry |
 | gateway-service | 7093 | API gateway, JWT validation, rate limiting |
-| auth-service | 8090 | OAuth2/OIDC identity provider |
-| event-service | 9004 | Event lifecycle, volunteers, beneficiaries, admin |
+| auth-service | 8090 | OAuth2/OIDC identity provider; accounts, invitations, passwords, one-time codes, organizations |
+| event-service | 9004 | Event lifecycle, volunteers, beneficiaries, teams, user directory, audit log |
 | feedback-service | 9001 | Feedback collection and search |
 | notification-service | 9002 | Email templates, dispatch, delivery tracking |
 | ingestion-service | 9003 | File upload, parsing, job tracking |
 | report-service | 9005 | Analytics, aggregation, export |
 | ai-service | 9006 | AI summarization, anomaly detection |
+| outreach-studio | 5173 | Web app (Vite dev server) |
+| MailHog | 8025 | Catches all outgoing email in development |
 
 ## Prerequisites
 
 - Java 21
+- Node.js 20+ (for the web app)
 - Docker Desktop
 - Maven (wrapper included)
 
 ## Quick Start
 
 ```bash
-# Clone and enter project
+# Backend: images are built from source by Docker
 cd outreach-platform/outreach-platform-parent
-
-# Build all services
-./mvnw clean package -DskipTests
-
-# Start everything
-docker compose up -d
-
-# Verify
+docker compose up -d --build
 docker compose ps
+
+# Web app
+cd ../outreach-studio
+npm ci
+npm run dev        # http://localhost:5173
 ```
 
-Services start in dependency order (infra → platform → business). Full stack takes ~2 minutes.
+Services start in dependency order (infra → platform → business). Full stack takes a few minutes on the first build.
+
+On first start, auth-service invites the platform admin (`PLATFORM_ADMIN_EMAIL`, `platform.admin@outreach-platform.com` in Compose). Open MailHog at http://localhost:8025, follow the activation link to set a password, then sign in and create organizations from **Organizations**.
 
 ## Run Without Docker
 
 ```bash
-# Start infrastructure manually (PostgreSQL, MongoDB, Redis)
+# Start infrastructure manually (PostgreSQL, MongoDB, Redis, RabbitMQ, MailHog)
 # Then run individual services:
 ./mvnw spring-boot:run -pl event-service
 ./mvnw spring-boot:run -pl feedback-service
@@ -116,7 +120,7 @@ Services start in dependency order (infra → platform → business). Full stack
 | Tenant Admin | Manage users and roles within their tenant |
 | Admin | Full access within tenant — events, reports, AI, audit |
 | PMO | Events, reports, feedback, volunteers within tenant |
-| POC | Assigned events, enrolled volunteers, attendance within tenant |
+| POC | Events assigned to them or shared with their team: volunteers, attendance, feedback |
 
 ## API Access
 
