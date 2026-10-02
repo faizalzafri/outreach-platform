@@ -1,6 +1,7 @@
 package com.outreach.platform.feedback;
 
 import com.outreach.platform.common.tenant.TenantConstants;
+import com.outreach.platform.feedback.client.EventServiceClient;
 import com.outreach.platform.feedback.model.dto.FeedbackDto;
 import com.outreach.platform.feedback.model.dto.FeedbackSubmitRequest;
 import com.outreach.platform.feedback.model.dto.FeedbackUpdateRequest;
@@ -22,13 +23,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import feign.FeignException;
+import feign.Request;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Integration tests for the Feedback Service REST API.
@@ -57,6 +66,10 @@ class FeedbackServiceIT {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    // event-service is another process; its answers are the boundary stubbed here.
+    @MockitoBean
+    private EventServiceClient eventServiceClient;
+
     private UUID eventId;
     private UUID volunteerId;
 
@@ -76,6 +89,8 @@ class FeedbackServiceIT {
 
         eventId = UUID.randomUUID();
         volunteerId = UUID.randomUUID();
+        when(eventServiceClient.feedbackEligibility(any(), any()))
+                .thenAnswer(inv -> new EventServiceClient.FeedbackEligibility(inv.getArgument(0), "ACTIVE", false));
     }
 
     @Test
@@ -310,5 +325,47 @@ class FeedbackServiceIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTitle()).isEqualTo("Feedback Already Exists");
+    }
+
+    @Test
+    @DisplayName("Feedback is refused before the event is under way, and when event-service cannot say")
+    void submitFeedback_onlyForEventsUnderWay() {
+        FeedbackSubmitRequest request = new FeedbackSubmitRequest(
+                eventId, volunteerId, 4, "Great", null, null, "Overall", null, false);
+
+        when(eventServiceClient.feedbackEligibility(any(), any()))
+                .thenReturn(new EventServiceClient.FeedbackEligibility(eventId, "PUBLISHED", false));
+        ResponseEntity<String> early = restTemplate.postForEntity("/feedback", request, String.class);
+        assertThat(early.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(early.getBody()).contains("this event is PUBLISHED");
+
+        when(eventServiceClient.feedbackEligibility(any(), any())).thenThrow(new FeignException.ServiceUnavailable(
+                "down", Request.create(Request.HttpMethod.GET, "/events", Map.of(), null, StandardCharsets.UTF_8, null),
+                null, Map.of()));
+        assertThat(restTemplate.postForEntity("/feedback", request, String.class).getStatusCode())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("Listed feedback carries event and volunteer names, except for anonymous feedback")
+    void list_showsNames_butNotForAnonymousFeedback() {
+        UUID named = UUID.randomUUID();
+        UUID anonymous = UUID.randomUUID();
+        restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, named, 5, "Great", null, null, "Overall", null, false), FeedbackDto.class);
+        restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, anonymous, 3, "Fine", null, null, "Overall", null, true), FeedbackDto.class);
+        when(eventServiceClient.eventNames(any())).thenReturn(Map.of(eventId, "Coastal Cleanup Drive"));
+        when(eventServiceClient.volunteerNames(any())).thenReturn(Map.of(named, "Asha Menon", anonymous, "Hidden"));
+
+        RestPageResponse<FeedbackDto> page = restTemplate.exchange("/feedback/search?eventId={id}",
+                HttpMethod.GET, null, new ParameterizedTypeReference<RestPageResponse<FeedbackDto>>() { },
+                eventId).getBody();
+
+        assertThat(page.getContent()).extracting(FeedbackDto::eventName).containsOnly("Coastal Cleanup Drive");
+        assertThat(page.getContent()).filteredOn(f -> f.volunteerId().equals(named))
+                .extracting(FeedbackDto::volunteerName).containsExactly("Asha Menon");
+        assertThat(page.getContent()).filteredOn(FeedbackDto::anonymous)
+                .extracting(FeedbackDto::volunteerName).containsOnlyNulls();
     }
 }

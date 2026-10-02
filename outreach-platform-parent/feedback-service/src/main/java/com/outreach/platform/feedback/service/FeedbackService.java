@@ -1,5 +1,7 @@
 package com.outreach.platform.feedback.service;
 
+import com.outreach.platform.common.security.CurrentUser;
+import com.outreach.platform.feedback.client.EventServiceClient;
 import com.outreach.platform.feedback.entity.VolunteerFeedbackEntity;
 import com.outreach.platform.feedback.mapper.FeedbackMapper;
 import com.outreach.platform.feedback.model.FeedbackCategory;
@@ -10,32 +12,50 @@ import com.outreach.platform.feedback.model.dto.FeedbackStatusResponse;
 import com.outreach.platform.feedback.model.dto.FeedbackSubmitRequest;
 import com.outreach.platform.feedback.model.dto.FeedbackUpdateRequest;
 import com.outreach.platform.feedback.repo.VolunteerFeedbackRepository;
+import feign.FeignException;
 import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Core business logic for feedback CRUD, search, and status reporting. */
 @Service
 public class FeedbackService {
 
+    private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
+
+    /** Event statuses in which feedback may be given. */
+    private static final Set<String> OPEN_FOR_FEEDBACK = Set.of("ACTIVE", "COMPLETED");
+
     private final VolunteerFeedbackRepository feedbackRepository;
     private final FeedbackMapper feedbackMapper;
+    private final EventServiceClient eventServiceClient;
 
     @Inject
-    public FeedbackService(VolunteerFeedbackRepository feedbackRepository, FeedbackMapper feedbackMapper) {
+    public FeedbackService(VolunteerFeedbackRepository feedbackRepository, FeedbackMapper feedbackMapper,
+                           EventServiceClient eventServiceClient) {
         this.feedbackRepository = feedbackRepository;
         this.feedbackMapper = feedbackMapper;
+        this.eventServiceClient = eventServiceClient;
     }
 
     @Transactional
     public FeedbackDto submitFeedback(FeedbackSubmitRequest request) {
+        requireOpenForFeedback(request.eventId());
         Optional<VolunteerFeedbackEntity> existing =
                 feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId());
         if (existing.isPresent()) {
@@ -75,8 +95,7 @@ public class FeedbackService {
 
     @Transactional(readOnly = true)
     public Page<FeedbackDto> listByEvent(UUID eventId, Pageable pageable) {
-        return feedbackRepository.findByEventId(eventId, pageable)
-                .map(feedbackMapper::toDto);
+        return withNames(feedbackRepository.findByEventId(eventId, pageable));
     }
 
     @Transactional(readOnly = true)
@@ -94,7 +113,7 @@ public class FeedbackService {
 
     @Transactional(readOnly = true)
     public Page<FeedbackDto> search(FeedbackSearchRequest request, Pageable pageable) {
-        return feedbackRepository.search(
+        return withNames(feedbackRepository.search(
                 request.eventId(),
                 request.employeeId(),
                 request.category(),
@@ -105,7 +124,57 @@ public class FeedbackService {
                 request.dateFrom(),
                 request.dateTo(),
                 pageable
-        ).map(feedbackMapper::toDto);
+        ));
+    }
+
+    /**
+     * Feedback is given for events under way or finished, and by a POC only for their own events.
+     * event-service is asked; if it cannot answer, nothing is accepted.
+     */
+    private void requireOpenForFeedback(UUID eventId) {
+        boolean pocOnly = CurrentUser.isPocOnly();
+        EventServiceClient.FeedbackEligibility eligibility;
+        try {
+            eligibility = eventServiceClient.feedbackEligibility(eventId, pocOnly ? CurrentUser.requireId() : null);
+        } catch (FeignException.NotFound ex) {
+            throw new NoSuchElementException("Event not found: " + eventId);
+        } catch (FeignException ex) {
+            log.warn("Could not check event {} with event-service: {}", eventId, ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Feedback cannot be accepted right now; please try again shortly");
+        }
+        if (!OPEN_FOR_FEEDBACK.contains(eligibility.status())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Feedback opens once the event is active; this event is " + eligibility.status());
+        }
+        if (pocOnly && !eligibility.assigned()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only the event's POCs can give feedback for it");
+        }
+    }
+
+    /**
+     * Fills in event and volunteer names with one batched call each. Names are for display only,
+     * so if event-service cannot answer the page is still returned, without them.
+     */
+    private Page<FeedbackDto> withNames(Page<VolunteerFeedbackEntity> page) {
+        Set<UUID> eventIds = page.stream().map(VolunteerFeedbackEntity::getEventId).collect(Collectors.toSet());
+        Set<UUID> volunteerIds = page.stream().filter(f -> !f.isAnonymous())
+                .map(VolunteerFeedbackEntity::getVolunteerId).collect(Collectors.toSet());
+        Map<UUID, String> eventNames = Map.of();
+        Map<UUID, String> volunteerNames = Map.of();
+        if (!page.isEmpty()) {
+            try {
+                eventNames = eventServiceClient.eventNames(eventIds);
+                volunteerNames = volunteerIds.isEmpty() ? Map.of() : eventServiceClient.volunteerNames(volunteerIds);
+            } catch (FeignException ex) {
+                log.warn("Feedback shown without names; event-service did not answer: {}", ex.getMessage());
+            }
+        }
+        Map<UUID, String> events = eventNames;
+        Map<UUID, String> volunteers = volunteerNames;
+        return page.map(f -> feedbackMapper.toDto(f, events.get(f.getEventId()),
+                f.isAnonymous() ? null : volunteers.get(f.getVolunteerId())));
     }
 
     @Transactional
