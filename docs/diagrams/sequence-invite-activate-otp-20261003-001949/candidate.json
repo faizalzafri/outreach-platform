@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Invite → Activate → Sign in with a one-time code",
+    "output": "docs/diagrams/sequence-invite-activate-otp-20261003-001949/invite-activate-otp.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/faizalzafri/outreach-platform.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "44dd3e5aea2ddc58bea3a4e4f2fe50144d4568fe"
+    }
+  },
+  "participants": [
+    {
+      "id": "admin",
+      "type": "external",
+      "label": "Org admin",
+      "sublabel": "browser"
+    },
+    {
+      "id": "studio",
+      "type": "frontend",
+      "label": "Studio",
+      "sublabel": "Outreach SPA",
+      "sources": [
+        {
+          "path": "outreach-studio/src/routes/_authenticated/admin/-components/AdminContent.tsx",
+          "line": 118,
+          "label": "invite call"
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "auth-service",
+      "sublabel": "pages + OAuth2",
+      "sources": [
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/service/AccountAdminService.java",
+          "line": 84,
+          "end_line": 107,
+          "label": "invite"
+        },
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/service/SelfServiceAccountService.java",
+          "line": 66,
+          "label": "activate via link"
+        },
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/controller/LoginOtpController.java",
+          "line": 57,
+          "end_line": 65,
+          "label": "verify code"
+        }
+      ]
+    },
+    {
+      "id": "authdb",
+      "type": "database",
+      "label": "auth tables",
+      "sublabel": "accounts · outbox",
+      "sources": [
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/service/AccountTokenService.java",
+          "line": 42,
+          "label": "token stored as SHA-256"
+        },
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/service/IdentityEventPublisher.java",
+          "line": 40,
+          "end_line": 70,
+          "label": "outbox rows"
+        }
+      ]
+    },
+    {
+      "id": "rabbit",
+      "type": "messagebus",
+      "label": "RabbitMQ",
+      "sublabel": "outreach.events",
+      "sources": [
+        {
+          "path": "outreach-platform-parent/auth-service/src/main/java/com/outreach/platform/auth/service/OutboxPublisher.java",
+          "line": 43,
+          "end_line": 55,
+          "label": "outbox poller"
+        }
+      ]
+    },
+    {
+      "id": "notify",
+      "type": "backend",
+      "label": "notification",
+      "sublabel": "service · emails",
+      "sources": [
+        {
+          "path": "outreach-platform-parent/notification-service/src/main/java/com/outreach/platform/notification/service/IdentityNotificationService.java",
+          "line": 48,
+          "end_line": 72,
+          "label": "send identity email"
+        }
+      ]
+    },
+    {
+      "id": "inbox",
+      "type": "external",
+      "label": "Email inbox",
+      "sublabel": "MailHog in dev"
+    },
+    {
+      "id": "user",
+      "type": "external",
+      "label": "New user",
+      "sublabel": "browser"
+    }
+  ],
+  "segments": [
+    {
+      "from": 153,
+      "to": 319,
+      "label": "1 · Invite"
+    },
+    {
+      "from": 329,
+      "to": 439,
+      "label": "2 · Activate"
+    },
+    {
+      "from": 449,
+      "to": 699,
+      "label": "3 · Sign in with a code"
+    }
+  ],
+  "messages": [
+    {
+      "id": "admin-invites",
+      "from": "admin",
+      "to": "studio",
+      "label": "invite name, email, role",
+      "y": 165
+    },
+    {
+      "id": "post-users",
+      "from": "studio",
+      "to": "auth",
+      "label": "POST /api/auth/users",
+      "variant": "emphasis",
+      "y": 193
+    },
+    {
+      "id": "save-invited",
+      "from": "auth",
+      "to": "authdb",
+      "label": "INVITED account + outbox row",
+      "note": "one transaction; only the token SHA-256 is stored",
+      "y": 221
+    },
+    {
+      "id": "publish-invite",
+      "from": "authdb",
+      "to": "rabbit",
+      "label": "poller publishes (≈1s)",
+      "variant": "dashed",
+      "y": 249
+    },
+    {
+      "id": "deliver-invite",
+      "from": "rabbit",
+      "to": "notify",
+      "label": "identity.user-invited",
+      "variant": "dashed",
+      "y": 277
+    },
+    {
+      "id": "email-invite",
+      "from": "notify",
+      "to": "inbox",
+      "label": "activation link email",
+      "variant": "emphasis",
+      "y": 305
+    },
+    {
+      "id": "open-link",
+      "from": "user",
+      "to": "auth",
+      "label": "GET /activate?token=…",
+      "y": 341
+    },
+    {
+      "id": "set-password",
+      "from": "user",
+      "to": "auth",
+      "label": "POST /activate + new password",
+      "variant": "emphasis",
+      "y": 369
+    },
+    {
+      "id": "activate-account",
+      "from": "auth",
+      "to": "authdb",
+      "label": "policy OK → ACTIVE",
+      "y": 397
+    },
+    {
+      "id": "activated",
+      "from": "auth",
+      "to": "user",
+      "label": "redirect /login?activated",
+      "variant": "return",
+      "y": 425
+    },
+    {
+      "id": "authorize",
+      "from": "studio",
+      "to": "auth",
+      "label": "/oauth2/authorize (PKCE)",
+      "variant": "security",
+      "y": 461
+    },
+    {
+      "id": "password",
+      "from": "user",
+      "to": "auth",
+      "label": "username + password",
+      "variant": "security",
+      "y": 489
+    },
+    {
+      "id": "issue-code",
+      "from": "auth",
+      "to": "authdb",
+      "label": "code challenge + outbox row",
+      "note": "org policy decides; the code is stored hashed",
+      "y": 517
+    },
+    {
+      "id": "publish-code",
+      "from": "authdb",
+      "to": "rabbit",
+      "label": "identity.otp-issued",
+      "variant": "dashed",
+      "y": 545
+    },
+    {
+      "id": "deliver-code",
+      "from": "rabbit",
+      "to": "notify",
+      "label": "otp-issued",
+      "variant": "dashed",
+      "y": 573
+    },
+    {
+      "id": "email-code",
+      "from": "notify",
+      "to": "inbox",
+      "label": "6-digit code email",
+      "variant": "emphasis",
+      "y": 601
+    },
+    {
+      "id": "submit-code",
+      "from": "user",
+      "to": "auth",
+      "label": "POST /login/otp + code",
+      "variant": "security",
+      "y": 629
+    },
+    {
+      "id": "auth-code",
+      "from": "auth",
+      "to": "studio",
+      "label": "auth code → token exchange",
+      "variant": "return",
+      "y": 657
+    },
+    {
+      "id": "jwt",
+      "from": "auth",
+      "to": "studio",
+      "label": "JWT: uid, tenant_id, roles",
+      "variant": "return",
+      "y": 685
+    }
+  ],
+  "activations": [
+    {
+      "participant": "auth",
+      "from": 188,
+      "to": 226,
+      "type": "security"
+    },
+    {
+      "participant": "notify",
+      "from": 272,
+      "to": 310,
+      "type": "backend"
+    },
+    {
+      "participant": "auth",
+      "from": 336,
+      "to": 430,
+      "type": "security"
+    },
+    {
+      "participant": "auth",
+      "from": 456,
+      "to": 690,
+      "type": "security"
+    },
+    {
+      "participant": "notify",
+      "from": 568,
+      "to": 606,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Invite and activate",
+      "items": [
+        "No password is ever set or shared by an admin",
+        "The emailed link carries a random token; only its SHA-256 is stored",
+        "Activation enforces the password policy (length, classes, common words, name/email, history)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Delivery",
+      "items": [
+        "auth-service writes events to its outbox with the change; a poller publishes them",
+        "notification-service sends identity emails at once and stores them redacted",
+        "Channels are pluggable: email today (OtpSender / MessageChannelSender)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "One-time code",
+      "items": [
+        "Required per organization policy for sign-in, reset or password change",
+        "Limited attempts and expiry; resend has a cooldown",
+        "No email on the account and a code required: sign-in fails closed"
+      ]
+    }
+  ]
+}
