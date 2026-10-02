@@ -33,6 +33,8 @@ import { Route as AuthenticatedTeamsTeamIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedVolunteersIndexRouteImport } from './routes/_authenticated/volunteers/index'
 import { Route as AuthenticatedVolunteersEmployeeIdRouteImport } from './routes/_authenticated/volunteers/$employeeId'
 import { Route as AuthenticatedAdminSecurityIndexRouteImport } from './routes/_authenticated/admin/security/index'
+import { Route as AuthenticatedPlatformTenantsIndexRouteImport } from './routes/_authenticated/platform/tenants/index'
+import { Route as AuthenticatedPlatformTenantsTenantIdRouteImport } from './routes/_authenticated/platform/tenants/$tenantId'
 
 const R404Route = R404RouteImport.update({
   id: '/404',
@@ -167,6 +169,18 @@ const AuthenticatedAdminSecurityIndexRoute =
     path: '/admin/security/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlatformTenantsIndexRoute =
+  AuthenticatedPlatformTenantsIndexRouteImport.update({
+    id: '/platform/tenants/',
+    path: '/platform/tenants/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlatformTenantsTenantIdRoute =
+  AuthenticatedPlatformTenantsTenantIdRouteImport.update({
+    id: '/platform/tenants/$tenantId',
+    path: '/platform/tenants/$tenantId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/404': typeof R404Route
@@ -191,7 +205,9 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/teams/': typeof AuthenticatedTeamsIndexRoute
   '/volunteers/': typeof AuthenticatedVolunteersIndexRoute
+  '/platform/tenants/$tenantId': typeof AuthenticatedPlatformTenantsTenantIdRoute
   '/admin/security/': typeof AuthenticatedAdminSecurityIndexRoute
+  '/platform/tenants/': typeof AuthenticatedPlatformTenantsIndexRoute
 }
 export interface FileRoutesByTo {
   '/404': typeof R404Route
@@ -216,7 +232,9 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/teams': typeof AuthenticatedTeamsIndexRoute
   '/volunteers': typeof AuthenticatedVolunteersIndexRoute
+  '/platform/tenants/$tenantId': typeof AuthenticatedPlatformTenantsTenantIdRoute
   '/admin/security': typeof AuthenticatedAdminSecurityIndexRoute
+  '/platform/tenants': typeof AuthenticatedPlatformTenantsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -243,7 +261,9 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/teams/': typeof AuthenticatedTeamsIndexRoute
   '/_authenticated/volunteers/': typeof AuthenticatedVolunteersIndexRoute
+  '/_authenticated/platform/tenants/$tenantId': typeof AuthenticatedPlatformTenantsTenantIdRoute
   '/_authenticated/admin/security/': typeof AuthenticatedAdminSecurityIndexRoute
+  '/_authenticated/platform/tenants/': typeof AuthenticatedPlatformTenantsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,7 +290,9 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/teams/'
     | '/volunteers/'
+    | '/platform/tenants/$tenantId'
     | '/admin/security/'
+    | '/platform/tenants/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/404'
@@ -295,7 +317,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/teams'
     | '/volunteers'
+    | '/platform/tenants/$tenantId'
     | '/admin/security'
+    | '/platform/tenants'
   id:
     | '__root__'
     | '/404'
@@ -321,7 +345,9 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/teams/'
     | '/_authenticated/volunteers/'
+    | '/_authenticated/platform/tenants/$tenantId'
     | '/_authenticated/admin/security/'
+    | '/_authenticated/platform/tenants/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -503,6 +529,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSecurityIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/platform/tenants/': {
+      id: '/_authenticated/platform/tenants/'
+      path: '/platform/tenants'
+      fullPath: '/platform/tenants/'
+      preLoaderRoute: typeof AuthenticatedPlatformTenantsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform/tenants/$tenantId': {
+      id: '/_authenticated/platform/tenants/$tenantId'
+      path: '/platform/tenants/$tenantId'
+      fullPath: '/platform/tenants/$tenantId'
+      preLoaderRoute: typeof AuthenticatedPlatformTenantsTenantIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -524,7 +564,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedTeamsIndexRoute: typeof AuthenticatedTeamsIndexRoute
   AuthenticatedVolunteersIndexRoute: typeof AuthenticatedVolunteersIndexRoute
+  AuthenticatedPlatformTenantsTenantIdRoute: typeof AuthenticatedPlatformTenantsTenantIdRoute
   AuthenticatedAdminSecurityIndexRoute: typeof AuthenticatedAdminSecurityIndexRoute
+  AuthenticatedPlatformTenantsIndexRoute: typeof AuthenticatedPlatformTenantsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -546,7 +588,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedTeamsIndexRoute: AuthenticatedTeamsIndexRoute,
   AuthenticatedVolunteersIndexRoute: AuthenticatedVolunteersIndexRoute,
+  AuthenticatedPlatformTenantsTenantIdRoute:
+    AuthenticatedPlatformTenantsTenantIdRoute,
   AuthenticatedAdminSecurityIndexRoute: AuthenticatedAdminSecurityIndexRoute,
+  AuthenticatedPlatformTenantsIndexRoute:
+    AuthenticatedPlatformTenantsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

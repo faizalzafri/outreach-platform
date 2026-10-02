@@ -18,7 +18,10 @@ import type { OtpPurpose, OtpSettings, SecurityPolicy } from '@/types/domain';
 
 import styles from './SecurityPolicyContent.module.css';
 
-const POLICY_KEY = ['admin', 'security-policy'] as const;
+const policyKey = (tenantId?: string) => ['admin', 'security-policy', tenantId ?? 'own'] as const;
+
+/** Adds ?tenantId= when a platform admin works on another organization. */
+const scopeFor = (tenantId?: string) => (tenantId ? { params: { tenantId } } : undefined);
 
 const PURPOSES: { purpose: OtpPurpose; label: string; hint: string }[] = [
   { purpose: 'LOGIN', label: 'Sign-in', hint: 'After the password, before entering the app' },
@@ -26,7 +29,7 @@ const PURPOSES: { purpose: OtpPurpose; label: string; hint: string }[] = [
   { purpose: 'PASSWORD_CHANGE', label: 'Password change', hint: 'When a signed-in user changes their password' },
 ];
 
-function PolicyForm({ initial }: { initial: SecurityPolicy }) {
+function PolicyForm({ initial, tenantId }: { initial: SecurityPolicy; tenantId?: string }) {
   const queryClient = useQueryClient();
   const { success: toastSuccess, error: toastError } = useToast();
   const [policy, setPolicy] = useState<SecurityPolicy>(initial);
@@ -39,9 +42,9 @@ function PolicyForm({ initial }: { initial: SecurityPolicy }) {
       passwordMinLength: policy.passwordMinLength,
       passwordHistoryCount: policy.passwordHistoryCount,
       otp: policy.otp,
-    })).data,
+    }, scopeFor(tenantId))).data,
     onSuccess: (saved) => {
-      queryClient.setQueryData(POLICY_KEY, saved);
+      queryClient.setQueryData(policyKey(tenantId), saved);
       setErrors({});
       toastSuccess('Security policy saved. It applies from each user\'s next sign-in or password change.');
     },
@@ -165,18 +168,20 @@ function PolicyForm({ initial }: { initial: SecurityPolicy }) {
   );
 }
 
-export function SecurityPolicyContent() {
+export function SecurityPolicyContent({ tenantId, embedded = false }: { tenantId?: string; embedded?: boolean } = {}) {
   const { data, isLoading, isError } = useQuery({
-    queryKey: POLICY_KEY,
-    queryFn: async () => (await httpClient.get<SecurityPolicy>('/auth/security-policy')).data,
+    queryKey: policyKey(tenantId),
+    queryFn: async () => (await httpClient.get<SecurityPolicy>('/auth/security-policy', scopeFor(tenantId))).data,
   });
 
   return (
     <div className={styles['container']}>
-      <h1 className={styles['pageTitle']}>Sign-in security</h1>
+      {embedded
+        ? <h2 className={styles['cardTitle']}>Sign-in security</h2>
+        : <h1 className={styles['pageTitle']}>Sign-in security</h1>}
       {isLoading && <p role="status">Loading your organization's policy…</p>}
       {isError && <p role="alert">The policy could not be loaded. Please refresh the page.</p>}
-      {data && <PolicyForm initial={data} />}
+      {data && <PolicyForm initial={data} tenantId={tenantId} />}
     </div>
   );
 }

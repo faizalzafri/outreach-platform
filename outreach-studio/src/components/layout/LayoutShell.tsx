@@ -181,6 +181,12 @@ const navigationGroups: NavigationGroup[] = [
     ],
   },
   {
+    label: 'Platform',
+    items: [
+      { label: 'Organizations', href: '/platform/tenants', icon: AdminIcon, requiredRoles: ['ROLE_PLATFORM_ADMIN'] },
+    ],
+  },
+  {
     label: 'System',
     items: [
       { label: 'Teams', href: '/teams', icon: TeamsIcon, requiredRoles: ['ROLE_ADMIN'] },

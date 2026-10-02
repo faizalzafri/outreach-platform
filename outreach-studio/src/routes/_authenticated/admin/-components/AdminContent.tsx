@@ -33,6 +33,9 @@ const ROLE_OPTIONS: { label: string; value: AccountRole }[] = [
   { label: 'POC', value: 'POC' },
 ];
 
+/** Axios config adding ?tenantId= when a platform admin works on another organization. */
+type TenantScope = { params: { tenantId: string } } | undefined;
+
 const EMPTY_INVITE: UserInviteForm = { username: '', displayName: '', email: '', role: 'POC' };
 
 function formatDate(iso: string | null): string {
@@ -106,13 +109,13 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 // Invite form
 // ---------------------------------------------------------------------------
 
-function InviteForm({ onInvited }: { onInvited: () => void }) {
+function InviteForm({ onInvited, scope }: { onInvited: () => void; scope: TenantScope }) {
   const { success: toastSuccess, error: toastError } = useToast();
   const [values, setValues] = useState<UserInviteForm>(EMPTY_INVITE);
   const [errors, setErrors] = useState<Partial<Record<keyof UserInviteForm, string>>>({});
 
   const invite = useMutation({
-    mutationFn: async (body: UserInviteForm) => (await httpClient.post<Account>('/auth/users', body)).data,
+    mutationFn: async (body: UserInviteForm) => (await httpClient.post<Account>('/auth/users', body, scope)).data,
     onSuccess: (account) => {
       toastSuccess(`Invitation sent to ${account.email}`);
       setValues(EMPTY_INVITE);
@@ -192,7 +195,9 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function AdminContent() {
+/** Optional tenant scope: platform admins manage another organization's users through the same page. */
+export function AdminContent({ tenantId, embedded = false }: { tenantId?: string; embedded?: boolean } = {}) {
+  const scope: TenantScope = tenantId ? { params: { tenantId } } : undefined;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -201,10 +206,10 @@ export function AdminContent() {
     open: false, title: '', message: '', confirmLabel: '', onConfirm: () => {},
   });
 
-  const accountsKey = queryKeys.admin.accounts();
+  const accountsKey = queryKeys.admin.accounts(tenantId);
   const { data: accounts, isLoading, isError, refetch } = useQuery({
     queryKey: accountsKey,
-    queryFn: async () => (await httpClient.get<Account[]>('/auth/users')).data,
+    queryFn: async () => (await httpClient.get<Account[]>('/auth/users', scope)).data,
   });
 
   const refresh = useCallback(() => {
@@ -240,13 +245,13 @@ export function AdminContent() {
     if (account.status === 'INVITED') {
       buttons.push(
         <button key="resend" type="button" className={styles['actionBtn']}
-          onClick={() => run(() => httpClient.post(`${base}/invitation`), `Invitation re-sent to ${account.email}`)}>
+          onClick={() => run(() => httpClient.post(`${base}/invitation`, null, scope), `Invitation re-sent to ${account.email}`)}>
           Resend invite
         </button>,
         <button key="revoke" type="button" className={styles['actionBtnDanger']}
           onClick={() => ask('Revoke invitation',
             `${account.displayName}'s invitation link will stop working and they will be removed.`, 'Revoke',
-            () => run(() => httpClient.delete(`${base}/invitation`), 'Invitation revoked'))}>
+            () => run(() => httpClient.delete(`${base}/invitation`, scope), 'Invitation revoked'))}>
           Revoke
         </button>,
       );
@@ -256,7 +261,7 @@ export function AdminContent() {
         <button key="reset" type="button" className={styles['actionBtn']}
           onClick={() => ask('Send password reset',
             `Email ${account.displayName} a link to choose a new password? Their current password keeps working until they do.`,
-            'Send link', () => run(() => httpClient.post(`${base}/password-reset`), `Reset link sent to ${account.email}`))}>
+            'Send link', () => run(() => httpClient.post(`${base}/password-reset`, null, scope), `Reset link sent to ${account.email}`))}>
           Send reset link
         </button>,
       );
@@ -264,7 +269,7 @@ export function AdminContent() {
         buttons.push(
           <button key="disable" type="button" className={styles['actionBtnDanger']}
             onClick={() => ask('Disable account', `${account.displayName} will no longer be able to sign in.`, 'Disable',
-              () => run(() => httpClient.post(`${base}/disable`), 'Account disabled'))}>
+              () => run(() => httpClient.post(`${base}/disable`, null, scope), 'Account disabled'))}>
             Disable
           </button>,
         );
@@ -273,7 +278,7 @@ export function AdminContent() {
     if (account.status === 'DISABLED' || (account.status === 'ACTIVE' && account.locked)) {
       buttons.push(
         <button key="enable" type="button" className={styles['actionBtn']}
-          onClick={() => run(() => httpClient.post(`${base}/enable`),
+          onClick={() => run(() => httpClient.post(`${base}/enable`, null, scope),
             account.locked ? 'Account unlocked' : 'Account enabled')}>
           {account.status === 'DISABLED' ? 'Enable' : 'Unlock'}
         </button>,
@@ -285,13 +290,15 @@ export function AdminContent() {
   return (
     <div className={styles['container']}>
       <div className={styles['header']}>
-        <h1 className={styles['pageTitle']}>User Administration</h1>
+        {embedded
+          ? <h2 className={styles['createSectionTitle']}>People</h2>
+          : <h1 className={styles['pageTitle']}>User Administration</h1>}
         <button type="button" className={styles['toggleBtn']} onClick={() => setShowInvite((v) => !v)}>
           {showInvite ? 'Cancel' : 'Invite user'}
         </button>
       </div>
 
-      {showInvite && <InviteForm onInvited={() => { setShowInvite(false); refresh(); }} />}
+      {showInvite && <InviteForm scope={scope} onInvited={() => { setShowInvite(false); refresh(); }} />}
 
       {isLoading && <p className={styles['muted']} role="status">Loading users…</p>}
       {isError && (
@@ -330,7 +337,7 @@ export function AdminContent() {
                       onChange={(e) => {
                         // Read now: the controlled select snaps back to the saved role before the request runs.
                         const role = e.target.value as AccountRole;
-                        run(() => httpClient.put(`/auth/users/${account.id}/role`, { role }),
+                        run(() => httpClient.put(`/auth/users/${account.id}/role`, { role }, scope),
                           `${account.displayName} is now ${role}`);
                       }}
                       aria-label={`Role for ${account.displayName}`}

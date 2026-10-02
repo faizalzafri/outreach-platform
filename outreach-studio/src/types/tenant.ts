@@ -11,6 +11,18 @@ export interface Tenant {
   createdDate: string;
 }
 
+/** A row in the platform console's organization list (GET /api/tenants). */
+export interface TenantSummary extends Tenant {
+  memberCount: number;
+}
+
+/** One organization in the platform console (GET /api/tenants/{id}). */
+export interface TenantDetail extends Tenant {
+  lastModifiedDate: string | null;
+  lastModifiedBy: string | null;
+  membersByRole: Partial<Record<'ADMIN' | 'PMO' | 'POC', number>>;
+}
+
 export interface TenantMembership {
   tenantId: string;
   tenantName: string;
