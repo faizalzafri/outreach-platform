@@ -11,6 +11,7 @@ import com.outreach.platform.event.model.dto.FeedbackEligibilityDto;
 import com.outreach.platform.event.model.dto.PocAssignRequest;
 import com.outreach.platform.event.model.dto.StatusTransitionRequest;
 import com.outreach.platform.event.service.EventService;
+import com.outreach.platform.event.service.VolunteerEnrollmentService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Counts that follow enrollments, attendance, locked events, POC scoping, and the lookups
@@ -92,6 +95,9 @@ class EventParticipationIT {
 
     @Autowired
     private EventService eventService;
+
+    @Autowired
+    private VolunteerEnrollmentService enrollmentService;
 
     @BeforeEach
     void setUp() {
@@ -191,6 +197,49 @@ class EventParticipationIT {
         List<UUID> listed = eventService.listEvents(new EventSearchCriteria(null, null, null, null, null, null),
                 Pageable.ofSize(50)).map(EventDto::id).getContent();
         assertThat(listed).contains(POC_ONLY_EVENT).doesNotContain(ACTIVE_EVENT, DRAFT_EVENT);
+    }
+
+    @Test
+    void sharingWithATeam_letsItsPocsWorkOnTheEvent() {
+        UUID teamPoc = UUID.fromString("a0000000-0000-0000-0000-000000000004");
+        UUID completedEvent = UUID.fromString("b0000000-0000-0000-0000-000000000008");
+        UUID teamId = UUID.fromString((String) restTemplate.postForObject("/api/teams",
+                Map.of("name", "Kolkata Crew"), Map.class).get("id"));
+        restTemplate.postForEntity("/api/teams/{id}/members", Map.of("userId", teamPoc), String.class, teamId);
+        assertThat(eligibility(completedEvent, teamPoc).assigned()).isFalse();
+
+        share(completedEvent, teamId, "VIEW");
+        assertThat(eligibility(completedEvent, teamPoc).assigned()).isTrue();
+        actAsPoc(teamPoc);
+        assertThat(eventService.listEvents(new EventSearchCriteria(null, null, null, null, null, null),
+                Pageable.ofSize(50)).map(EventDto::id).getContent()).contains(completedEvent);
+        assertThatThrownBy(() -> enrollmentService.recordAttendance(completedEvent, List.of()))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        share(completedEvent, teamId, "EDIT");
+        assertThat(enrollmentService.recordAttendance(completedEvent, List.of())).isNotNull();
+        assertThat(restTemplate.getForObject("/events/{id}/teams", String.class, completedEvent))
+                .contains("Kolkata Crew").contains("EDIT");
+
+        restTemplate.delete("/events/{id}/teams/{team}", completedEvent, teamId);
+        assertThat(eligibility(completedEvent, teamPoc).assigned()).isFalse();
+    }
+
+    private void share(UUID eventId, UUID teamId, String level) {
+        restTemplate.put("/events/{id}/teams/{team}", Map.of("accessLevel", level), eventId, teamId);
+    }
+
+    private FeedbackEligibilityDto eligibility(UUID eventId, UUID userId) {
+        return restTemplate.getForObject("/events/{id}/feedback-eligibility?userId={u}",
+                FeedbackEligibilityDto.class, eventId, userId);
+    }
+
+    private void actAsPoc(UUID userId) {
+        TenantContext.setCurrentTenantId(TenantConstants.DEFAULT_TENANT_ID);
+        Jwt jwt = Jwt.withTokenValue("t").header("alg", "none").subject("poc").claim("uid", userId.toString()).build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_POC"))));
     }
 
     private EventDto event(UUID id) {

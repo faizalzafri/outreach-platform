@@ -71,4 +71,7 @@
     <!-- 16. Event counts follow enrollments, including imported ones -->
     <include file="db/changelog/20261002-002-recount-event-enrollments.sql"/>
 
+    <!-- 17. Events are shared with teams -->
+    <include file="db/changelog/20261002-003-event-team-access.sql"/>
+
 </databaseChangeLog>

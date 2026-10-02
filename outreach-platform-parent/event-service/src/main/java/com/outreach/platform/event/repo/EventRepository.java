@@ -21,9 +21,14 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<EventEntity, UUID> {
 
-    /** Limits a query to the events a POC is assigned to; a null {@code :pocUserId} means no limit. */
-    String POC_SCOPE = "(:pocUserId IS NULL OR EXISTS (SELECT 1 FROM PocAssignmentEntity p "
-            + "WHERE p.event = e AND p.user.id = :pocUserId))";
+    /**
+     * Limits a query to the events a POC is assigned to, directly or through a team the event is
+     * shared with; a null {@code :pocUserId} means no limit.
+     */
+    String POC_SCOPE = "(:pocUserId IS NULL"
+            + " OR EXISTS (SELECT 1 FROM PocAssignmentEntity p WHERE p.event = e AND p.user.id = :pocUserId)"
+            + " OR EXISTS (SELECT 1 FROM EventTeamAccess a, TeamMembership m"
+            + " WHERE a.eventId = e.id AND m.teamId = a.teamId AND m.userId = :pocUserId))";
 
     /**
      * Tenant-scoped primary-key lookup. {@link #findById(Object)} (inherited from

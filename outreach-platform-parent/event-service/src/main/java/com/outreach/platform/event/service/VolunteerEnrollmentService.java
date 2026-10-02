@@ -134,8 +134,8 @@ public class VolunteerEnrollmentService {
     @Transactional
     public List<EnrollmentDto> recordAttendance(UUID eventId, List<AttendanceUpdateRequest.Entry> entries) {
         EventEntity event = findEventOrThrow(eventId);
-        if (CurrentUser.isPocOnly() && !visibility.isAssigned(eventId, CurrentUser.requireId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the event's POCs can record its attendance");
+        if (CurrentUser.isPocOnly() && !visibility.canEdit(eventId, CurrentUser.requireId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the event's POCs, or teams with edit access, can record its attendance");
         }
         if (!ATTENDANCE_STATUSES.contains(event.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

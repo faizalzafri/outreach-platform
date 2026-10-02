@@ -11,7 +11,7 @@ import com.outreach.platform.event.model.dto.CreateTeamRequest;
 import com.outreach.platform.event.model.dto.TeamMemberResponse;
 import com.outreach.platform.event.model.dto.TeamResponse;
 import com.outreach.platform.event.model.dto.UpdateTeamRequest;
-import com.outreach.platform.event.repo.ResourcePermissionRepository;
+import com.outreach.platform.event.repo.EventTeamAccessRepository;
 import com.outreach.platform.event.repo.TeamMembershipRepository;
 import com.outreach.platform.event.repo.TeamRepository;
 import com.outreach.platform.event.repo.UserRepository;
@@ -43,15 +43,15 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final TeamMembershipRepository teamMembershipRepository;
-    private final ResourcePermissionRepository resourcePermissionRepository;
+    private final EventTeamAccessRepository eventTeamAccessRepository;
     private final UserRepository userRepository;
 
     @Inject
     public TeamService(TeamRepository teamRepository, TeamMembershipRepository teamMembershipRepository,
-                       ResourcePermissionRepository resourcePermissionRepository, UserRepository userRepository) {
+                       EventTeamAccessRepository eventTeamAccessRepository, UserRepository userRepository) {
         this.teamRepository = teamRepository;
         this.teamMembershipRepository = teamMembershipRepository;
-        this.resourcePermissionRepository = resourcePermissionRepository;
+        this.eventTeamAccessRepository = eventTeamAccessRepository;
         this.userRepository = userRepository;
     }
 
@@ -127,7 +127,7 @@ public class TeamService {
     }
 
     /**
-     * Deletes a team and cascade-deletes memberships and resource permissions.
+     * Deletes a team with its memberships and the event access it was given.
      *
      * @param id the team UUID
      */
@@ -135,9 +135,9 @@ public class TeamService {
     public void deleteTeam(UUID id) {
         Team team = findTeamOrThrow(id);
 
-        // Cascade revoke resource permissions granted to this team
-        resourcePermissionRepository.deleteByGrantedTeamId(id);
-        log.info("Cascade-revoked resource permissions for team {}", id);
+        // Events shared with this team stop being shared
+        eventTeamAccessRepository.deleteByTeamId(id);
+
 
         // Cascade delete team memberships
         teamMembershipRepository.deleteByTeamId(id);

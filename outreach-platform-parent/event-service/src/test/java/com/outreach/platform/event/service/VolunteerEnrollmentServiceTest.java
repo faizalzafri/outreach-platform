@@ -9,6 +9,7 @@ import com.outreach.platform.event.model.dto.EnrollmentDto;
 import com.outreach.platform.event.repo.EventEnrollmentRepository;
 import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.PocAssignmentRepository;
+import com.outreach.platform.event.repo.EventTeamAccessRepository;
 import com.outreach.platform.event.repo.VolunteerRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,13 +44,15 @@ class VolunteerEnrollmentServiceTest {
     private VolunteerRepository volunteerRepository;
     @Mock
     private PocAssignmentRepository pocAssignmentRepository;
+    @Mock
+    private EventTeamAccessRepository teamAccessRepository;
 
     private VolunteerEnrollmentService enrollmentService;
 
     @BeforeEach
     void setUp() {
         enrollmentService = new VolunteerEnrollmentService(enrollmentRepository, eventRepository, volunteerRepository,
-                new EventVisibility(pocAssignmentRepository));
+                new EventVisibility(pocAssignmentRepository, teamAccessRepository));
         // Production requests always have TenantContext populated by TenantContextFilter — set it
         // here too so these tests exercise the tenant-scoped findByIdAndTenantId path. See
         // docs/specs/platform-hardening/ Finding 0 / Requirement 0.
