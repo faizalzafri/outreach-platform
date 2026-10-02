@@ -14,11 +14,11 @@ import java.util.Objects;
 
 /**
  * Global filter that enforces differentiated rate limiting:
- * - Authenticated users: 100 req/min (handled by route-level RequestRateLimiter)
+ * - Authenticated users: 100 req/min (per tenant, in TenantRateLimitFilter)
  * - Unauthenticated IPs: 20 req/min (enforced here via Redis)
  *
  * This filter only activates for unauthenticated requests, complementing
- * the per-route RequestRateLimiter which handles authenticated traffic.
+ * TenantRateLimitFilter, which handles authenticated traffic.
  */
 @Component
 public class AdaptiveRateLimitFilter implements GlobalFilter, Ordered {
