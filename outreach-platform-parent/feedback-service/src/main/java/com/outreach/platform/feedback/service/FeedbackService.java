@@ -59,7 +59,7 @@ public class FeedbackService {
         Optional<VolunteerFeedbackEntity> existing =
                 feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId());
         if (existing.isPresent()) {
-            throw new FeedbackAlreadyExistsException(request.eventId(), request.volunteerId());
+            throw new FeedbackAlreadyExistsException();
         }
 
         VolunteerFeedbackEntity entity = feedbackMapper.toEntity(request);
