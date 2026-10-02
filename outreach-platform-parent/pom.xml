@@ -75,7 +75,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
 
         <!-- Hypersistence Utils (PostgreSQL-specific JPA types: JSONB, PostgreSQL enums) -->
-        <hypersistence-utils.version>3.9.0</hypersistence-utils.version>
+        <hypersistence-utils.version>3.16.0</hypersistence-utils.version>
 
         <!-- Documents: Excel (ingestion parsing, report export) and PDF (report export) -->
         <poi.version>5.4.0</poi.version>
