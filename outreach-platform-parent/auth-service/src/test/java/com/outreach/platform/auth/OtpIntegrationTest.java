@@ -86,6 +86,7 @@ class OtpIntegrationTest extends BaseAuthIntegrationTest {
             last = browser.submitForm("/login/otp", "/login/otp", Map.of("code", "999999"));
         }
         assertThat(BrowserSession.location(last)).endsWith("/login?otpExpired");
+        assertThat(browser.get("/login?otpExpired").body()).contains("verification code expired");
         // The real code no longer works either: the parked sign-in is gone.
         assertThat(BrowserSession.location(browser.submitForm("/login", "/login/otp", Map.of("code", code))))
                 .endsWith("/login");

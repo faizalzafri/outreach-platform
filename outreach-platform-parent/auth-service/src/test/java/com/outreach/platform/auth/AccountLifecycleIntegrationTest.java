@@ -62,6 +62,7 @@ class AccountLifecycleIntegrationTest extends BaseAuthIntegrationTest {
         HttpResponse<String> activated = user.submitForm(activationPath, "/activate", Map.of(
                 "token", token(activationPath), "password", firstPassword, "confirmPassword", firstPassword));
         assertThat(BrowserSession.location(activated)).endsWith("/login?activated");
+        assertThat(user.get("/login?activated").body()).contains("Your account is ready");
 
         // 4. The link is single-use.
         assertThat(user.get(activationPath).body()).contains("This link can");
@@ -97,6 +98,7 @@ class AccountLifecycleIntegrationTest extends BaseAuthIntegrationTest {
         HttpResponse<String> reset = anonymous.submitForm(resetPath, "/reset-password", Map.of(
                 "token", token(resetPath), "password", secondPassword, "confirmPassword", secondPassword));
         assertThat(BrowserSession.location(reset)).endsWith("/login?reset");
+        assertThat(anonymous.get("/login?reset").body()).contains("Your password has been changed");
         assertThat(latestPayload(RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_CHANGED, email)).isNotNull();
 
         assertThatThrownBy(() -> new BrowserSession(baseUrl()).signIn(username, firstPassword))

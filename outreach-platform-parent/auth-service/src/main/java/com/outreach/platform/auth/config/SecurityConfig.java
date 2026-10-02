@@ -101,6 +101,9 @@ public class SecurityConfig {
                         .requestMatchers("/favicon.ico").permitAll()
                         // Account pages reached from emailed links or the sign-in page; the
                         // single-use token in the link is the credential
+                        // The sign-in page itself with any notice flag (?activated, ?reset, ?otpExpired, ...);
+                        // formLogin's permitAll only covers ?error and ?logout
+                        .requestMatchers("/login").permitAll()
                         .requestMatchers("/activate", "/forgot-password", "/reset-password", "/css/**").permitAll()
                         // Second sign-in step: the password was already checked; the parked
                         // authentication in this session is what the code completes

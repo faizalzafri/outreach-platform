@@ -23,9 +23,12 @@ final class IdentityMessages {
     static OutboundMessage invitation(String address, Map<String, Object> p) {
         String name = text(p, "displayName");
         String link = text(p, "activationLink");
+        String invitedBy = text(p, "invitedBy");
+        // The first platform admin is invited by the platform itself, not by a person.
+        String who = invitedBy.isBlank() || "system".equals(invitedBy) ? "You've been" : invitedBy + " has";
         return build(address, name, "You're invited to Outreach Studio",
                 "Hi " + name + ",",
-                text(p, "invitedBy") + " has invited you to Outreach Studio. Choose a password to activate your account.",
+                who + " invited you to Outreach Studio. Choose a password to activate your account.",
                 "Activate your account", link,
                 "This link works once and expires on " + when(p, "expiresAt") + ". If you weren't expecting this, you can ignore it.");
     }
