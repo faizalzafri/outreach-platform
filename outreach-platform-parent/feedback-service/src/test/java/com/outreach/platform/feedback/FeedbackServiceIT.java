@@ -319,12 +319,10 @@ class FeedbackServiceIT {
         FeedbackSubmitRequest duplicate = new FeedbackSubmitRequest(
                 eventId, volunteerId, 5, "Duplicate attempt", null, null, "General", null, false
         );
-        ResponseEntity<ProblemDetail> response = restTemplate.postForEntity(
-                "/feedback", duplicate, ProblemDetail.class);
+        ResponseEntity<String> response = restTemplate.postForEntity("/feedback", duplicate, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getTitle()).isEqualTo("Feedback Already Exists");
+        assertThat(response.getBody()).contains("already has feedback for this event");
     }
 
     @Test

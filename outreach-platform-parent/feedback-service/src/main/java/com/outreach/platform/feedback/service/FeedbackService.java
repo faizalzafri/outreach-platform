@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Pageable;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,10 +54,8 @@ public class FeedbackService {
     @Transactional
     public FeedbackDto submitFeedback(FeedbackSubmitRequest request) {
         requireOpenForFeedback(request.eventId());
-        Optional<VolunteerFeedbackEntity> existing =
-                feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId());
-        if (existing.isPresent()) {
-            throw new FeedbackAlreadyExistsException();
+        if (feedbackRepository.findByEventIdAndVolunteerId(request.eventId(), request.volunteerId()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This volunteer already has feedback for this event.");
         }
 
         VolunteerFeedbackEntity entity = feedbackMapper.toEntity(request);
@@ -71,25 +67,20 @@ public class FeedbackService {
     @Transactional
     public FeedbackDto updateFeedback(UUID eventId, UUID employeeId, FeedbackUpdateRequest request) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
-                .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
+                .orElseThrow(() -> notFound(eventId, employeeId));
 
         feedbackMapper.updateEntityFromRequest(request, entity);
         if (request.category() != null) {
             entity.setCategory(FeedbackCategory.normalize(request.category()));
         }
 
-        try {
-            VolunteerFeedbackEntity saved = feedbackRepository.save(entity);
-            return feedbackMapper.toDto(saved);
-        } catch (ObjectOptimisticLockingFailureException ex) {
-            throw new FeedbackConflictException(eventId, employeeId);
-        }
+        return feedbackMapper.toDto(feedbackRepository.save(entity));
     }
 
     @Transactional(readOnly = true)
     public FeedbackDto getFeedback(UUID eventId, UUID employeeId) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
-                .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
+                .orElseThrow(() -> notFound(eventId, employeeId));
         return feedbackMapper.toDto(entity);
     }
 
@@ -180,7 +171,7 @@ public class FeedbackService {
     @Transactional
     public void softDelete(UUID eventId, UUID employeeId) {
         VolunteerFeedbackEntity entity = feedbackRepository.findByEventIdAndVolunteerId(eventId, employeeId)
-                .orElseThrow(() -> new FeedbackNotFoundException(eventId, employeeId));
+                .orElseThrow(() -> notFound(eventId, employeeId));
 
         entity.setStatus(FeedbackStatus.ARCHIVED);
         feedbackRepository.save(entity);
@@ -201,5 +192,10 @@ public class FeedbackService {
     @Transactional(readOnly = true)
     public List<VolunteerFeedbackEntity> listAllByEvent(UUID eventId) {
         return feedbackRepository.findByEventId(eventId, Pageable.unpaged()).getContent();
+    }
+
+    private static ResponseStatusException notFound(UUID eventId, UUID volunteerId) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "No feedback for event " + eventId + " and volunteer " + volunteerId);
     }
 }
