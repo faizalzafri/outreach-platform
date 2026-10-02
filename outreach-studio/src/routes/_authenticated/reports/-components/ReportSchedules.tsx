@@ -55,7 +55,7 @@ export function ReportSchedules() {
     mutationFn: () =>
       httpClient.post('/reports/scheduled', {
         name: name.trim(),
-        reportType: 'EVENT_SCORES',
+        reportType: 'BY_EVENT',
         cronExpression: cron,
         exportFormat: format,
         recipients: recipients.split(',').map((r) => r.trim()).filter(Boolean),

@@ -5,7 +5,7 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 15s
 
-  # PostgreSQL datasource (READ-ONLY access)
+  # PostgreSQL datasource: reads the shared tables for reports; writes only its own report schedules
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/outreachfeedbackdb}
     username: ${DATABASE_USERNAME:postgres}
@@ -18,7 +18,6 @@ spring:
       idle-timeout: 600000
       leak-detection-threshold: 30000
       connection-init-sql: SET statement_timeout = '30s'
-      read-only: true
 
   # JPA / Hibernate (read-only, no schema management)
   jpa:

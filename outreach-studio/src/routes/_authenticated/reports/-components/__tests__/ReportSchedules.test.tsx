@@ -28,7 +28,7 @@ describe('ReportSchedules', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Schedule' }));
 
     await waitFor(() => expect(created).toEqual({
-      name: 'Weekly scores', reportType: 'EVENT_SCORES', cronExpression: '0 0 8 * * MON', exportFormat: 'CSV',
+      name: 'Weekly scores', reportType: 'BY_EVENT', cronExpression: '0 0 8 * * MON', exportFormat: 'CSV',
       recipients: ['pmo@example.com', 'lead@example.com'],
     }));
     expect(await screen.findByRole('cell', { name: 'Every Monday' })).toBeInTheDocument();

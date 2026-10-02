@@ -14,6 +14,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.Base64;
@@ -35,10 +37,13 @@ public class ScheduledReportRunner {
     private final ReportService reportService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     @Inject
     public ScheduledReportRunner(JdbcTemplate jdbcTemplate, ReportScheduleRepository scheduleRepository,
-                                 ReportService reportService, RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+                                 ReportService reportService, RabbitTemplate rabbitTemplate, ObjectMapper objectMapper,
+                                 PlatformTransactionManager transactionManager) {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.jdbcTemplate = jdbcTemplate;
         this.scheduleRepository = scheduleRepository;
         this.reportService = reportService;
@@ -55,10 +60,9 @@ public class ScheduledReportRunner {
             UUID id = (UUID) row.get("id");
             TenantContext.setCurrentTenantId((UUID) row.get("tenant_id"));
             try {
-                var schedule = scheduleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId());
-                if (schedule.isPresent()) {
-                    run(schedule.get());
-                }
+                // One read-write transaction per schedule: its lookup and the update after sending.
+                transactionTemplate.executeWithoutResult(tx ->
+                        scheduleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId()).ifPresent(this::run));
             } catch (Exception e) {
                 log.error("Scheduled report {} failed; it will be tried again at its next run", id, e);
             } finally {
@@ -67,12 +71,19 @@ public class ScheduledReportRunner {
         }
     }
 
-    void run(ReportScheduleEntity schedule) throws Exception {
-        Map<String, Object> filters = schedule.getFilterCriteria() == null ? Map.of()
-                : objectMapper.readValue(schedule.getFilterCriteria(), new TypeReference<>() { });
-        List<String> recipients = objectMapper.readValue(schedule.getRecipients(), new TypeReference<>() { });
-        byte[] file = ExportService.render(schedule.getExportFormat(),
-                reportService.aggregateByEvent(ExportService.toQueryParams(filters)));
+    void run(ReportScheduleEntity schedule) {
+        Map<String, Object> filters;
+        List<String> recipients;
+        byte[] file;
+        try {
+            filters = schedule.getFilterCriteria() == null ? Map.of()
+                    : objectMapper.readValue(schedule.getFilterCriteria(), new TypeReference<>() { });
+            recipients = objectMapper.readValue(schedule.getRecipients(), new TypeReference<>() { });
+            file = ExportService.render(schedule.getExportFormat(),
+                    reportService.aggregateByEvent(ExportService.toQueryParams(filters)));
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
 
         rabbitTemplate.convertAndSend(RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
                 RabbitMqConstants.ROUTING_KEY_REPORT_SCHEDULED,
