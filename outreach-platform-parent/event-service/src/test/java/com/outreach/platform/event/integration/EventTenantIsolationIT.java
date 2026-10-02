@@ -135,6 +135,30 @@ class EventTenantIsolationIT {
                 .isPresent();
     }
 
+    @Autowired
+    private com.outreach.platform.event.service.EventService eventService;
+
+    @Test
+    void listsAndSearches_onlyReturnTheCallersTenant() {
+        // Lists, searches and counts are JPQL, which only the Hibernate tenant filter scopes. If the
+        // filter isn't switched on, every tenant sees every other tenant's events.
+        UUID tenantA = seedTenant("Tenant F Corp", "tenant-f-corp");
+        UUID tenantB = seedTenant("Tenant G Corp", "tenant-g-corp");
+        TenantContext.setCurrentTenantId(tenantA);
+        eventRepository.save(newDraftEvent("Tenant F Private Gala"));
+
+        TenantContext.setCurrentTenantId(tenantB);
+        var criteria = new com.outreach.platform.event.model.dto.EventSearchCriteria(null, null, null, null, null, null);
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 200);
+        assertThat(eventService.listEvents(criteria, pageable).getContent())
+                .extracting(com.outreach.platform.event.model.dto.EventDto::eventName)
+                .doesNotContain("Tenant F Private Gala");
+        assertThat(eventService.searchEvents("Private Gala", pageable).getTotalElements()).isZero();
+
+        TenantContext.setCurrentTenantId(tenantA);
+        assertThat(eventService.searchEvents("Private Gala", pageable).getTotalElements()).isEqualTo(1);
+    }
+
     private UUID seedTenant(String name, String slug) {
         // Creating a TenantEntity (extends plain BaseEntity, not tenant-scoped) still runs
         // TenantFilterAspect's @Before advice, since the aspect's pointcut matches every

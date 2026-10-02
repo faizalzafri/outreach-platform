@@ -48,7 +48,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(
         classes = RabbitMqEventListenerIT.TestApp.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "eureka.client.enabled=false"
+        properties = {
+                "eureka.client.enabled=false",
+                // This test declares its own exchange and queue beans; the shared ones would clash.
+                "spring.autoconfigure.exclude=com.outreach.platform.common.messaging.RabbitMqConfig"
+        }
 )
 @Testcontainers
 class RabbitMqEventListenerIT {

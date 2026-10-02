@@ -79,14 +79,23 @@ public class TenantAutoConfiguration {
     // service ever needs to load it.
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(jakarta.persistence.EntityManager.class)
+    // Off only for services whose tables are not tenant data (auth-service: accounts and tenants themselves)
+    @ConditionalOnProperty(name = "tenant.jpa-filter.enabled", havingValue = "true", matchIfMissing = true)
     static class TenantJpaAutoConfiguration {
 
-        /** Registers the Hibernate tenant filter aspect, conditional on a JPA EntityManager bean. */
+        /**
+         * Registers the Hibernate tenant filter aspect. No @ConditionalOnBean: that condition never
+         * found the EntityManagerFactory here, so the aspect was silently never registered and no
+         * list, search or count was tenant-filtered. JPA is resolved lazily on first use instead.
+         */
         @Bean
-        @ConditionalOnBean(jakarta.persistence.EntityManager.class)
         public com.outreach.platform.common.tenant.TenantFilterAspect tenantFilterAspect(
-                jakarta.persistence.EntityManager entityManager) {
-            return new com.outreach.platform.common.tenant.TenantFilterAspect(entityManager);
+                org.springframework.beans.factory.ObjectProvider<jakarta.persistence.EntityManagerFactory> entityManagerFactory,
+                org.springframework.beans.factory.ObjectProvider<org.springframework.transaction.PlatformTransactionManager> transactionManager) {
+            return new com.outreach.platform.common.tenant.TenantFilterAspect(
+                    () -> org.springframework.orm.jpa.SharedEntityManagerCreator.createSharedEntityManager(
+                            entityManagerFactory.getObject()),
+                    transactionManager::getObject);
         }
     }
 
