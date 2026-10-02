@@ -7,12 +7,11 @@ export function buildAuditEntry(overrides: Partial<AuditEntry> = {}): AuditEntry
   return {
     id: `audit-${counter}`,
     timestamp: '2025-03-01T14:30:00Z',
-    user: `user-${counter}`,
+    userId: `user-${counter}`,
     action: 'CREATE',
     resourceType: 'Event',
     resourceId: `evt-${counter}`,
-    ipAddress: '192.168.1.1',
-    payload: {},
+    details: {},
     ...overrides,
   };
 }

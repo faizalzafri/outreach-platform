@@ -431,3 +431,25 @@ describe('IngestionContent', () => {
     });
   });
 });
+
+describe('IngestionContent template downloads', () => {
+  it('downloads the template in the format picked', async () => {
+    let requested: string | null = null;
+    server.use(http.get('/api/ingestion/templates', ({ request }) => {
+      requested = new URL(request.url).searchParams.get('format');
+      return new HttpResponse('employeeId,fullName', { headers: { 'Content-Type': 'text/csv' } });
+    }));
+    const createObjectURL = vi.fn(() => 'blob:template');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(<IngestionContent />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(requested).toBe('csv');
+    expect(screen.getByRole('button', { name: 'Excel (.xlsx)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excel 97–2003 (.xls)' })).toBeInTheDocument();
+    click.mockRestore();
+  });
+});

@@ -21,7 +21,7 @@ import java.time.Instant;
  * <p>{@code assigned_at}/{@code assigned_by} are a distinct domain concept (who assigned this
  * POC and when) from the generic {@code createdDate}/{@code createdBy} audit trail gained by
  * extending {@link TenantAwareBaseEntity} — both are kept, per
- * {@code docs/specs/platform-hardening/design.md}'s modeling decision. The generic audit columns
+ * CLAUDE.md's modeling decision. The generic audit columns
  * were added by {@code 20250122-004-add-missing-audit-columns.sql}; this entity had none before.
  */
 @Entity

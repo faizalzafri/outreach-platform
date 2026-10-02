@@ -4,13 +4,9 @@
  *
  * Accepts column definitions, a query key, and an API endpoint,
  * making it reusable across all list views in the application.
- *
- * When a dataset exceeds 100 visible rows, the table switches to
- * virtualized rendering via @tanstack/react-virtual to maintain
- * >30fps scroll performance with large datasets.
  */
 
-import { useState, useMemo, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -20,11 +16,8 @@ import {
   type ColumnFiltersState,
   type VisibilityState,
   type PaginationState,
-  type Row,
-  type Cell,
 } from '@tanstack/react-table';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { httpClient } from '@/lib/http-client';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -41,11 +34,18 @@ export interface DataTableProps<TData> {
   queryKey: QueryKey;
   endpoint: string;
   defaultPageSize?: number;
-  searchPlaceholder?: string;
   enableColumnVisibility?: boolean;
   emptyMessage?: string;
   /** Accessible caption describing the table contents */
   caption?: string;
+  /**
+   * Controlled pagination (1-based page). Pass both to keep the page in the URL: the table shows
+   * this page and reports changes instead of holding its own. Page size comes from defaultPageSize.
+   */
+  page?: number;
+  onPaginationChange?: (page: number, pageSize: number) => void;
+  /** Extra query parameters sent with every request, such as a page-level search box. */
+  params?: Record<string, string | undefined>;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,39 +53,6 @@ export interface DataTableProps<TData> {
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-
-/**
- * Row count threshold above which virtualization is enabled.
- * Below this count the table renders normally without virtualization overhead.
- */
-const VIRTUALIZATION_THRESHOLD = 100;
-
-/** Estimated height of each table row in pixels (used by the virtualizer). */
-const ROW_HEIGHT_ESTIMATE = 44;
-
-// ---------------------------------------------------------------------------
-// Memoized row component — applied when processing >100 items to reduce
-// re-renders during scroll. Only re-renders when its own row data changes.
-// ---------------------------------------------------------------------------
-
-interface VirtualRowProps<TData> {
-  row?: Row<TData>;
-  cells: Cell<TData, unknown>[];
-}
-
-const VirtualRowInner = memo(function VirtualRowInner<TData>({
-  cells,
-}: VirtualRowProps<TData>) {
-  return (
-    <>
-      {cells.map((cell) => (
-        <td key={cell.id} className={styles['td']}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </td>
-      ))}
-    </>
-  );
-}) as <TData>(props: VirtualRowProps<TData>) => React.JSX.Element;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -96,16 +63,34 @@ export function DataTable<TData>({
   queryKey,
   endpoint,
   defaultPageSize = 10,
-  searchPlaceholder: _searchPlaceholder,
   enableColumnVisibility = true,
   emptyMessage = 'No records found.',
   caption,
+  page,
+  onPaginationChange,
+  params: extraParams,
 }: DataTableProps<TData>) {
   // --- Table state ---
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [internalPagination, setInternalPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: defaultPageSize,
   });
+  const controlled = page !== undefined && onPaginationChange !== undefined;
+  const pagination: PaginationState = useMemo(
+    () => (controlled ? { pageIndex: page - 1, pageSize: defaultPageSize } : internalPagination),
+    [controlled, page, defaultPageSize, internalPagination],
+  );
+  const setPagination = useCallback(
+    (updater: PaginationState | ((previous: PaginationState) => PaginationState)) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      if (controlled) {
+        onPaginationChange(next.pageIndex + 1, next.pageSize);
+      } else {
+        setInternalPagination(next);
+      }
+    },
+    [controlled, onPaginationChange, pagination],
+  );
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -120,6 +105,9 @@ export function DataTable<TData>({
       page: pagination.pageIndex, // 0-based for Spring Boot Pageable
       size: pagination.pageSize,
     };
+    for (const [key, value] of Object.entries(extraParams ?? {})) {
+      if (value) params[key] = value;
+    }
 
     // Sorting — Spring Boot Pageable format: "fieldName,direction"
     if (sorting.length > 0) {
@@ -137,7 +125,7 @@ export function DataTable<TData>({
     }
 
     return params;
-  }, [pagination, sorting, debouncedFilters]);
+  }, [pagination, sorting, debouncedFilters, extraParams]);
 
   // --- Data fetching ---
   const { data, isLoading, isError, error, refetch } = useQuery<PageResponse<TData>>({
@@ -171,19 +159,7 @@ export function DataTable<TData>({
     manualFiltering: true,
   });
 
-  // --- Virtualization: only engage when row count exceeds threshold ---
   const rows = table.getRowModel().rows;
-  const shouldVirtualize = rows.length > VIRTUALIZATION_THRESHOLD;
-
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
-    overscan: 10,
-    enabled: shouldVirtualize,
-  });
 
   // --- Column visibility: ensure at least one column always visible ---
   const handleColumnVisibilityChange = useCallback(
@@ -337,11 +313,7 @@ export function DataTable<TData>({
         </div>
       )}
 
-      {/* Table — uses a scrollable container with virtualization for large datasets */}
-      <div
-        ref={tableContainerRef}
-        className={`${styles['tableWrapper']} ${shouldVirtualize ? styles['tableWrapperVirtual'] : ''}`}
-      >
+      <div className={styles['tableWrapper']}>
         <table className={styles['table']}>
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead className={styles['thead']}>
@@ -454,8 +426,7 @@ export function DataTable<TData>({
               </tr>
             )}
 
-            {/* Data rows — standard rendering for small datasets */}
-            {!isLoading && !isError && !shouldVirtualize &&
+            {!isLoading && !isError &&
               rows.map((row) => (
                 <tr key={row.id} className={styles['tr']}>
                   {row.getVisibleCells().map((cell) => (
@@ -466,55 +437,6 @@ export function DataTable<TData>({
                 </tr>
               ))}
 
-            {/* Virtualized rows — for datasets exceeding 100 rows */}
-            {!isLoading && !isError && shouldVirtualize && (() => {
-              const virtualItems = rowVirtualizer.getVirtualItems();
-              return (
-                <>
-                  {/* Top spacer to position visible rows correctly in the scroll area */}
-                  {virtualItems.length > 0 && (
-                    <tr
-                      className={styles['virtualSpacer']}
-                      aria-hidden="true"
-                    >
-                      <td
-                        colSpan={table.getVisibleFlatColumns().length}
-                        style={{ height: `${virtualItems[0]?.start ?? 0}px` }}
-                      />
-                    </tr>
-                  )}
-
-                  {virtualItems.map((virtualRow) => {
-                    const row = rows[virtualRow.index]!;
-                    return (
-                      <tr
-                        key={row.id}
-                        className={styles['tr']}
-                        data-index={virtualRow.index}
-                        ref={rowVirtualizer.measureElement}
-                      >
-                        <VirtualRowInner row={row} cells={row.getVisibleCells()} />
-                      </tr>
-                    );
-                  })}
-
-                  {/* Bottom spacer */}
-                  {virtualItems.length > 0 && (
-                    <tr
-                      className={styles['virtualSpacer']}
-                      aria-hidden="true"
-                    >
-                      <td
-                        colSpan={table.getVisibleFlatColumns().length}
-                        style={{
-                          height: `${rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)}px`,
-                        }}
-                      />
-                    </tr>
-                  )}
-                </>
-              );
-            })()}
           </tbody>
         </table>
       </div>

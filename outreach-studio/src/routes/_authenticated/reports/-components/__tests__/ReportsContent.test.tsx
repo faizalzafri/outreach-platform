@@ -93,27 +93,16 @@ const pocOnlyUser = {
   logout: vi.fn(),
 };
 
-const mockReportResponse = {
-  timeSeries: [
-    { date: '2024-05-01', count: 12, avgScore: 4.1 },
-    { date: '2024-05-02', count: 8, avgScore: 4.5 },
-    { date: '2024-05-03', count: 15, avgScore: 3.9 },
-  ],
-  aggregations: [
-    {
-      dimension: 'Event Alpha',
-      submissionCount: 25,
-      avgScore: 4.2,
-      scoreDistribution: { '1': 1, '2': 3, '3': 5, '4': 10, '5': 6 },
-    },
-    {
-      dimension: 'Event Beta',
-      submissionCount: 18,
-      avgScore: 3.8,
-      scoreDistribution: { '1': 2, '2': 4, '3': 6, '4': 4, '5': 2 },
-    },
-  ],
-};
+// Shapes as report-service returns them
+const mockReportResponse = [
+  { eventId: 'evt-a', eventName: 'Event Alpha', city: 'Pune', averageScore: 4.2, feedbackCount: 25, minScore: 1, maxScore: 5 },
+  { eventId: 'evt-b', eventName: 'Event Beta', city: 'Delhi', averageScore: 3.8, feedbackCount: 18, minScore: 1, maxScore: 5 },
+];
+
+const mockTimeSeries = [
+  { period: '2024-05-01 00:00:00+00', value: 4.1, count: 12 },
+  { period: '2024-05-02 00:00:00+00', value: 4.5, count: 8 },
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,6 +121,9 @@ function setupDefaultHandlers() {
     }),
     http.get('/api/reports/by-poc', () => {
       return HttpResponse.json(mockReportResponse);
+    }),
+    http.get('/api/reports/time-series', () => {
+      return HttpResponse.json(mockTimeSeries);
     }),
   );
 }
@@ -156,6 +148,27 @@ describe('ReportsContent', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('renders the API rows and sends the date range as dateFrom/dateTo', async () => {
+    vi.useRealTimers();
+    let query: URLSearchParams | null = null;
+    server.use(
+      http.get('/api/reports/by-event', ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json(mockReportResponse);
+      }),
+    );
+
+    await renderReports();
+
+    await waitFor(() => {
+      expect(screen.getByText('Event Alpha')).toBeInTheDocument();
+    });
+    expect(screen.getByText('25')).toBeInTheDocument();
+    expect(screen.getByText('4.2')).toBeInTheDocument();
+    expect(query!.get('dateFrom')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(query!.get('dateTo')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   describe('Filter change triggers refetch', () => {

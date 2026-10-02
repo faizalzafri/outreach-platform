@@ -11,6 +11,8 @@ export default defineConfig({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
       quoteStyle: 'single',
+      // Splits each route's component into its own chunk, loaded on demand.
+      autoCodeSplitting: true,
     }),
     react(),
     checker({

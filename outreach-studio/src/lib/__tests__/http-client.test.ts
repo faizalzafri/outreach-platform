@@ -160,6 +160,26 @@ describe('HTTP Client - Error Normalization', () => {
 
       expect(normalized.fieldErrors).toEqual([]);
     });
+
+    it('should flatten field errors sent as the backend map of field to messages', () => {
+      const error = createAxiosError({
+        response: {
+          status: 400,
+          data: {
+            error: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            fieldErrors: { name: ['must not be blank', 'too short'], email: ['invalid'] },
+          },
+        },
+      });
+
+      expect(normalizeError(error).fieldErrors).toEqual([
+        { field: 'name', message: 'must not be blank' },
+        { field: 'name', message: 'too short' },
+        { field: 'email', message: 'invalid' },
+      ]);
+    });
+
   });
 });
 

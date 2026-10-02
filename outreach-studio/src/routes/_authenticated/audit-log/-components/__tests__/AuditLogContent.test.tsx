@@ -51,12 +51,11 @@ const mockAuditEntries = {
     {
       id: 'audit-001',
       timestamp: '2024-06-02T15:30:00Z',
-      user: 'priya_sharma',
+      userId: 'priya_sharma',
       action: 'EVENT_CREATED',
       resourceType: 'EVENT',
       resourceId: 'evt-001',
-      ipAddress: '192.168.1.100',
-      payload: {
+      details: {
         eventName: 'Annual Volunteer Drive',
         eventCode: 'EVT2024001',
       },
@@ -64,12 +63,11 @@ const mockAuditEntries = {
     {
       id: 'audit-002',
       timestamp: '2024-06-02T14:00:00Z',
-      user: 'admin_user',
+      userId: 'admin_user',
       action: 'USER_ROLE_CHANGED',
       resourceType: 'USER',
       resourceId: 'user-002',
-      ipAddress: '10.0.0.50',
-      payload: {
+      details: {
         previousRole: 'ROLE_POC',
         newRole: 'ROLE_PMO',
       },
@@ -77,12 +75,11 @@ const mockAuditEntries = {
     {
       id: 'audit-003',
       timestamp: '2024-06-02T12:15:00Z',
-      user: 'rahul_verma',
+      userId: 'rahul_verma',
       action: 'VOLUNTEER_ENROLLED',
       resourceType: 'VOLUNTEER',
       resourceId: 'EMP005',
-      ipAddress: '172.16.0.25',
-      payload: {
+      details: {
         eventId: 'evt-001',
         employeeId: 'EMP005',
       },
@@ -236,10 +233,10 @@ describe('AuditLogContent', () => {
         http.get('/api/admin/audit-log', ({ request }) => {
           requestCount++;
           const url = new URL(request.url);
-          const userParam = url.searchParams.get('user');
+          const userParam = url.searchParams.get('userId');
           const content = userParam
             ? mockAuditEntries.content.filter((e) =>
-                e.user.toLowerCase().includes(userParam.toLowerCase()),
+                e.userId.toLowerCase().includes(userParam.toLowerCase()),
               )
             : mockAuditEntries.content;
           return HttpResponse.json({

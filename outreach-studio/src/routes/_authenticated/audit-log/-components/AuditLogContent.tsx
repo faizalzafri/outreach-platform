@@ -94,18 +94,17 @@ function RowGroup({ entry, isExpanded, onToggle, colSpan }: RowGroupProps) {
         aria-expanded={isExpanded}
       >
         <td className={styles['td']}>{formatTimestamp(entry.timestamp)}</td>
-        <td className={styles['td']}>{entry.user}</td>
+        <td className={styles['td']}>{entry.userId}</td>
         <td className={styles['td']}>{entry.action}</td>
         <td className={styles['td']}>{entry.resourceType}</td>
         <td className={styles['td']}>{entry.resourceId}</td>
-        <td className={styles['td']}>{entry.ipAddress}</td>
       </tr>
       {isExpanded && (
         <tr className={styles['expandedRow']}>
           <td colSpan={colSpan} className={styles['expandedCell']}>
             <div className={styles['payloadContainer']}>
               <pre className={styles['payloadPre']}>
-                {JSON.stringify(entry.payload, null, 2)}
+                {JSON.stringify(entry.details, null, 2)}
               </pre>
             </div>
           </td>
@@ -113,6 +112,22 @@ function RowGroup({ entry, isExpanded, onToggle, colSpan }: RowGroupProps) {
       )}
     </>
   );
+}
+
+/**
+ * Query params as GET /admin/audit-log(/export) binds them: userId, and dateFrom/dateTo as
+ * instants covering the whole of the picked days (UTC).
+ */
+function auditFilterParams(f: {
+  startDate: string; endDate: string; user: string; action: string; resourceType: string;
+}): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (f.startDate) params['dateFrom'] = `${f.startDate}T00:00:00Z`;
+  if (f.endDate) params['dateTo'] = `${f.endDate}T23:59:59.999Z`;
+  if (f.user) params['userId'] = f.user;
+  if (f.action) params['action'] = f.action;
+  if (f.resourceType) params['resourceType'] = f.resourceType;
+  return params;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,12 +162,9 @@ export function AuditLogContent() {
 
   // --- Build filter params ---
   const filterParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    if (startDate) params['startDate'] = startDate;
-    if (endDate) params['endDate'] = endDate;
-    if (debouncedUser) params['user'] = debouncedUser;
-    if (actionFilter) params['action'] = actionFilter;
-    if (resourceTypeFilter) params['resourceType'] = resourceTypeFilter;
+    const params = auditFilterParams({
+      startDate, endDate, user: debouncedUser, action: actionFilter, resourceType: resourceTypeFilter,
+    });
     if (sortState.direction) {
       params['sort'] = `${sortState.column},${sortState.direction}`;
     }
@@ -225,12 +237,9 @@ export function AuditLogContent() {
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const params: Record<string, string> = {};
-      if (startDate) params['startDate'] = startDate;
-      if (endDate) params['endDate'] = endDate;
-      if (debouncedUser) params['user'] = debouncedUser;
-      if (actionFilter) params['action'] = actionFilter;
-      if (resourceTypeFilter) params['resourceType'] = resourceTypeFilter;
+      const params = auditFilterParams({
+        startDate, endDate, user: debouncedUser, action: actionFilter, resourceType: resourceTypeFilter,
+      });
 
       const response = await httpClient.get('/admin/audit-log/export', {
         params,
@@ -267,11 +276,10 @@ export function AuditLogContent() {
   // --- Column definitions ---
   const sortableColumns = [
     { id: 'timestamp', label: 'Timestamp' },
-    { id: 'user', label: 'User' },
+    { id: 'userId', label: 'User' },
     { id: 'action', label: 'Action' },
     { id: 'resourceType', label: 'Resource Type' },
     { id: 'resourceId', label: 'Resource ID' },
-    { id: 'ipAddress', label: 'IP Address' },
   ] as const;
 
   return (

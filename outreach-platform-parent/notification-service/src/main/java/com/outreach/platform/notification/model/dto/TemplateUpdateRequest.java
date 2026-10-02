@@ -1,7 +1,6 @@
 package com.outreach.platform.notification.model.dto;
 
 import com.outreach.platform.notification.model.NotificationType;
-import com.outreach.platform.notification.model.TemplateEngine;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
@@ -18,8 +17,6 @@ public record TemplateUpdateRequest(
         @Size(max = 100) String subjectTemplate,
         @Schema(description = "Updated body template")
         String bodyTemplate,
-        @Schema(description = "Updated template engine", example = "THYMELEAF")
-        TemplateEngine engine,
         @Schema(description = "Updated variables schema")
         String variablesSchema,
         @Schema(description = "Activate or deactivate the template", example = "true")

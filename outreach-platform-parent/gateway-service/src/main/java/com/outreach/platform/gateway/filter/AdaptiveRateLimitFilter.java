@@ -14,11 +14,11 @@ import java.util.Objects;
 
 /**
  * Global filter that enforces differentiated rate limiting:
- * - Authenticated users: 100 req/min (handled by route-level RequestRateLimiter)
+ * - Authenticated users: 100 req/min (per tenant, in TenantRateLimitFilter)
  * - Unauthenticated IPs: 20 req/min (enforced here via Redis)
  *
  * This filter only activates for unauthenticated requests, complementing
- * the per-route RequestRateLimiter which handles authenticated traffic.
+ * TenantRateLimitFilter, which handles authenticated traffic.
  */
 @Component
 public class AdaptiveRateLimitFilter implements GlobalFilter, Ordered {
@@ -35,9 +35,13 @@ public class AdaptiveRateLimitFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Branch on "has a principal" rather than flatMap(chain).switchIfEmpty(...): a successful
+        // chain completes empty, which would trigger switchIfEmpty and run the chain a second time.
         return exchange.getPrincipal()
-                .flatMap(principal -> chain.filter(exchange))
-                .switchIfEmpty(applyUnauthenticatedRateLimit(exchange, chain));
+                .hasElement()
+                .flatMap(authenticated -> authenticated
+                        ? chain.filter(exchange)
+                        : applyUnauthenticatedRateLimit(exchange, chain));
     }
 
     private Mono<Void> applyUnauthenticatedRateLimit(ServerWebExchange exchange, GatewayFilterChain chain) {

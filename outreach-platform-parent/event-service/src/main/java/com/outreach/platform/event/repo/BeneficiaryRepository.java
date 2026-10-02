@@ -21,7 +21,7 @@ public interface BeneficiaryRepository extends JpaRepository<BeneficiaryEntity, 
     /**
      * Tenant-scoped primary-key lookup — use instead of the inherited {@code findById}, which
      * compiles to {@code EntityManager.find()} and is not reached by Hibernate's {@code @Filter}.
-     * See {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0.
+     * See CLAUDE.md.
      */
     Optional<BeneficiaryEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 

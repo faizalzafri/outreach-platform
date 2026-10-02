@@ -49,13 +49,15 @@ public class TenantStatusValidationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
+        // Fail open only when the status lookup itself fails. The handler must not wrap the
+        // downstream chain: an error from routing or the backend would otherwise be logged as a
+        // lookup failure and the whole chain re-run after the response was already written.
         return tenantStatusService.getTenantStatus(tenantId)
-                .flatMap(status -> evaluateStatus(exchange, chain, tenantId, status))
                 .onErrorResume(ex -> {
-                    log.error("Failed to resolve tenant status for {}: {}", tenantId, ex.getMessage());
-                    // Fail-open for availability
-                    return chain.filter(exchange);
-                });
+                    log.error("Failed to resolve tenant status for {}, allowing request", tenantId, ex);
+                    return Mono.just(TenantStatusService.STATUS_ACTIVE);
+                })
+                .flatMap(status -> evaluateStatus(exchange, chain, tenantId, status));
     }
 
     private Mono<Void> evaluateStatus(ServerWebExchange exchange,

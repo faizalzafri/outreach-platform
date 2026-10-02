@@ -19,14 +19,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Legend,
-  BarChart,
-  Bar,
 } from 'recharts';
 
 import { httpClient } from '@/lib/http-client';
@@ -37,6 +37,8 @@ import type { TrendParams } from '@/types/api';
 
 import { Route } from '../index';
 import styles from './ReportsContent.module.css';
+import { ReportInsights } from './ReportInsights';
+import { ReportSchedules } from './ReportSchedules';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,21 +52,40 @@ interface ReportDataPoint {
   avgScore?: number;
 }
 
-interface ScoreDistribution {
-  [score: string]: number;
-}
-
 interface AggregationRow {
   dimension: string;
   submissionCount: number;
   avgScore: number;
-  scoreDistribution?: ScoreDistribution;
 }
 
 interface ReportResponse {
   timeSeries: ReportDataPoint[];
   aggregations: AggregationRow[];
 }
+
+/** A row from GET /reports/by-{event,beneficiary,city,poc}; the name field depends on the endpoint. */
+interface ApiAggregationRow {
+  averageScore: number;
+  feedbackCount: number;
+  eventName?: string;
+  beneficiaryName?: string;
+  city?: string;
+  pocName?: string;
+}
+
+/** A point from GET /reports/time-series: value is the period's average score. */
+interface ApiTimeSeriesPoint {
+  period: string;
+  value: number;
+  count: number;
+}
+
+const DIMENSION_FIELD: Record<AggregationTab, keyof ApiAggregationRow> = {
+  event: 'eventName',
+  beneficiary: 'beneficiaryName',
+  city: 'city',
+  poc: 'pocName',
+};
 
 interface FilterOption {
   id: string;
@@ -178,17 +199,16 @@ export function ReportsContent() {
   const [selectedPocs, setSelectedPocs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<AggregationTab>(search.tab as AggregationTab);
 
-  // Build query params — ROLE_POC gets pre-filtered
+  // Build query params (named as report-service binds them) — ROLE_POC gets pre-filtered
   const queryParams = useMemo(() => ({
-    startDate,
-    endDate,
+    dateFrom: startDate,
+    dateTo: endDate,
     granularity,
     eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
     cities: selectedCities.length > 0 ? selectedCities : undefined,
     beneficiaryIds: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
-    pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
-    groupBy: activeTab,
-  }), [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, activeTab, isPocOnly, user?.sub]);
+    pocIds: isPocOnly ? [user?.uid ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
+  }), [startDate, endDate, granularity, selectedEvents, selectedCities, selectedBeneficiaries, selectedPocs, isPocOnly, user?.uid]);
 
   const trendParams: TrendParams = useMemo(() => ({
     startDate,
@@ -216,13 +236,36 @@ export function ReportsContent() {
     error,
     refetch,
   } = useQuery<ReportResponse>({
-    queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.sub : null],
+    queryKey: [...queryKeys.reports.trends(trendParams), activeTab, selectedBeneficiaries, selectedPocs, isPocOnly ? user?.uid : null],
     queryFn: async () => {
-      const response = await httpClient.get<ReportResponse>(reportEndpoint, {
-        params: queryParams,
-      });
-      return response.data;
+      const [rows, series] = await Promise.all([
+        httpClient.get<ApiAggregationRow[]>(reportEndpoint, { params: queryParams }),
+        httpClient.get<ApiTimeSeriesPoint[]>('/reports/time-series', { params: queryParams }),
+      ]);
+      const nameField = DIMENSION_FIELD[activeTab];
+      return {
+        aggregations: rows.data.map((row) => ({
+          dimension: String(row[nameField] ?? '—'),
+          submissionCount: row.feedbackCount,
+          avgScore: Number(row.averageScore),
+        })),
+        // period arrives as a Postgres timestamp ("2024-04-01 00:00:00+00"); keep the date part
+        timeSeries: series.data.map((point) => ({
+          date: point.period.slice(0, 10),
+          count: point.count,
+          avgScore: Number(point.value),
+        })),
+      };
     },
+  });
+
+  // Responses per score 1–5 under the same filters.
+  const { data: scoreDistribution } = useQuery<{ score: number; count: number }[]>({
+    queryKey: [...queryKeys.reports.scoreDistribution(startDate, endDate), queryParams],
+    queryFn: async () =>
+      (await httpClient.get<{ score: number; count: number }[]>('/reports/score-distribution', {
+        params: queryParams,
+      })).data,
   });
 
   // Filter options are not available from a dedicated API endpoint.
@@ -270,7 +313,7 @@ export function ReportsContent() {
           eventIds: selectedEvents.length > 0 ? selectedEvents : undefined,
           cities: selectedCities.length > 0 ? selectedCities : undefined,
           beneficiaries: selectedBeneficiaries.length > 0 ? selectedBeneficiaries : undefined,
-          pocIds: isPocOnly ? [user?.sub ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
+          pocIds: isPocOnly ? [user?.uid ?? ''] : (selectedPocs.length > 0 ? selectedPocs : undefined),
         },
       });
 
@@ -426,7 +469,7 @@ export function ReportsContent() {
             id="report-pocs"
             className={styles['multiSelect']}
             multiple
-            value={isPocOnly ? [user?.sub ?? ''] : selectedPocs}
+            value={isPocOnly ? [user?.uid ?? ''] : selectedPocs}
             onChange={(e) => handleMultiSelectChange(e, setSelectedPocs)}
             disabled={isPocOnly}
             aria-label="Filter by POCs"
@@ -567,28 +610,16 @@ export function ReportsContent() {
             </ResponsiveContainer>
           </section>
 
-          {/* Score Distribution Bar Chart */}
-          {data.aggregations && data.aggregations.length > 0 && data.aggregations.some((row) => row.scoreDistribution) && (
+          {scoreDistribution && (
             <section className={styles['chartSection']}>
               <h2 className={styles['chartTitle']}>Score Distribution</h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart
-                  data={data.aggregations.map((row) => ({
-                    name: row.dimension.length > 20 ? `${row.dimension.substring(0, 20)}…` : row.dimension,
-                    ...row.scoreDistribution,
-                  }))}
-                  margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
-                >
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={scoreDistribution} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="var(--text-muted)" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="1" fill="var(--color-danger-500)" name="Score 1" stackId="a" />
-                  <Bar dataKey="2" fill="var(--color-orange-500)" name="Score 2" stackId="a" />
-                  <Bar dataKey="3" fill="var(--color-amber-500)" name="Score 3" stackId="a" />
-                  <Bar dataKey="4" fill="var(--color-success-500)" name="Score 4" stackId="a" />
-                  <Bar dataKey="5" fill="var(--color-info-500)" name="Score 5" stackId="a" />
+                  <XAxis dataKey="score" tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--text-muted)" />
+                  <Tooltip labelFormatter={(score) => `Score ${String(score)}`} />
+                  <Bar dataKey="count" name="Responses" fill="var(--accent)" />
                 </BarChart>
               </ResponsiveContainer>
             </section>
@@ -606,11 +637,6 @@ export function ReportsContent() {
                     <th>{TAB_LABELS[activeTab].replace('By ', '')}</th>
                     <th>Submissions</th>
                     <th>Avg Score</th>
-                    <th>Score 1</th>
-                    <th>Score 2</th>
-                    <th>Score 3</th>
-                    <th>Score 4</th>
-                    <th>Score 5</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -619,11 +645,6 @@ export function ReportsContent() {
                       <td>{row.dimension}</td>
                       <td>{row.submissionCount}</td>
                       <td>{row.avgScore.toFixed(1)}</td>
-                      <td>{row.scoreDistribution?.['1'] ?? 0}</td>
-                      <td>{row.scoreDistribution?.['2'] ?? 0}</td>
-                      <td>{row.scoreDistribution?.['3'] ?? 0}</td>
-                      <td>{row.scoreDistribution?.['4'] ?? 0}</td>
-                      <td>{row.scoreDistribution?.['5'] ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -636,6 +657,9 @@ export function ReportsContent() {
           </section>
         </>
       )}
+
+      {!isPocOnly && <ReportInsights params={queryParams} />}
+      {!isPocOnly && <ReportSchedules />}
     </div>
   );
 }

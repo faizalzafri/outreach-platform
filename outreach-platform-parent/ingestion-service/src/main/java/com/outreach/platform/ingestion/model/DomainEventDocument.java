@@ -11,7 +11,11 @@ import java.util.UUID;
 /**
  * MongoDB document representing a domain event in the outbox pattern.
  */
-@Document("domain_events")
+// Own collection, not event-service's "domain_events": every service shares one Mongo database, and
+// each outbox poller publishes every PENDING document in its collection. Sharing one made both
+// pollers publish each other's events (duplicate messages) and crashed this poller on event-service
+// documents, whose payload is a JSON string rather than a map.
+@Document("ingestion_domain_events")
 public class DomainEventDocument {
 
     @Id

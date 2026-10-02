@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/server';
+import type { Account } from '@/types/domain';
 
-// Mock useAuth to provide authenticated user context
 const mockUseAuth = vi.fn();
-
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock useToast to capture calls
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 vi.mock('@/hooks/useToast', () => ({
@@ -28,451 +26,150 @@ vi.mock('@/hooks/useToast', () => ({
   }),
 }));
 
-// Mock Route.useSearch
-vi.mock('../../index', () => ({
-  Route: {
-    useSearch: () => ({ page: 1, size: 10, role: undefined, status: undefined }),
-  },
-}));
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const mockUsers = {
-  content: [
-    {
-      id: 'user-001',
-      username: 'priya_sharma',
-      email: 'priya.sharma@company.com',
-      role: 'ROLE_PMO',
-      enabled: true,
-    },
-    {
-      id: 'user-002',
-      username: 'rahul_verma',
-      email: 'rahul.verma@company.com',
-      role: 'ROLE_POC',
-      enabled: true,
-    },
-    {
-      id: 'user-003',
-      username: 'disabled_user',
-      email: 'disabled@company.com',
-      role: 'ROLE_POC',
-      enabled: false,
-    },
-  ],
-  totalElements: 3,
-  totalPages: 1,
-  page: 0,
-  size: 10,
-};
-
-const adminUser = {
-  user: {
-    sub: 'admin-001',
-    name: 'Admin User',
-    email: 'admin@outreach.dev',
-    roles: ['ROLE_ADMIN'],
-  },
-  isAuthenticated: true,
-  isLoading: false,
-  login: vi.fn(),
-  logout: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function setupDefaultHandlers() {
-  server.use(
-    http.get('/api/admin/users', () => {
-      return HttpResponse.json(mockUsers);
-    }),
-    http.post('/api/admin/users', async ({ request }) => {
-      const body = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json(
-        {
-          id: 'user-new-001',
-          username: body.username,
-          email: body.email,
-          role: body.role,
-          enabled: true,
-        },
-        { status: 201 },
-      );
-    }),
-    http.patch('/api/admin/users/:id/status', async ({ request }) => {
-      const body = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({ status: body.status });
-    }),
-  );
+function account(overrides: Partial<Account>): Account {
+  return {
+    id: 'u-0',
+    username: 'user',
+    displayName: 'User',
+    email: 'user@example.com',
+    phone: null,
+    role: 'POC',
+    status: 'ACTIVE',
+    locked: false,
+    lastLoginAt: null,
+    createdAt: '2026-10-01T10:00:00Z',
+    ...overrides,
+  };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+const accounts: Account[] = [
+  account({ id: 'u-admin', username: 'admin', displayName: 'Ada Admin', email: 'admin@example.com', role: 'ADMIN' }),
+  account({ id: 'u-priya', username: 'priya_sharma', displayName: 'Priya Sharma', email: 'priya@example.com', role: 'PMO' }),
+  account({ id: 'u-meera', username: 'meera', displayName: 'Meera Iyer', email: 'meera@example.com', status: 'INVITED' }),
+  account({ id: 'u-rahul', username: 'rahul', displayName: 'Rahul Verma', email: 'rahul@example.com', locked: true }),
+  account({ id: 'u-old', username: 'old', displayName: 'Old Timer', email: 'old@example.com', status: 'DISABLED' }),
+];
 
-describe('AdminContent', () => {
+async function renderAdmin() {
+  const { AdminContent } = await import('../AdminContent');
+  renderWithProviders(<AdminContent />);
+  await screen.findByText('Priya Sharma');
+}
+
+function row(name: string) {
+  return screen.getByText(name).closest('tr') as HTMLElement;
+}
+
+describe('AdminContent (user administration)', () => {
   beforeEach(() => {
-    mockUseAuth.mockReturnValue(adminUser);
     mockToastSuccess.mockClear();
     mockToastError.mockClear();
-    setupDefaultHandlers();
+    mockUseAuth.mockReturnValue({
+      user: { sub: 'admin', name: 'Admin', email: 'admin@example.com', roles: ['ROLE_ADMIN'] },
+      isAuthenticated: true,
+      isLoading: false,
+    });
+    server.use(http.get('/api/auth/users', () => HttpResponse.json(accounts)));
   });
 
-  async function renderAdmin() {
-    const { AdminContent } = await import('../AdminContent');
-    return renderWithProviders(<AdminContent />);
-  }
+  it('lists users with their status, including invited and locked accounts', async () => {
+    await renderAdmin();
 
-  // =========================================================================
-  // User Creation Form Validation and Duplicate Error Handling
-  // =========================================================================
-
-  describe('User creation form validation and duplicate error handling', () => {
-    it('shows create form when Create User button is clicked', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      expect(screen.getByLabelText('Username')).toBeInTheDocument();
-      expect(screen.getByLabelText('Email')).toBeInTheDocument();
-      expect(screen.getByLabelText('Role')).toBeInTheDocument();
-    });
-
-    it('shows validation error for short username on blur', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      const usernameInput = screen.getByLabelText('Username');
-      await user.type(usernameInput, 'ab');
-      await user.tab(); // trigger blur
-
-      await waitFor(() => {
-        expect(screen.getByText(/too_small|at least 3/i)).toBeInTheDocument();
-      });
-    });
-
-    it('shows validation error for invalid email on blur', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      const emailInput = screen.getByLabelText('Email');
-      await user.type(emailInput, 'not-an-email');
-      await user.tab();
-
-      await waitFor(() => {
-        expect(screen.getByText(/invalid/i)).toBeInTheDocument();
-      });
-    });
-
-    it('shows validation error for invalid username characters on blur', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      const usernameInput = screen.getByLabelText('Username');
-      await user.type(usernameInput, 'user@invalid!');
-      await user.tab();
-
-      await waitFor(() => {
-        expect(screen.getByText(/invalid/i)).toBeInTheDocument();
-      });
-    });
-
-    it('disables submit button when form is invalid', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      // Submit button should be disabled when fields are empty
-      const submitBtn = screen.getByRole('button', { name: /Create$/i });
-      expect(submitBtn).toBeDisabled();
-    });
-
-    it('enables submit button when all fields are valid', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      await user.type(screen.getByLabelText('Username'), 'new_user');
-      await user.type(screen.getByLabelText('Email'), 'new@example.com');
-      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
-
-      await waitFor(() => {
-        const submitBtn = screen.getByRole('button', { name: /Create$/i });
-        expect(submitBtn).not.toBeDisabled();
-      });
-    });
-
-    it('displays duplicate username error from server', async () => {
-      server.use(
-        http.post('/api/admin/users', () => {
-          return HttpResponse.json(
-            {
-              error: 'Conflict',
-              message: 'Username already exists',
-              fieldErrors: [
-                { field: 'username', message: 'A user with this username already exists' },
-              ],
-            },
-            { status: 409, headers: { 'X-Correlation-ID': 'test-id' } },
-          );
-        }),
-      );
-
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      await user.type(screen.getByLabelText('Username'), 'existing_user');
-      await user.type(screen.getByLabelText('Email'), 'new@example.com');
-      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
-
-      const submitBtn = screen.getByRole('button', { name: /Create$/i });
-      await user.click(submitBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('A user with this username already exists')).toBeInTheDocument();
-      });
-    });
-
-    it('displays duplicate email error from server', async () => {
-      server.use(
-        http.post('/api/admin/users', () => {
-          return HttpResponse.json(
-            {
-              error: 'Conflict',
-              message: 'Email already exists',
-              fieldErrors: [
-                { field: 'email', message: 'A user with this email already exists' },
-              ],
-            },
-            { status: 409, headers: { 'X-Correlation-ID': 'test-id' } },
-          );
-        }),
-      );
-
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      await user.type(screen.getByLabelText('Username'), 'new_user');
-      await user.type(screen.getByLabelText('Email'), 'existing@example.com');
-      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
-
-      const submitBtn = screen.getByRole('button', { name: /Create$/i });
-      await user.click(submitBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('A user with this email already exists')).toBeInTheDocument();
-      });
-    });
-
-    it('shows generic error toast when server returns non-field error', async () => {
-      server.use(
-        http.post('/api/admin/users', () => {
-          return HttpResponse.json(
-            {
-              error: 'Internal Server Error',
-              message: 'An unexpected error occurred',
-              fieldErrors: [],
-            },
-            { status: 500, headers: { 'X-Correlation-ID': 'test-id' } },
-          );
-        }),
-      );
-
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('button', { name: /Create User/i }));
-
-      await user.type(screen.getByLabelText('Username'), 'new_user');
-      await user.type(screen.getByLabelText('Email'), 'new@example.com');
-      await user.type(screen.getByLabelText('Password'), 'ValidPass123!');
-
-      const submitBtn = screen.getByRole('button', { name: /Create$/i });
-      await user.click(submitBtn);
-
-      await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalled();
-      });
-    });
+    expect(within(row('Meera Iyer')).getByText('INVITED')).toBeInTheDocument();
+    expect(within(row('Rahul Verma')).getByText('Locked')).toBeInTheDocument();
+    expect(within(row('Old Timer')).getByText('DISABLED')).toBeInTheDocument();
   });
 
-  // =========================================================================
-  // Confirmation Dialog for Disable/Enable Actions
-  // =========================================================================
+  it('offers the actions that fit each status', async () => {
+    await renderAdmin();
 
-  describe('Confirmation dialog for disable/enable actions', () => {
-    it('shows confirmation dialog when Disable button is clicked', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
+    const invited = within(row('Meera Iyer'));
+    expect(invited.getByRole('button', { name: 'Resend invite' })).toBeInTheDocument();
+    expect(invited.getByRole('button', { name: 'Revoke' })).toBeInTheDocument();
+    expect(invited.queryByRole('button', { name: 'Send reset link' })).not.toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
+    expect(within(row('Rahul Verma')).getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
+    expect(within(row('Old Timer')).getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+  });
 
-      // Click the Disable button for the first enabled user
-      const disableBtn = screen.getByRole('button', { name: /Disable account for priya_sharma/i });
-      await user.click(disableBtn);
+  it('does not let an admin disable themselves or change their own role', async () => {
+    await renderAdmin();
 
-      // Confirmation dialog should appear
-      await waitFor(() => {
-        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-      });
+    const self = within(row('Ada Admin'));
+    expect(self.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument();
+    expect(self.getByRole('combobox', { name: 'Role for Ada Admin' })).toBeDisabled();
+  });
 
-      expect(screen.getByText(/Are you sure you want to disable the account for "priya_sharma"/i)).toBeInTheDocument();
-    });
+  it('invites a user without any password and shows validation messages first', async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> | null = null;
+    server.use(http.post('/api/auth/users', async ({ request }) => {
+      body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json(account({ username: 'kavya', email: 'kavya@example.com', status: 'INVITED' }), { status: 201 });
+    }));
+    await renderAdmin();
 
-    it('shows confirmation dialog when Enable button is clicked', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
+    await user.click(screen.getByRole('button', { name: 'Invite user' }));
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(screen.getByText('disabled_user')).toBeInTheDocument();
-      });
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+    expect(await screen.findByText("Enter the person's name")).toBeInTheDocument();
+    expect(body).toBeNull();
 
-      // Click Enable button for the disabled user
-      const enableBtn = screen.getByRole('button', { name: /Enable account for disabled_user/i });
-      await user.click(enableBtn);
+    await user.type(screen.getByLabelText('Full name'), 'Kavya Rao');
+    await user.type(screen.getByLabelText('Username'), 'kavya');
+    await user.type(screen.getByLabelText('Email'), 'kavya@example.com');
+    await user.selectOptions(screen.getByLabelText('Role'), 'PMO');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
 
-      // Confirmation dialog should appear
-      await waitFor(() => {
-        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-      });
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Invitation sent to kavya@example.com'));
+    expect(body).toEqual({ displayName: 'Kavya Rao', username: 'kavya', email: 'kavya@example.com', role: 'PMO' });
+  });
 
-      expect(screen.getByText(/Are you sure you want to enable/i)).toBeInTheDocument();
-    });
+  it('shows a server conflict as a message', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('/api/auth/users', () => HttpResponse.json(
+      { status: 409, error: 'USER_CONFLICT', message: "Username 'kavya' is already taken", fieldErrors: {} },
+      { status: 409 })));
+    await renderAdmin();
 
-    it('calls status change API when confirm button is clicked', async () => {
-      let statusPayload: Record<string, unknown> | null = null;
-      server.use(
-        http.patch('/api/admin/users/:id/status', async ({ request }) => {
-          statusPayload = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({ status: 'DISABLED' });
-        }),
-      );
+    await user.click(screen.getByRole('button', { name: 'Invite user' }));
+    await user.type(screen.getByLabelText('Full name'), 'Kavya Rao');
+    await user.type(screen.getByLabelText('Username'), 'kavya');
+    await user.type(screen.getByLabelText('Email'), 'kavya@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
 
-      const user = userEvent.setup();
-      await renderAdmin();
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith("Username 'kavya' is already taken"));
+  });
 
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
+  it('revokes an invitation only after confirmation', async () => {
+    const user = userEvent.setup();
+    const revoked = vi.fn();
+    server.use(http.delete('/api/auth/users/u-meera/invitation', () => {
+      revoked();
+      return new HttpResponse(null, { status: 204 });
+    }));
+    await renderAdmin();
 
-      const disableBtn = screen.getByRole('button', { name: /Disable account for priya_sharma/i });
-      await user.click(disableBtn);
+    await user.click(within(row('Meera Iyer')).getByRole('button', { name: 'Revoke' }));
+    expect(revoked).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Revoke' }));
 
-      await waitFor(() => {
-        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-      });
+    await waitFor(() => expect(revoked).toHaveBeenCalledOnce());
+    expect(mockToastSuccess).toHaveBeenCalledWith('Invitation revoked');
+  });
 
-      // Click Confirm (the Disable button in the dialog)
-      const confirmBtn = screen.getByRole('button', { name: /^Disable$/i });
-      await user.click(confirmBtn);
+  it('changes a role through the auth API', async () => {
+    const user = userEvent.setup();
+    let roleBody: unknown = null;
+    server.use(http.put('/api/auth/users/u-priya/role', async ({ request }) => {
+      roleBody = await request.json();
+      return HttpResponse.json(account({ id: 'u-priya', role: 'ADMIN' }));
+    }));
+    await renderAdmin();
 
-      await waitFor(() => {
-        expect(statusPayload).not.toBeNull();
-      });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Role for Priya Sharma' }), 'ADMIN');
 
-      expect(statusPayload!.enabled).toBe(false);
-    });
-
-    it('closes dialog without action when Cancel is clicked', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      const disableBtn = screen.getByRole('button', { name: /Disable account for priya_sharma/i });
-      await user.click(disableBtn);
-
-      await waitFor(() => {
-        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-      });
-
-      // Click Cancel
-      await user.click(screen.getByRole('button', { name: /Cancel/i }));
-
-      await waitFor(() => {
-        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-      });
-    });
-
-    it('shows success toast after successful status change', async () => {
-      const user = userEvent.setup();
-      await renderAdmin();
-
-      await waitFor(() => {
-        expect(screen.getByText('priya_sharma')).toBeInTheDocument();
-      });
-
-      const disableBtn = screen.getByRole('button', { name: /Disable account for priya_sharma/i });
-      await user.click(disableBtn);
-
-      await waitFor(() => {
-        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-      });
-
-      const confirmBtn = screen.getByRole('button', { name: /^Disable$/i });
-      await user.click(confirmBtn);
-
-      await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith('Account status updated successfully');
-      });
-    });
+    await waitFor(() => expect(roleBody).toEqual({ role: 'ADMIN' }));
   });
 });

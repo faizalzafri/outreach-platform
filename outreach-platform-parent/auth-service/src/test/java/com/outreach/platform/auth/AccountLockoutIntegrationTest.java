@@ -35,7 +35,7 @@ class AccountLockoutIntegrationTest extends BaseAuthIntegrationTest {
     @BeforeEach
     void resetLockoutState() {
         // Reset any previous lockout state for the test user
-        lockoutService.resetAttempts(TEST_USER);
+        lockoutService.recordSuccessfulLogin(TEST_USER);
     }
 
     @Test
@@ -91,7 +91,7 @@ class AccountLockoutIntegrationTest extends BaseAuthIntegrationTest {
         assertThat(lockoutService.getFailedAttempts(TEST_USER)).isEqualTo(2);
 
         // Simulate successful authentication
-        lockoutService.resetAttempts(TEST_USER);
+        lockoutService.recordSuccessfulLogin(TEST_USER);
 
         assertThat(lockoutService.getFailedAttempts(TEST_USER)).isEqualTo(0);
         assertThat(lockoutService.isLocked(TEST_USER)).isFalse();

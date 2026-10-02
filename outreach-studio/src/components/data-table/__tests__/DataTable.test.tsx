@@ -165,6 +165,28 @@ describe('DataTable', () => {
       expect(screen.getByText(/Page 2 of 3/)).toBeInTheDocument();
     });
 
+    it('in controlled mode shows the given page and reports changes instead of moving itself', async () => {
+      const user = userEvent.setup();
+      const allItems = generateItems(25);
+      setupMswHandler((url) => {
+        const page = Number(url.searchParams.get('page') ?? '0');
+        const size = Number(url.searchParams.get('size') ?? '10');
+        return createPageResponse(allItems.slice(page * size, (page + 1) * size), page, size, 25);
+      });
+      const onPaginationChange = vi.fn();
+
+      renderDataTable({ page: 2, onPaginationChange });
+
+      await waitFor(() => {
+        expect(screen.getByText('Item 11')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', { name: 'Next page' }));
+
+      expect(onPaginationChange).toHaveBeenCalledWith(3, 10);
+      // The URL (here: the prop) decides the page, so nothing moved yet.
+      expect(screen.getByText(/Page 2 of 3/)).toBeInTheDocument();
+    });
+
     it('navigates to last page and disables Next/Last buttons', async () => {
       const user = userEvent.setup();
       const allItems = generateItems(25);

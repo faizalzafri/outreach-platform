@@ -1,5 +1,7 @@
 package com.outreach.platform.event.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.Team;
 import com.outreach.platform.event.entity.TeamMembership;
@@ -9,7 +11,7 @@ import com.outreach.platform.event.model.dto.CreateTeamRequest;
 import com.outreach.platform.event.model.dto.TeamMemberResponse;
 import com.outreach.platform.event.model.dto.TeamResponse;
 import com.outreach.platform.event.model.dto.UpdateTeamRequest;
-import com.outreach.platform.event.repo.ResourcePermissionRepository;
+import com.outreach.platform.event.repo.EventTeamAccessRepository;
 import com.outreach.platform.event.repo.TeamMembershipRepository;
 import com.outreach.platform.event.repo.TeamRepository;
 import com.outreach.platform.event.repo.UserRepository;
@@ -41,15 +43,15 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final TeamMembershipRepository teamMembershipRepository;
-    private final ResourcePermissionRepository resourcePermissionRepository;
+    private final EventTeamAccessRepository eventTeamAccessRepository;
     private final UserRepository userRepository;
 
     @Inject
     public TeamService(TeamRepository teamRepository, TeamMembershipRepository teamMembershipRepository,
-                       ResourcePermissionRepository resourcePermissionRepository, UserRepository userRepository) {
+                       EventTeamAccessRepository eventTeamAccessRepository, UserRepository userRepository) {
         this.teamRepository = teamRepository;
         this.teamMembershipRepository = teamMembershipRepository;
-        this.resourcePermissionRepository = resourcePermissionRepository;
+        this.eventTeamAccessRepository = eventTeamAccessRepository;
         this.userRepository = userRepository;
     }
 
@@ -125,7 +127,7 @@ public class TeamService {
     }
 
     /**
-     * Deletes a team and cascade-deletes memberships and resource permissions.
+     * Deletes a team with its memberships and the event access it was given.
      *
      * @param id the team UUID
      */
@@ -133,9 +135,9 @@ public class TeamService {
     public void deleteTeam(UUID id) {
         Team team = findTeamOrThrow(id);
 
-        // Cascade revoke resource permissions granted to this team
-        resourcePermissionRepository.deleteByGrantedTeamId(id);
-        log.info("Cascade-revoked resource permissions for team {}", id);
+        // Events shared with this team stop being shared
+        eventTeamAccessRepository.deleteByTeamId(id);
+
 
         // Cascade delete team memberships
         teamMembershipRepository.deleteByTeamId(id);
@@ -238,7 +240,7 @@ public class TeamService {
 
     private Team findTeamOrThrow(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<Team> team = TenantContext.isPresent()
                 ? teamRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : teamRepository.findById(id);
@@ -271,33 +273,33 @@ public class TeamService {
 
     // ─── Exceptions ─────────────────────────────────────────────────────────────
 
-    public static class TeamNotFoundException extends RuntimeException {
+    public static class TeamNotFoundException extends ResponseStatusException {
         public TeamNotFoundException(UUID id) {
-            super("Team with ID " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "Team with ID " + id + " not found");
         }
     }
 
-    public static class UserNotFoundException extends RuntimeException {
+    public static class UserNotFoundException extends ResponseStatusException {
         public UserNotFoundException(UUID id) {
-            super("User with ID " + id + " not found");
+            super(HttpStatus.NOT_FOUND, "User with ID " + id + " not found");
         }
     }
 
-    public static class DuplicateTeamNameException extends RuntimeException {
+    public static class DuplicateTeamNameException extends ResponseStatusException {
         public DuplicateTeamNameException(String name) {
-            super("Team with name '" + name + "' already exists in this tenant");
+            super(HttpStatus.CONFLICT, "Team with name '" + name + "' already exists in this tenant");
         }
     }
 
-    public static class DuplicateTeamMemberException extends RuntimeException {
+    public static class DuplicateTeamMemberException extends ResponseStatusException {
         public DuplicateTeamMemberException(UUID teamId, UUID userId) {
-            super("User " + userId + " is already a member of team " + teamId);
+            super(HttpStatus.CONFLICT, "User " + userId + " is already a member of team " + teamId);
         }
     }
 
-    public static class MemberNotFoundException extends RuntimeException {
+    public static class MemberNotFoundException extends ResponseStatusException {
         public MemberNotFoundException(UUID teamId, UUID userId) {
-            super("User " + userId + " is not a member of team " + teamId);
+            super(HttpStatus.NOT_FOUND, "User " + userId + " is not a member of team " + teamId);
         }
     }
 }

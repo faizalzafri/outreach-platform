@@ -29,12 +29,14 @@ vi.mock('@tanstack/react-router', () => ({
 // Mock the route modules that components import for useSearch/useParams
 vi.mock('../../index', () => ({
   Route: {
+    useNavigate: () => vi.fn(),
     useSearch: () => mockSearchParams(),
   },
 }));
 
 vi.mock('../../$eventId', () => ({
   Route: {
+    useNavigate: () => vi.fn(),
     useSearch: () => mockSearchParams(),
     useParams: () => mockRouteParams(),
     fullPath: '/_authenticated/events/$eventId',
@@ -113,6 +115,37 @@ describe('EventListContent', () => {
       expect(screen.getByText('TW002')).toBeInTheDocument();
       expect(screen.getByText('ACTIVE')).toBeInTheDocument();
       expect(screen.getByText('DRAFT')).toBeInTheDocument();
+    });
+
+    it('shows events on the calendar for the days they run', async () => {
+      const today = new Date();
+      const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      server.use(
+        http.get('/api/events', () => HttpResponse.json(createEventPage([]))),
+        http.get('/api/events/calendar', () =>
+          HttpResponse.json(createEventPage([buildEvent({ id: 'c1', eventName: 'Beach Day', eventDate: day, eventEndDate: day })]))),
+      );
+
+      await renderEventList();
+      await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+      const cell = await screen.findByRole('gridcell', { name: today.toDateString() });
+      await waitFor(() => expect(cell).toHaveTextContent('Beach Day'));
+    });
+
+    it('sends the search box text to the API', async () => {
+      const queries: (string | null)[] = [];
+      server.use(
+        http.get('/api/events', ({ request }) => {
+          queries.push(new URL(request.url).searchParams.get('query'));
+          return HttpResponse.json(createEventPage([]));
+        }),
+      );
+
+      await renderEventList();
+      await userEvent.type(screen.getByLabelText('Search events'), 'women');
+
+      await waitFor(() => expect(queries).toContain('women'));
     });
 
     it('renders the Create Event link', async () => {
@@ -473,8 +506,8 @@ describe('EventDetailContent', () => {
     });
   });
 
-  describe('lifecycle transition optimistic update and rollback', () => {
-    it('applies optimistic status update immediately on transition click', async () => {
+  describe('lifecycle transitions', () => {
+    it('shows the new status once the server accepts the transition', async () => {
       const user = userEvent.setup();
       let patchCalled = false;
 
@@ -523,7 +556,7 @@ describe('EventDetailContent', () => {
       expect(patchCalled).toBe(true);
     });
 
-    it('rolls back status on server rejection and shows error', async () => {
+    it('keeps the status and shows the error when the server refuses', async () => {
       const user = userEvent.setup();
 
       setupEventDetailHandler({ status: 'PUBLISHED' });
@@ -563,6 +596,171 @@ describe('EventDetailContent', () => {
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('cancelling and locked events', () => {
+    it('asks before cancelling, and does nothing when the answer is no', async () => {
+      setupEventDetailHandler({ status: 'PUBLISHED' });
+      const patched = vi.fn();
+      server.use(
+        http.patch('/api/events/:eventId/status', () => {
+          patched();
+          return HttpResponse.json({});
+        }),
+      );
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      await renderEventDetail();
+      await userEvent.click(await screen.findByRole('button', { name: /^Cancel$/ }));
+
+      expect(confirm).toHaveBeenCalled();
+      expect(patched).not.toHaveBeenCalled();
+      confirm.mockRestore();
+    });
+
+    it('offers no Edit for a cancelled event', async () => {
+      setupEventDetailHandler({ status: 'CANCELLED' });
+
+      await renderEventDetail();
+      await screen.findByText('Annual Volunteer Drive');
+
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('attendance', () => {
+    const enrollment = {
+      id: 'enr-1',
+      eventId: 'evt-001',
+      volunteerId: 'vol-1',
+      employeeId: 'EMP001',
+      volunteerName: 'Rajesh Kumar',
+      attendanceStatus: 'REGISTERED',
+      emailStatus: 'SENT',
+      registeredAt: '2024-05-20T10:00:00Z',
+    };
+
+    it('records attendance once the event is active', async () => {
+      setupEventDetailHandler({ status: 'ACTIVE' });
+      mockSearchParams.mockReturnValue({ tab: 'volunteers' });
+      let sent: unknown;
+      server.use(
+        http.get('/api/events/:eventId/volunteers', () => HttpResponse.json([enrollment])),
+        http.put('/api/events/:eventId/volunteers/attendance', async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json([{ ...enrollment, attendanceStatus: 'ATTENDED' }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await userEvent.selectOptions(
+        await screen.findByLabelText('Attendance for Rajesh Kumar'),
+        'ATTENDED',
+      );
+
+      await waitFor(() =>
+        expect(sent).toEqual({ entries: [{ volunteerId: 'vol-1', status: 'ATTENDED' }] }),
+      );
+    });
+
+    it('is not offered before the event starts', async () => {
+      setupEventDetailHandler({ status: 'PUBLISHED' });
+      mockSearchParams.mockReturnValue({ tab: 'volunteers' });
+      server.use(http.get('/api/events/:eventId/volunteers', () => HttpResponse.json([enrollment])));
+
+      await renderEventDetail();
+      await screen.findByText('Rajesh Kumar');
+
+      expect(screen.queryByLabelText('Attendance for Rajesh Kumar')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('POCs and beneficiaries', () => {
+    it('assigns a POC chosen from the organization', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'pocs' });
+      let assigned: unknown;
+      server.use(
+        http.get('/api/events/:eventId/pocs', () => HttpResponse.json([])),
+        http.get('/api/admin/users', () =>
+          HttpResponse.json({
+            content: [
+              { id: 'u-5', username: 'rahul_verma', displayName: 'Rahul Verma', email: 'r@x.dev', role: 'ROLE_POC', enabled: true },
+            ],
+            totalElements: 1,
+            totalPages: 1,
+            page: 0,
+            size: 200,
+          }),
+        ),
+        http.post('/api/events/:eventId/pocs', async ({ request }) => {
+          assigned = await request.json();
+          return HttpResponse.json({}, { status: 201 });
+        }),
+      );
+
+      await renderEventDetail();
+      const picker = await screen.findByLabelText('POC to assign');
+      await screen.findByRole('option', { name: 'Rahul Verma' });
+      await userEvent.selectOptions(picker, 'u-5');
+      await userEvent.click(screen.getByRole('button', { name: 'Assign' }));
+
+      await waitFor(() => expect(assigned).toEqual({ userId: 'u-5', role: 'PRIMARY' }));
+    });
+
+    it('creates a new beneficiary and links it to the event', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'beneficiaries' });
+      const linked: string[] = [];
+      server.use(
+        http.get('/api/events/:eventId/beneficiaries', () => HttpResponse.json([])),
+        http.get('/api/beneficiaries', () =>
+          HttpResponse.json({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 200 }),
+        ),
+        http.post('/api/beneficiaries', async ({ request }) =>
+          HttpResponse.json({ id: 'ben-9', active: true, ...((await request.json()) as object) }, { status: 201 }),
+        ),
+        http.put('/api/events/:eventId/beneficiaries/:id', ({ params }) => {
+          linked.push(params['id'] as string);
+          return HttpResponse.json([{ id: 'ben-9', name: 'Harbour Trust', city: 'Kochi', active: true }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await userEvent.type(await screen.findByLabelText('New beneficiary name'), 'Harbour Trust');
+      await userEvent.type(screen.getByLabelText('New beneficiary city'), 'Kochi');
+      await userEvent.click(screen.getByRole('button', { name: 'Add and link' }));
+
+      await waitFor(() => expect(linked).toEqual(['ben-9']));
+      expect(await screen.findByText('Harbour Trust')).toBeInTheDocument();
+    });
+  });
+
+  describe('sharing with teams', () => {
+    it('shares the event with a team at the chosen access', async () => {
+      setupEventDetailHandler();
+      mockSearchParams.mockReturnValue({ tab: 'teams' });
+      let sent: unknown;
+      server.use(
+        http.get('/api/events/:eventId/teams', () => HttpResponse.json([])),
+        http.get('/api/teams', () =>
+          HttpResponse.json({ content: [{ id: 't-1', name: 'Mumbai Crew' }], totalElements: 1, totalPages: 1, page: 0, size: 200 }),
+        ),
+        http.put('/api/events/:eventId/teams/:teamId', async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json([{ teamId: 't-1', teamName: 'Mumbai Crew', accessLevel: 'EDIT' }]);
+        }),
+      );
+
+      await renderEventDetail();
+      await screen.findByRole('option', { name: 'Mumbai Crew' });
+      await userEvent.selectOptions(screen.getByLabelText('Team to share with'), 't-1');
+      await userEvent.selectOptions(screen.getByLabelText('Access'), 'EDIT');
+      await userEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+      await waitFor(() => expect(sent).toEqual({ accessLevel: 'EDIT' }));
+      expect(await screen.findByText('Mumbai Crew')).toBeInTheDocument();
     });
   });
 

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Session renewal</title>
+</head>
+<body>
+  <!-- Redirect target for the hidden-iframe re-authorization in src/lib/auth.ts: hands the
+       authorization response (code + state, or error) to the app window, same origin only. -->
+  <script>
+    window.parent.postMessage(
+      { type: 'outreach-silent-callback', search: window.location.search },
+      window.location.origin
+    );
+  </script>
+</body>
+</html>

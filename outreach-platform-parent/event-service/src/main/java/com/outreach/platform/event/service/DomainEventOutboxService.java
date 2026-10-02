@@ -1,5 +1,6 @@
 package com.outreach.platform.event.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outreach.platform.common.messaging.DomainEventMessage;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Outbox service for domain events. Persists events as PENDING and includes a
@@ -65,6 +65,15 @@ public class DomainEventOutboxService {
         return saved;
     }
 
+    /** Serializes the payload to JSON and saves it to the outbox with PENDING status. */
+    public DomainEventDocument save(String eventType, Map<String, Object> payload) {
+        try {
+            return save(eventType, objectMapper.writeValueAsString(payload));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Domain event payload is not serializable: " + eventType, e);
+        }
+    }
+
     /**
      * Scheduled outbox poller that processes PENDING domain events.
      * Runs at a fixed rate (default 5 seconds). For each pending event, attempts
@@ -108,11 +117,21 @@ public class DomainEventOutboxService {
                 event.getCreatedAt()
         );
 
-        rabbitTemplate.convertAndSend(
-                RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
-                routingKey,
-                message
-        );
+        // The poller runs on a scheduler thread with no request tenant; publish under the event's
+        // own tenant so the RabbitTemplate's post-processor stamps x-tenant-id. A tenant-less
+        // event goes out without the header and is dead-lettered by the consumer.
+        if (event.getTenantId() != null) {
+            TenantContext.setCurrentTenantId(event.getTenantId());
+        }
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
+                    routingKey,
+                    message
+            );
+        } finally {
+            TenantContext.clear();
+        }
 
         log.debug("Published domain event to RabbitMQ: type={}, id={}, routingKey={}",
                 event.getEventType(), event.getId(), routingKey);
@@ -128,7 +147,6 @@ public class DomainEventOutboxService {
         };
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> deserializePayload(String payload) {
         try {
             return objectMapper.readValue(payload, new TypeReference<Map<String, Object>>() {});

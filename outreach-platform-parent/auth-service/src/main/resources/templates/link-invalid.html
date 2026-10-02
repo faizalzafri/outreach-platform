@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Link expired')}"></head>
+<body>
+<div class="page">
+    <div class="card">
+        <div th:replace="~{fragments :: brand}"></div>
+
+        <h1 class="heading">This link can't be used</h1>
+        <p class="subtitle">
+            It has expired, has already been used, or was replaced by a newer one.
+            <th:block th:if="${activation}">Ask your administrator to send you a new invitation.</th:block>
+            <th:block th:unless="${activation}">You can request a new password reset link.</th:block>
+        </p>
+
+        <a th:unless="${activation}" class="btn-primary" th:href="@{/forgot-password}">Request a new link</a>
+        <a class="link back-link" th:href="@{/login}">Back to sign in</a>
+    </div>
+</div>
+</body>
+</html>

@@ -4,3 +4,5 @@ com.outreach.platform.common.config.IdpAutoConfiguration
 com.outreach.platform.common.feign.FeignAuthAutoConfiguration
 com.outreach.platform.common.health.HealthAutoConfiguration
 com.outreach.platform.common.tenant.config.TenantAutoConfiguration
+com.outreach.platform.common.messaging.RabbitMqConfig
+com.outreach.platform.common.config.ServletDefaultsAutoConfiguration

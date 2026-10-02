@@ -3,19 +3,11 @@
  *
  * Displays reports with filters, charts, and export functionality.
  * Validates search params with Zod schema using .catch() to discard invalid params.
- * Uses React.lazy + Suspense for code splitting.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
 import { z } from 'zod';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
-
-const ReportsContent = lazy(() =>
-  import('./-components/ReportsContent').then((mod) => ({
-    default: mod.ReportsContent,
-  }))
-);
+import { ReportsContent } from './-components/ReportsContent';
 
 const reportSearchSchema = z.object({
   startDate: z.string().optional().catch(undefined),
@@ -34,8 +26,6 @@ export const Route = createFileRoute('/_authenticated/reports/')({
 
 function ReportsPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Reports" />}>
-      <ReportsContent />
-    </Suspense>
+    <ReportsContent />
   );
 }

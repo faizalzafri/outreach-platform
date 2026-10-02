@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,15 @@ import java.util.UUID;
 public interface EventRepository extends JpaRepository<EventEntity, UUID> {
 
     /**
+     * Limits a query to the events a POC is assigned to, directly or through a team the event is
+     * shared with; a null {@code :pocUserId} means no limit.
+     */
+    String POC_SCOPE = "(:pocUserId IS NULL"
+            + " OR EXISTS (SELECT 1 FROM PocAssignmentEntity p WHERE p.event = e AND p.user.id = :pocUserId)"
+            + " OR EXISTS (SELECT 1 FROM EventTeamAccess a, TeamMembership m"
+            + " WHERE a.eventId = e.id AND m.teamId = a.teamId AND m.userId = :pocUserId))";
+
+    /**
      * Tenant-scoped primary-key lookup. {@link #findById(Object)} (inherited from
      * {@code JpaRepository}) compiles to {@code EntityManager.find()}, which Hibernate's
      * {@code @Filter} mechanism does NOT apply to — a session-level filter only affects
@@ -28,7 +38,7 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
      * <em>do</em> compile to JPQL and are correctly filtered, so this explicit tenant condition —
      * not the inherited filter — is what actually enforces isolation here. Use this instead of
      * {@code findById} for every tenant-scoped lookup; see
-     * {@code docs/specs/platform-hardening/requirements.md} Finding 0 / Requirement 0 for the
+     * CLAUDE.md for the
      * regression test that proved {@code findById} alone lets a cross-tenant read through.
      */
     Optional<EventEntity> findByIdAndTenantId(UUID id, UUID tenantId);
@@ -38,32 +48,36 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
     Optional<EventEntity> findByEventCode(String eventCode);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
-            "LOWER(e.eventName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(e.city) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(e.eventCode) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<EventEntity> search(@Param("query") String query, Pageable pageable);
-
-    @Query("SELECT e FROM EventEntity e WHERE " +
             "(:status IS NULL OR e.status = :status) AND " +
             "(:city IS NULL OR LOWER(e.city) = LOWER(CAST(:city AS string))) AND " +
             "(:category IS NULL OR LOWER(e.category) = LOWER(CAST(:category AS string))) AND " +
             "(:dateFrom IS NULL OR e.eventDate >= :dateFrom) AND " +
-            "(:dateTo IS NULL OR e.eventDate <= :dateTo)")
+            "(:dateTo IS NULL OR e.eventDate <= :dateTo) AND " +
+            "(:query IS NULL OR LOWER(e.eventName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) " +
+            "OR LOWER(e.city) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) " +
+            "OR LOWER(e.eventCode) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))) AND " + POC_SCOPE)
     Page<EventEntity> findByFilters(
             @Param("status") EventStatus status,
             @Param("city") String city,
             @Param("category") String category,
             @Param("dateFrom") LocalDate dateFrom,
             @Param("dateTo") LocalDate dateTo,
+            @Param("query") String query,
+            @Param("pocUserId") UUID pocUserId,
             Pageable pageable);
 
     @Query("SELECT e FROM EventEntity e WHERE " +
-            "e.eventDate >= :rangeStart AND e.eventDate <= :rangeEnd " +
-            "ORDER BY e.eventDate ASC")
+            "e.eventDate >= :rangeStart AND e.eventDate <= :rangeEnd AND " + POC_SCOPE +
+            " ORDER BY e.eventDate ASC")
     Page<EventEntity> findByDateRange(
             @Param("rangeStart") LocalDate rangeStart,
             @Param("rangeEnd") LocalDate rangeEnd,
+            @Param("pocUserId") UUID pocUserId,
             Pageable pageable);
+
+    /** {id, name} rows for the given events, for showing names where only ids are stored. */
+    @Query("SELECT e.id, e.eventName FROM EventEntity e WHERE e.id IN :ids")
+    List<Object[]> findNames(@Param("ids") Collection<UUID> ids);
 
     long countByStatus(EventStatus status);
 

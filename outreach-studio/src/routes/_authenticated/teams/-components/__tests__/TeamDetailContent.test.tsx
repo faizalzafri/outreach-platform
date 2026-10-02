@@ -21,6 +21,7 @@ let mockSearch: { edit: boolean } = { edit: false };
 vi.mock('../../$teamId', () => ({
   Route: {
     useParams: () => ({ teamId: 'team-001' }),
+    useNavigate: () => vi.fn(),
     useSearch: () => mockSearch,
   },
 }));

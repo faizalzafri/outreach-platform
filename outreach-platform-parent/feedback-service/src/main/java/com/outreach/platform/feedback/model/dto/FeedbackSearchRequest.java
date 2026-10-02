@@ -29,6 +29,8 @@ public record FeedbackSearchRequest(
         @Schema(description = "Start of date range")
         Instant dateFrom,
         @Schema(description = "End of date range")
-        Instant dateTo
+        Instant dateTo,
+        @Schema(description = "Only feedback carrying this tag", example = "community")
+        String tag
 ) {
 }

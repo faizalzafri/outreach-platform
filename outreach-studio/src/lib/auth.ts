@@ -191,6 +191,9 @@ function clearPkceParams(): void {
   sessionStorage.removeItem(PKCE_STATE_KEY);
 }
 
+/** postMessage type sent by public/silent-callback.html back to the window that opened it. */
+export const SILENT_CALLBACK_MESSAGE = 'outreach-silent-callback';
+
 // --- Auth Module Factory ---
 
 export function createAuthModule(): AuthModule {
@@ -233,6 +236,7 @@ export function createAuthModule(): AuthModule {
     return {
       user: {
         sub: claims.sub,
+        uid: claims.uid,
         name: claims.name ?? claims.preferred_username ?? 'Unknown',
         email: claims.email ?? '',
         roles: extractRoles(claims),
@@ -302,7 +306,19 @@ export function createAuthModule(): AuthModule {
       throw new Error('Missing PKCE verifier: authentication failed');
     }
 
-    // Exchange code for tokens (must complete within 10 seconds)
+    try {
+      await exchangeCode(code, verifier, getRedirectUri());
+    } catch (error) {
+      clearSession();
+      throw error;
+    }
+  }
+
+  /**
+   * Exchanges an authorization code for tokens and stores them (must complete within 10 seconds).
+   * Shared by the interactive login callback and the silent iframe re-authorization.
+   */
+  async function exchangeCode(code: string, verifier: string, redirectUri: string): Promise<string> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
 
@@ -311,7 +327,7 @@ export function createAuthModule(): AuthModule {
         grant_type: 'authorization_code',
         client_id: config.clientId,
         code,
-        redirect_uri: getRedirectUri(),
+        redirect_uri: redirectUri,
         code_verifier: verifier,
       });
 
@@ -347,9 +363,8 @@ export function createAuthModule(): AuthModule {
       });
 
       scheduleAutoRefresh(tokens.access_token);
+      return tokens.access_token;
     } catch (error) {
-      clearSession();
-
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new Error('Token exchange timed out: authentication could not be completed', { cause: error });
       }
@@ -359,10 +374,71 @@ export function createAuthModule(): AuthModule {
     }
   }
 
+  /**
+   * Obtains fresh tokens without a refresh token: runs the authorization-code + PKCE flow in a
+   * hidden iframe, which completes without UI while the auth server's login session is alive.
+   * Spring Authorization Server never issues refresh tokens to public clients like this SPA, so
+   * this is the only way to renew there. Rejects if the session is gone (the iframe then lands on
+   * the login page, which never answers) or the response doesn't match this request.
+   */
+  async function silentReauthorize(): Promise<string> {
+    const verifier = generateCodeVerifier();
+    const stateParam = generateState();
+    const redirectUri = `${window.location.origin}/silent-callback.html`;
+    const params = new URLSearchParams({
+      client_id: config.clientId,
+      response_type: 'code',
+      scope: 'openid profile email',
+      redirect_uri: redirectUri,
+      state: stateParam,
+      code_challenge: await generateCodeChallenge(verifier),
+      code_challenge_method: 'S256',
+      prompt: 'none',
+    });
+
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.title = 'Session renewal';
+
+    const search = await new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => finish(() => reject(new Error('Silent re-authorization timed out'))), 10_000);
+      function onMessage(event: MessageEvent): void {
+        const data = event.data as { type?: string; search?: string } | null;
+        if (event.origin !== window.location.origin || data?.type !== SILENT_CALLBACK_MESSAGE) return;
+        finish(() => resolve(data.search ?? ''));
+      }
+      function finish(settle: () => void): void {
+        clearTimeout(timeout);
+        window.removeEventListener('message', onMessage);
+        iframe.remove();
+        settle();
+      }
+      window.addEventListener('message', onMessage);
+      iframe.src = `${endpoints.authorization}?${params.toString()}`;
+      document.body.appendChild(iframe);
+    });
+
+    const result = new URLSearchParams(search);
+    const code = result.get('code');
+    if (result.get('state') !== stateParam || !code) {
+      throw new Error(`Silent re-authorization failed: ${result.get('error') ?? 'invalid response'}`);
+    }
+    return exchangeCode(code, verifier, redirectUri);
+  }
+
   async function silentRefresh(): Promise<string | null> {
     if (!state.refreshToken) {
-      clearSession();
-      return null;
+      // Only renew an existing session; with none there is nothing to renew, so go to login.
+      if (!state.isAuthenticated) {
+        clearSession();
+        return null;
+      }
+      try {
+        return await silentReauthorize();
+      } catch {
+        clearSession();
+        return null;
+      }
     }
 
     try {

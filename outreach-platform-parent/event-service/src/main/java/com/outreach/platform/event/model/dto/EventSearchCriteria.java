@@ -4,6 +4,7 @@ import com.outreach.platform.event.model.EventStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Search criteria for filtering events with pagination support.
@@ -21,6 +22,13 @@ public record EventSearchCriteria(
         @Schema(description = "End of date range filter", example = "2024-12-31")
         LocalDate dateTo,
         @Schema(description = "Full-text search query", example = "health drive")
-        String query
+        String query,
+        @Schema(description = "Only events this POC works on, directly or through a shared team")
+        UUID pocId
 ) {
+
+    public EventSearchCriteria(EventStatus status, String city, String category, LocalDate dateFrom, LocalDate dateTo,
+                               String query) {
+        this(status, city, category, dateFrom, dateTo, query, null);
+    }
 }

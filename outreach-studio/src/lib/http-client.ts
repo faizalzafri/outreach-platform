@@ -14,7 +14,6 @@
 
 import axios from 'axios';
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 
 import { authModule } from '@/lib/auth';
 import { useTenantStore } from '@/stores/tenant-store';
@@ -53,6 +52,18 @@ export function setToastHandler(handler: (toast: ToastPayload) => void): void {
 // --- Error normalization ---
 
 /**
+ * The shared backend ErrorResponse sends field errors as { field: [messages] }; flatten to one
+ * entry per message. An already-flat array is passed through.
+ */
+function toFieldErrors(raw: unknown): Array<{ field: string; message: string }> {
+  if (Array.isArray(raw)) return raw as Array<{ field: string; message: string }>;
+  if (!raw || typeof raw !== 'object') return [];
+  return Object.entries(raw as Record<string, unknown>).flatMap(([field, messages]) =>
+    (Array.isArray(messages) ? messages : [messages]).map((message) => ({ field, message: String(message) })),
+  );
+}
+
+/**
  * Transforms any AxiosError into a consistent NormalizedError structure.
  */
 export function normalizeError(error: AxiosError): NormalizedError {
@@ -81,9 +92,7 @@ export function normalizeError(error: AxiosError): NormalizedError {
         (typeof data.correlationId === 'string' ? data.correlationId : null) ??
         (response.headers['x-correlation-id'] as string | undefined) ??
         null,
-      fieldErrors: Array.isArray(data.fieldErrors)
-        ? (data.fieldErrors as Array<{ field: string; message: string }>)
-        : [],
+      fieldErrors: toFieldErrors(data.fieldErrors),
     };
   }
 
@@ -185,7 +194,7 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
 
   // Attach correlation ID for request tracing
-  config.headers['X-Correlation-ID'] = uuidv4();
+  config.headers['X-Correlation-ID'] = crypto.randomUUID();
 
   // Platform Admin tenant override: when set, every outbound request carries the admin's chosen
   // tenant as a query param so the gateway can scope the request to it instead of (or in addition

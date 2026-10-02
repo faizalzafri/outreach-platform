@@ -1,6 +1,7 @@
 package com.outreach.platform.ingestion.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -13,11 +14,14 @@ public class FileMetadataDocument {
 
     @Id
     private String id;
+    @Indexed(name = "idx_file_metadata_jobId")
     private String jobId;
     private String originalFileName;
     private String extension;
     private long fileSizeBytes;
+    @Indexed(name = "idx_file_metadata_status")
     private JobStatus status;
+    @Indexed(name = "idx_file_metadata_ttl_90d", expireAfter = "90d")
     private Instant uploadedAt;
 
     public FileMetadataDocument() {

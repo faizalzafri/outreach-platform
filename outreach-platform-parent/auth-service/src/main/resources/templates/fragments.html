@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!-- Shared pieces of the auth server's pages (sign-in, activation, password reset, OTP). -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${title} + ' — Outreach Studio'">Outreach Studio</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}"/>
+</head>
+<body>
+<div th:fragment="brand" class="brand">
+    <span class="brand-icon" aria-hidden="true">◈</span>
+    <span class="brand-name">Outreach Studio</span>
+</div>
+
+<div th:fragment="violations(list)" th:if="${list != null and !list.isEmpty()}" class="alert alert-error" role="alert">
+    <span th:if="${list.size() == 1}" th:text="${list[0]}">Problem</span>
+    <th:block th:if="${list.size() > 1}">
+        Please fix the following:
+        <ul><li th:each="v : ${list}" th:text="${v}">Problem</li></ul>
+    </th:block>
+</div>
+
+<th:block th:fragment="password-fields">
+    <div class="field">
+        <label for="password">New password</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" required autofocus
+               aria-describedby="password-rules"/>
+        <ul id="password-rules" class="rules">
+            <li th:text="'At least ' + ${minLength} + ' characters'">At least 12 characters</li>
+            <li>Upper- and lower-case letters, a number and a symbol</li>
+            <li>Not a common word, your username, or a recent password</li>
+        </ul>
+    </div>
+    <div class="field">
+        <label for="confirmPassword">Confirm new password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" required/>
+    </div>
+</th:block>
+</body>
+</html>

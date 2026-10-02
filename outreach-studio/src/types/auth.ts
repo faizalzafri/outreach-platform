@@ -2,6 +2,8 @@
 
 export interface UserProfile {
   sub: string;
+  /** The user's id (the token's `uid` claim); `sub` is the username. */
+  uid?: string;
   name: string;
   email: string;
   roles: string[];
@@ -35,6 +37,7 @@ export interface AuthModule {
 
 export interface JwtClaims {
   sub: string;
+  uid?: string;
   name?: string;
   preferred_username?: string;
   email?: string;

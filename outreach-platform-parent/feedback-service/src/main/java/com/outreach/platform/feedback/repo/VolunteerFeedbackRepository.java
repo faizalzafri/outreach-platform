@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,8 +19,6 @@ import java.util.UUID;
 public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeedbackEntity, UUID> {
 
     Page<VolunteerFeedbackEntity> findByEventId(UUID eventId, Pageable pageable);
-
-    List<VolunteerFeedbackEntity> findByVolunteerId(UUID volunteerId);
 
     Optional<VolunteerFeedbackEntity> findByEventIdAndVolunteerId(UUID eventId, UUID volunteerId);
 
@@ -37,6 +34,8 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
               AND (:maxScore IS NULL OR f.score <= :maxScore)
               AND (CAST(:dateFrom AS timestamp) IS NULL OR f.submittedAt >= :dateFrom)
               AND (CAST(:dateTo AS timestamp) IS NULL OR f.submittedAt <= :dateTo)
+              AND (CAST(:tag AS string) IS NULL
+                   OR CONCAT(',', REPLACE(f.tags, ' ', ''), ',') LIKE CONCAT('%,', CAST(:tag AS string), ',%'))
             """)
     Page<VolunteerFeedbackEntity> search(
             @Param("eventId") UUID eventId,
@@ -48,6 +47,7 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
             @Param("maxScore") Integer maxScore,
             @Param("dateFrom") Instant dateFrom,
             @Param("dateTo") Instant dateTo,
+            @Param("tag") String tag,
             Pageable pageable
     );
 

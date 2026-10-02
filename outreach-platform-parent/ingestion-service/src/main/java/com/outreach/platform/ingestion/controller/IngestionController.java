@@ -5,14 +5,12 @@ import com.outreach.platform.ingestion.model.ParseResult;
 import com.outreach.platform.ingestion.model.ValidationResult;
 import com.outreach.platform.ingestion.service.FileParserService;
 import com.outreach.platform.ingestion.service.ImportProcessingService;
+import com.outreach.platform.ingestion.service.ImportTemplateService;
 import com.outreach.platform.ingestion.service.JobTrackingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +21,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,19 +40,17 @@ public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
 
-    private static final String[] TEMPLATE_HEADERS = {
-            "employeeId", "fullName", "email", "phone",
-            "baseLocation", "department", "designation", "skills", "eventCode"
-    };
-
     private final FileParserService fileParserService;
     private final JobTrackingService jobTrackingService;
     private final ImportProcessingService importProcessingService;
+    private final ImportTemplateService templates;
 
     @Inject
     public IngestionController(FileParserService fileParserService,
                                JobTrackingService jobTrackingService,
-                               ImportProcessingService importProcessingService) {
+                               ImportProcessingService importProcessingService,
+                               ImportTemplateService templates) {
+        this.templates = templates;
         this.fileParserService = fileParserService;
         this.jobTrackingService = jobTrackingService;
         this.importProcessingService = importProcessingService;
@@ -68,7 +63,26 @@ public class IngestionController {
     @PostMapping("/upload")
     public ResponseEntity<FileUploadResponse> uploadFile(
             @Parameter(description = "File to upload") @RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(acceptForImport(file));
+    }
 
+    /**
+     * Upload multiple files for processing. Returns 202 Accepted with a list of job IDs.
+     */
+    @Operation(summary = "Bulk upload", description = "Uploads multiple files for processing, returns 202 Accepted with job IDs")
+    @PostMapping("/upload/bulk")
+    public ResponseEntity<List<FileUploadResponse>> uploadBulk(
+            @Parameter(description = "Files to upload") @RequestParam("files") List<MultipartFile> files) throws IOException {
+
+        List<FileUploadResponse> responses = new ArrayList<>();
+        for (MultipartFile file : files) {
+            responses.add(acceptForImport(file));
+        }
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+    }
+
+    /** Validates the file, records a PENDING job, and hands it to the async import pipeline. */
+    private FileUploadResponse acceptForImport(MultipartFile file) throws IOException {
         validateNotEmpty(file);
         String extension = fileParserService.getExtension(file.getOriginalFilename());
         fileParserService.validateExtension(extension);
@@ -89,53 +103,7 @@ public class IngestionController {
         byte[] fileBytes = file.getBytes();
         importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
 
-        FileUploadResponse response = new FileUploadResponse(
-                jobId,
-                file.getOriginalFilename(),
-                "ACCEPTED",
-                Instant.now()
-        );
-
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
-    }
-
-    /**
-     * Upload multiple files for processing. Returns 202 Accepted with a list of job IDs.
-     */
-    @Operation(summary = "Bulk upload", description = "Uploads multiple files for processing, returns 202 Accepted with job IDs")
-    @PostMapping("/upload/bulk")
-    public ResponseEntity<List<FileUploadResponse>> uploadBulk(
-            @Parameter(description = "Files to upload") @RequestParam("files") List<MultipartFile> files) throws IOException {
-
-        List<FileUploadResponse> responses = new ArrayList<>();
-        for (MultipartFile file : files) {
-            validateNotEmpty(file);
-            String extension = fileParserService.getExtension(file.getOriginalFilename());
-            fileParserService.validateExtension(extension);
-
-            UUID jobId = UUID.randomUUID();
-            log.info("Accepted bulk file upload: {} (jobId={})", file.getOriginalFilename(), jobId);
-
-            jobTrackingService.createJob(
-                    jobId.toString(),
-                    "FILE_IMPORT",
-                    file.getOriginalFilename(),
-                    extension,
-                    file.getSize()
-            );
-
-            byte[] fileBytes = file.getBytes();
-            importProcessingService.processImport(jobId.toString(), fileBytes, file.getOriginalFilename(), extension);
-
-            responses.add(new FileUploadResponse(
-                    jobId,
-                    file.getOriginalFilename(),
-                    "ACCEPTED",
-                    Instant.now()
-            ));
-        }
-
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+        return new FileUploadResponse(jobId, file.getOriginalFilename(), "ACCEPTED", Instant.now());
     }
 
     /**
@@ -162,35 +130,22 @@ public class IngestionController {
     }
 
     /**
-     * Download the volunteer import template (empty Excel with correct headers).
+     * Download the volunteer import template in any supported format, with one example row.
      */
-    @Operation(summary = "Download template", description = "Downloads the volunteer import Excel template with correct headers")
+    @Operation(summary = "Download template",
+            description = "Volunteer import template as xlsx (default), xls or csv: headers plus one example row")
     @GetMapping("/templates")
-    public ResponseEntity<byte[]> downloadTemplate() throws IOException {
-        byte[] content = generateTemplate();
+    public ResponseEntity<byte[]> downloadTemplate(
+            @Parameter(description = "xlsx, xls or csv") @RequestParam(defaultValue = "xlsx") String format) {
+        ImportTemplateService.Format template = ImportTemplateService.Format.of(format);
+        byte[] content = templates.render(template);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.setContentDispositionFormData("attachment", "volunteer-import-template.xlsx");
+        headers.setContentType(MediaType.parseMediaType(template.contentType()));
+        headers.setContentDispositionFormData("attachment", template.fileName());
         headers.setContentLength(content.length);
 
         return new ResponseEntity<>(content, headers, HttpStatus.OK);
-    }
-
-    private byte[] generateTemplate() throws IOException {
-        try (SXSSFWorkbook workbook = new SXSSFWorkbook(1)) {
-            Sheet sheet = workbook.createSheet("Volunteers");
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < TEMPLATE_HEADERS.length; i++) {
-                headerRow.createCell(i).setCellValue(TEMPLATE_HEADERS[i]);
-            }
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-            workbook.dispose();
-            return out.toByteArray();
-        }
     }
 
     private void validateNotEmpty(MultipartFile file) {

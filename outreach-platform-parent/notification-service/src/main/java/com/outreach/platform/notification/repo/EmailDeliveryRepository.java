@@ -8,27 +8,40 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * MongoDB repository for email delivery tracking documents.
+ *
+ * <p>Request-facing reads must use the {@code ByTenantId...} variants (deliveries hold recipient
+ * PII); the unscoped ones are for the cross-tenant PLATFORM_ADMIN view (empty TenantContext) and
+ * the scheduled retry sweep.
  */
 @Repository
 public interface EmailDeliveryRepository extends MongoRepository<EmailDeliveryDocument, String> {
 
     List<EmailDeliveryDocument> findByEventId(String eventId);
 
-    List<EmailDeliveryDocument> findByEventIdAndStatus(String eventId, DeliveryStatus status);
+    List<EmailDeliveryDocument> findByTenantIdAndEventId(UUID tenantId, String eventId);
 
-    List<EmailDeliveryDocument> findByStatus(DeliveryStatus status);
+    List<EmailDeliveryDocument> findByEventIdAndStatusIn(String eventId, Collection<DeliveryStatus> statuses);
+
+    List<EmailDeliveryDocument> findByTenantIdAndEventIdAndStatusIn(
+            UUID tenantId, String eventId, Collection<DeliveryStatus> statuses);
+
+    Page<EmailDeliveryDocument> findByTenantId(UUID tenantId, Pageable pageable);
+
+    Page<EmailDeliveryDocument> findByTenantIdAndStatus(UUID tenantId, DeliveryStatus status, Pageable pageable);
+
+    Page<EmailDeliveryDocument> findByStatus(DeliveryStatus status, Pageable pageable);
 
     List<EmailDeliveryDocument> findByStatusAndNextRetryAtBefore(DeliveryStatus status, Instant now);
 
-    Page<EmailDeliveryDocument> findByEventId(String eventId, Pageable pageable);
-
-    Page<EmailDeliveryDocument> findAll(Pageable pageable);
-
-    long countByEventIdAndStatus(String eventId, DeliveryStatus status);
+    long countByTenantId(UUID tenantId);
 
     long countByStatus(DeliveryStatus status);
+
+    long countByTenantIdAndStatus(UUID tenantId, DeliveryStatus status);
 }

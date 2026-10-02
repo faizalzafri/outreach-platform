@@ -1,6 +1,7 @@
 package com.outreach.platform.event.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -12,10 +13,12 @@ import java.util.UUID;
  * Stores events as PENDING until the outbox poller publishes them.
  */
 @Document(collection = "domain_events")
+@CompoundIndex(name = "idx_domain_events_status_createdAt", def = "{'status': 1, 'createdAt': 1}")
 public class DomainEventDocument {
 
     @Id
     private String id;
+    @Indexed(name = "idx_domain_events_eventType")
     private String eventType;
     private String payload;
     private DomainEventStatus status;
@@ -23,6 +26,7 @@ public class DomainEventDocument {
     @Indexed
     private UUID tenantId;
 
+    @Indexed(name = "idx_domain_events_ttl_30d", expireAfter = "30d")
     private Instant createdAt;
     private Instant publishedAt;
     private int retryCount;

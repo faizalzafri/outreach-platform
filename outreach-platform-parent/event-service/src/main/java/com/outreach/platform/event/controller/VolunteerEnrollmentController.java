@@ -1,5 +1,6 @@
 package com.outreach.platform.event.controller;
 
+import com.outreach.platform.event.model.dto.AttendanceUpdateRequest;
 import com.outreach.platform.event.model.dto.EnrollmentDto;
 import com.outreach.platform.event.model.dto.VolunteerEnrollRequest;
 import com.outreach.platform.event.service.VolunteerEnrollmentService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,6 +58,15 @@ public class VolunteerEnrollmentController {
             @Valid @RequestBody VolunteerEnrollRequest request) {
         List<EnrollmentDto> enrolled = enrollmentService.enrollVolunteers(eventId, request.employeeIds());
         return ResponseEntity.status(HttpStatus.CREATED).body(enrolled);
+    }
+
+    @Operation(summary = "Record attendance", description = "Marks enrolled volunteers attended or not; POCs only for their own events")
+    @PreAuthorize("hasAnyRole('POC', 'PMO', 'ADMIN', 'TENANT_ADMIN', 'PLATFORM_ADMIN')")
+    @PutMapping("/attendance")
+    public List<EnrollmentDto> recordAttendance(
+            @Parameter(description = "Event UUID") @PathVariable UUID eventId,
+            @Valid @RequestBody AttendanceUpdateRequest request) {
+        return enrollmentService.recordAttendance(eventId, request.entries());
     }
 
     @Operation(summary = "Remove volunteer enrollment", description = "Removes a volunteer's enrollment from an event")

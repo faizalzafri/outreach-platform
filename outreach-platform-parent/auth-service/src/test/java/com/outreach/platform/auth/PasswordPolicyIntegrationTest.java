@@ -89,9 +89,31 @@ class PasswordPolicyIntegrationTest extends BaseAuthIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should accept the default admin password (Admin@12345!)")
-    void shouldAcceptDefaultAdminPassword() {
-        assertThat(passwordPolicyValidator.isValid("Admin@12345!")).isTrue();
+    @DisplayName("Should reject a common word dressed up with digits and symbols")
+    void shouldRejectGuessablePasswords() {
+        assertThat(passwordPolicyValidator.validate("Admin@12345!"))
+                .containsExactly("Password is too easy to guess; avoid common words with numbers or symbols added");
+        assertThat(passwordPolicyValidator.isValid("Password@2026!")).isFalse();
+        assertThat(passwordPolicyValidator.isValid("Lotus-Garden-47")).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should reject a password containing the username or email name")
+    void shouldRejectPasswordContainingIdentity() {
+        assertThat(passwordPolicyValidator.validate("Priya_Sharma-9x", "priya_sharma", null, 12))
+                .contains("Password must not contain your username or email address");
+        assertThat(passwordPolicyValidator.validate("Kites!meera.iyer7", "mi", "meera.iyer@example.com", 12))
+                .contains("Password must not contain your username or email address");
+    }
+
+    @Test
+    @DisplayName("A tenant can require a longer minimum than the platform, never a shorter one")
+    void tenantMinimumOnlyTightens() {
+        assertThat(passwordPolicyValidator.validate("Lotus-Garden-47", null, null, 16))
+                .containsExactly("Password must be at least 16 characters long");
+        assertThat(passwordPolicyValidator.validate("Lotus-Grd-47", null, null, 8)).isEmpty();
+        assertThat(passwordPolicyValidator.validate("Lotus-Gd-47", null, null, 8))
+                .containsExactly("Password must be at least 12 characters long");
     }
 
     @Test

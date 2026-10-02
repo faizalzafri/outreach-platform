@@ -24,6 +24,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 /**
  * REST controller for the volunteer directory: listing/searching, profile detail,
  * profile/availability updates, and per-volunteer participation history.
@@ -91,5 +95,12 @@ public class VolunteerController {
     @PostMapping("/import")
     public ResponseEntity<VolunteerImportResponse> importVolunteer(@Valid @RequestBody VolunteerImportRequest request) {
         return ResponseEntity.ok(volunteerService.importVolunteer(request));
+    }
+
+    /** Called by feedback-service's client-credentials token too, so not role-gated (as above). */
+    @Operation(summary = "Volunteer names", description = "Volunteer names by id, for services that store only the id")
+    @PostMapping("/names")
+    public Map<UUID, String> names(@RequestBody List<UUID> volunteerIds) {
+        return volunteerService.names(volunteerIds);
     }
 }

@@ -3,14 +3,17 @@ package com.outreach.platform.event.service;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.config.EventServiceProperties;
 import com.outreach.platform.event.entity.EventEntity;
+import com.outreach.platform.event.entity.PocAssignmentEntity;
 import com.outreach.platform.event.mapper.EventMapper;
 import com.outreach.platform.event.model.EventStatus;
 import com.outreach.platform.event.model.dto.EventCreateRequest;
 import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.EventSearchCriteria;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
+import com.outreach.platform.event.model.dto.FeedbackEligibilityDto;
 import com.outreach.platform.event.model.dto.LifecycleStatsDto;
 import com.outreach.platform.event.repo.EventRepository;
+import com.outreach.platform.event.repo.PocAssignmentRepository;
 import jakarta.inject.Inject;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -19,8 +22,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,22 +54,28 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
-    private final DomainEventPublisher domainEventPublisher;
+    private final DomainEventOutboxService domainEventOutboxService;
     private final AuditLogService auditLogService;
     private final EventServiceProperties properties;
+    private final PocAssignmentRepository pocAssignmentRepository;
+    private final EventVisibility visibility;
     private final AtomicLong eventCodeSequence = new AtomicLong(System.currentTimeMillis() % 100000);
 
     @Inject
     public EventService(EventRepository eventRepository,
                         EventMapper eventMapper,
-                        DomainEventPublisher domainEventPublisher,
+                        DomainEventOutboxService domainEventOutboxService,
                         AuditLogService auditLogService,
-                        EventServiceProperties properties) {
+                        EventServiceProperties properties,
+                        PocAssignmentRepository pocAssignmentRepository,
+                        EventVisibility visibility) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
-        this.domainEventPublisher = domainEventPublisher;
+        this.domainEventOutboxService = domainEventOutboxService;
         this.auditLogService = auditLogService;
         this.properties = properties;
+        this.pocAssignmentRepository = pocAssignmentRepository;
+        this.visibility = visibility;
     }
 
     /**
@@ -74,7 +90,7 @@ public class EventService {
         entity.setAttendedCount(0);
         EventEntity saved = eventRepository.save(entity);
 
-        auditLogService.log("system", "CREATE_EVENT", "Event",
+        auditLogService.log("CREATE_EVENT", "Event",
                 saved.getId().toString(), Map.of("eventName", saved.getEventName()));
 
         return eventMapper.toDto(saved);
@@ -99,6 +115,10 @@ public class EventService {
     @Transactional
     public EventDto updateEvent(UUID eventId, EventUpdateRequest request) {
         EventEntity entity = findEntityOrThrow(eventId);
+        if (entity.getStatus() == EventStatus.CANCELLED || entity.getStatus() == EventStatus.ARCHIVED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A " + entity.getStatus().name().toLowerCase(Locale.ROOT) + " event can no longer be edited");
+        }
         eventMapper.updateEntityFromRequest(request, entity);
         EventEntity saved = eventRepository.save(entity);
         return eventMapper.toDto(saved);
@@ -137,15 +157,17 @@ public class EventService {
 
         EventEntity saved = eventRepository.save(entity);
 
-        domainEventPublisher.publish("EventStatusChanged", Map.of(
+        domainEventOutboxService.save("EventStatusChanged", Map.of(
                 "eventId", eventId.toString(),
                 "eventCode", entity.getEventCode(),
+                "eventName", entity.getEventName(),
                 "previousStatus", currentStatus.name(),
                 "newStatus", targetStatus.name(),
-                "transitionedAt", Instant.now().toString()
+                "transitionedAt", Instant.now().toString(),
+                "recipients", pocRecipients(eventId)
         ));
 
-        auditLogService.log("system", "UPDATE_STATUS", "Event",
+        auditLogService.log("UPDATE_STATUS", "Event",
                 eventId.toString(), Map.of(
                         "previousStatus", currentStatus.name(),
                         "newStatus", targetStatus.name()));
@@ -164,17 +186,10 @@ public class EventService {
                 criteria.category(),
                 criteria.dateFrom(),
                 criteria.dateTo(),
+                criteria.query() == null || criteria.query().isBlank() ? null : criteria.query().trim(),
+                visibility.pocScope() != null ? visibility.pocScope() : criteria.pocId(),
                 pageable
         );
-        return page.map(eventMapper::toDto);
-    }
-
-    /**
-     * Full-text search across event name, city, and event code.
-     */
-    @Transactional(readOnly = true)
-    public Page<EventDto> searchEvents(String query, Pageable pageable) {
-        Page<EventEntity> page = eventRepository.search(query, pageable);
         return page.map(eventMapper::toDto);
     }
 
@@ -183,7 +198,7 @@ public class EventService {
      */
     @Transactional(readOnly = true)
     public Page<EventDto> getCalendarView(LocalDate from, LocalDate to, Pageable pageable) {
-        Page<EventEntity> page = eventRepository.findByDateRange(from, to, pageable);
+        Page<EventEntity> page = eventRepository.findByDateRange(from, to, visibility.pocScope(), pageable);
         return page.map(eventMapper::toDto);
     }
 
@@ -202,16 +217,46 @@ public class EventService {
         );
     }
 
+    /**
+     * Whether feedback may be given for an event, as seen by feedback-service: the event's status
+     * and whether the given user is one of its POCs.
+     */
+    @Transactional(readOnly = true)
+    public FeedbackEligibilityDto feedbackEligibility(UUID eventId, UUID userId) {
+        EventEntity entity = findEntityOrThrow(eventId);
+        return new FeedbackEligibilityDto(eventId, entity.getStatus(),
+                userId != null && visibility.isAssigned(eventId, userId));
+    }
+
+    /** Event names by id, for services that store only the id. Unknown ids are left out. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> names(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return eventRepository.findNames(ids).stream()
+                .collect(Collectors.toMap(row -> (UUID) row[0], row -> (String) row[1]));
+    }
+
     private EventEntity findEntityOrThrow(UUID eventId) {
         // findById() alone does not enforce tenant isolation — Hibernate's @Filter does not apply
         // to EntityManager.find()-style primary-key loads, only to query-based access. When
         // TenantContext is empty, the caller has already been established as PLATFORM_ADMIN
         // (TenantFilterAspect throws for anyone else), so an unscoped lookup is the intended
-        // cross-tenant behavior. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // cross-tenant behavior. See CLAUDE.md.
         Optional<EventEntity> entity = TenantContext.isPresent()
                 ? eventRepository.findByIdAndTenantId(eventId, TenantContext.getCurrentTenantId())
                 : eventRepository.findById(eventId);
         return entity.orElseThrow(() -> new EventNotFoundException(eventId));
+    }
+
+    /** The event's assigned POCs as {email, name} pairs — who a status-change email goes to. */
+    private List<Map<String, String>> pocRecipients(UUID eventId) {
+        return pocAssignmentRepository.findByEventId(eventId).stream()
+                .map(PocAssignmentEntity::getUser)
+                .filter(user -> user.getEmail() != null && !user.getEmail().isBlank())
+                .map(user -> Map.of("email", user.getEmail(), "name", user.getUsername()))
+                .toList();
     }
 
     private void applyStatusTimestamps(EventEntity entity, EventStatus targetStatus) {
@@ -232,31 +277,18 @@ public class EventService {
     /**
      * Thrown when an event is not found by its ID.
      */
-    public static class EventNotFoundException extends RuntimeException {
+    public static class EventNotFoundException extends ResponseStatusException {
         public EventNotFoundException(UUID eventId) {
-            super("Event not found: " + eventId);
+            super(HttpStatus.NOT_FOUND, "Event not found: " + eventId);
         }
     }
 
     /**
      * Thrown when an invalid lifecycle status transition is attempted.
      */
-    public static class InvalidStatusTransitionException extends RuntimeException {
-        private final EventStatus from;
-        private final EventStatus to;
-
+    public static class InvalidStatusTransitionException extends ResponseStatusException {
         public InvalidStatusTransitionException(EventStatus from, EventStatus to) {
-            super("Invalid status transition from " + from + " to " + to);
-            this.from = from;
-            this.to = to;
-        }
-
-        public EventStatus getFrom() {
-            return from;
-        }
-
-        public EventStatus getTo() {
-            return to;
+            super(HttpStatus.BAD_REQUEST, "Invalid status transition from " + from + " to " + to);
         }
     }
 }

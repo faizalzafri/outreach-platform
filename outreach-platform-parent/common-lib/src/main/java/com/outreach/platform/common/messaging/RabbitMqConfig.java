@@ -1,7 +1,10 @@
 package com.outreach.platform.common.messaging;
 
+import com.outreach.platform.common.tenant.TenantMessageInterceptor;
+import com.outreach.platform.common.tenant.TenantMessagePostProcessor;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
@@ -14,15 +17,20 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
 /**
  * Shared RabbitMQ infrastructure: declares exchanges, queues with DLQ, bindings, retry policy, and JSON message converter.
+ *
+ * <p>An auto-configuration (not a scanned @Configuration) so every service gets the same JSON
+ * converter and x-tenant-id handling regardless of its own {@code scanBasePackages}. Ordered
+ * before Boot's RabbitAutoConfiguration so Boot's plain RabbitTemplate backs off.
  */
-@Configuration
+@AutoConfiguration(before = RabbitAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.amqp.rabbit.core.RabbitTemplate")
 @ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class RabbitMqConfig {
@@ -100,6 +108,41 @@ public class RabbitMqConfig {
                 .with(RabbitMqConstants.ROUTING_KEY_SEND_FEEDBACK_EMAILS);
     }
 
+    /** Identity emails (invitation, reset, password changed, OTP) are delivered by notification-service. */
+    @Bean
+    public Declarables notificationIdentityBindings() {
+        return new Declarables(java.util.stream.Stream.of(
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_USER_INVITED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_RESET_REQUESTED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_PASSWORD_CHANGED,
+                        RabbitMqConstants.ROUTING_KEY_IDENTITY_OTP_ISSUED,
+                        RabbitMqConstants.ROUTING_KEY_REPORT_SCHEDULED)
+                .map(key -> BindingBuilder.bind(notificationQueue()).to(outreachEventsExchange()).with(key))
+                .toList());
+    }
+
+    @Bean
+    public Queue eventIdentityQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_EVENT_IDENTITY)
+                .withArgument("x-dead-letter-exchange", RabbitMqConstants.EXCHANGE_DEAD_LETTER)
+                .withArgument("x-dead-letter-routing-key", RabbitMqConstants.ROUTING_KEY_EVENT_IDENTITY_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Queue eventIdentityDeadLetterQueue() {
+        return QueueBuilder.durable(RabbitMqConstants.QUEUE_EVENT_IDENTITY_DLQ).build();
+    }
+
+    @Bean
+    public Declarables eventIdentityBindings() {
+        return new Declarables(
+                BindingBuilder.bind(eventIdentityQueue()).to(outreachEventsExchange())
+                        .with(RabbitMqConstants.ROUTING_KEY_IDENTITY_USER_CHANGED),
+                BindingBuilder.bind(eventIdentityDeadLetterQueue()).to(deadLetterExchange())
+                        .with(RabbitMqConstants.ROUTING_KEY_EVENT_IDENTITY_DLQ));
+    }
+
     @Bean
     public Binding reportBindingImportJobCompleted() {
         return BindingBuilder.bind(reportQueue())
@@ -144,6 +187,8 @@ public class RabbitMqConfig {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(jackson2JsonMessageConverter);
         template.setRetryTemplate(retryTemplate());
+        // Stamps x-tenant-id from TenantContext on every outbound message.
+        template.addBeforePublishPostProcessors(new TenantMessagePostProcessor());
         return template;
     }
 
@@ -154,12 +199,19 @@ public class RabbitMqConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            MessageConverter jackson2JsonMessageConverter) {
+            MessageConverter jackson2JsonMessageConverter,
+            // Boot's own property, which a hand-built factory would otherwise ignore (tests set it false)
+            @org.springframework.beans.factory.annotation.Value("${spring.rabbitmq.listener.simple.auto-startup:true}")
+            boolean autoStartup) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setAutoStartup(autoStartup);
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jackson2JsonMessageConverter);
         factory.setDefaultRequeueRejected(false); // rejected messages go to DLQ, not requeued
         factory.setPrefetchCount(10);
+        // Binds TenantContext from x-tenant-id for the listener call; a message without a valid
+        // header is rejected straight to the DLQ.
+        factory.setAdviceChain(new TenantMessageInterceptor());
         return factory;
     }
 

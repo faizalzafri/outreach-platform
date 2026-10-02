@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Read-only analytics aggregation, dashboard data, and report generation service.
@@ -16,8 +16,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * standalone {@code @Configuration} classes are correctly excluded from it.
  */
 @SpringBootApplication(scanBasePackages = "com.outreach.platform")
-@EnableFeignClients
 @EnableCaching
+@EnableScheduling
 @ConfigurationPropertiesScan
 public class ReportServiceApplication {
 

@@ -1,11 +1,13 @@
 package com.outreach.platform.report.service;
 
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.report.ReportServiceApplication;
 import com.outreach.platform.report.model.CityScoreDto;
 import com.outreach.platform.report.model.DashboardSummaryDto;
 import com.outreach.platform.report.model.EventScoreDto;
 import com.outreach.platform.report.model.NpsResultDto;
 import com.outreach.platform.report.model.ReportQueryParams;
+import com.outreach.platform.report.model.ScoreCountDto;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +48,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Testcontainers
 class ReportServiceIT {
+
+    private static final UUID TENANT_A = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001");
+    private static final UUID TENANT_B = UUID.fromString("bbbbbbbb-0000-0000-0000-000000000002");
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
@@ -150,14 +156,16 @@ class ReportServiceIT {
                     event_name VARCHAR(255) NOT NULL,
                     city VARCHAR(100),
                     status VARCHAR(50) DEFAULT 'PLANNED',
-                    event_date DATE
+                    event_date DATE,
+                    tenant_id UUID
                 )
                 """);
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS volunteers (
                     id BIGSERIAL PRIMARY KEY,
                     name VARCHAR(255),
-                    total_events_participated INT DEFAULT 0
+                    total_events_participated INT DEFAULT 0,
+                    tenant_id UUID
                 )
                 """);
         jdbcTemplate.execute("""
@@ -167,14 +175,17 @@ class ReportServiceIT {
                     volunteer_id BIGINT NOT NULL REFERENCES volunteers(id),
                     score INT NOT NULL,
                     sentiment VARCHAR(20),
-                    submitted_at TIMESTAMP DEFAULT NOW()
+                    status VARCHAR(20) DEFAULT 'SUBMITTED',
+                    submitted_at TIMESTAMP DEFAULT NOW(),
+                    tenant_id UUID
                 )
                 """);
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS beneficiaries (
                     id BIGSERIAL PRIMARY KEY,
                     name VARCHAR(255),
-                    active BOOLEAN DEFAULT true
+                    active BOOLEAN DEFAULT true,
+                    tenant_id UUID
                 )
                 """);
     }
@@ -271,5 +282,59 @@ class ReportServiceIT {
         assertThat(treePlantation.totalResponses()).isEqualTo(2);
         // NPS = (0 - 2) * 100 / 2 = -100.0
         assertThat(treePlantation.npsScore()).isEqualTo(new BigDecimal("-100.0"));
+    }
+
+    @Test
+    void getScoreDistribution_countsEachScore_withoutArchivedFeedback() {
+        jdbcTemplate.update("UPDATE volunteer_feedback SET status = 'ARCHIVED' WHERE id = 5"); // the score of 1
+
+        List<ScoreCountDto> distribution = reportService.getScoreDistribution(
+                new ReportQueryParams(null, null, null, null, null, null, null));
+
+        assertThat(distribution).containsExactly(
+                new ScoreCountDto(1, 0), new ScoreCountDto(2, 1), new ScoreCountDto(3, 1),
+                new ScoreCountDto(4, 1), new ScoreCountDto(5, 1));
+    }
+
+    @Test
+    void reports_areScopedToTheCurrentTenant() {
+        tagSeedDataWithTenant(TENANT_A);
+        jdbcTemplate.update("INSERT INTO events (id, event_name, city, status, event_date, tenant_id) "
+                + "VALUES (4, 'Other Tenant Drive', 'Chennai', 'COMPLETED', '2024-06-01', ?)", TENANT_B);
+        jdbcTemplate.update("INSERT INTO volunteers (id, name, total_events_participated, tenant_id) "
+                + "VALUES (4, 'Dana', 1, ?)", TENANT_B);
+        jdbcTemplate.update("INSERT INTO volunteer_feedback (id, event_id, volunteer_id, score, sentiment, submitted_at, tenant_id) "
+                + "VALUES (6, 4, 4, 5, 'POSITIVE', '2024-06-02 10:00:00', ?)", TENANT_B);
+        ReportQueryParams params = new ReportQueryParams(null, null, null, null, null, null, null);
+
+        try {
+            TenantContext.setCurrentTenantId(TENANT_A);
+            assertThat(reportService.aggregateByEvent(params))
+                    .extracting(EventScoreDto::eventName)
+                    .containsExactly("City Cleanup", "Tree Plantation");
+            DashboardSummaryDto a = reportService.getDashboardSummary(params);
+            assertThat(a.totalEvents()).isEqualTo(3);
+            assertThat(a.totalVolunteers()).isEqualTo(3);
+            assertThat(a.totalFeedbackSubmissions()).isEqualTo(5);
+
+            // Same params, different tenant: must hit the database again, not tenant A's cache entry.
+            TenantContext.setCurrentTenantId(TENANT_B);
+            assertThat(reportService.aggregateByEvent(params))
+                    .extracting(EventScoreDto::eventName)
+                    .containsExactly("Other Tenant Drive");
+            DashboardSummaryDto b = reportService.getDashboardSummary(params);
+            assertThat(b.totalEvents()).isEqualTo(1);
+            assertThat(b.totalVolunteers()).isEqualTo(1);
+            assertThat(b.totalFeedbackSubmissions()).isEqualTo(1);
+            assertThat(b.overallAverageScore()).isEqualTo(new BigDecimal("5.00"));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private void tagSeedDataWithTenant(UUID tenantId) {
+        for (String table : List.of("events", "volunteers", "volunteer_feedback", "beneficiaries")) {
+            jdbcTemplate.update("UPDATE " + table + " SET tenant_id = ?", tenantId);
+        }
     }
 }

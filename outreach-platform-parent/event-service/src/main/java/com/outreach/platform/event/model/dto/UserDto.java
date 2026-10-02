@@ -14,6 +14,9 @@ public record UserDto(
         UUID id,
         @Schema(description = "Username", example = "john.doe")
         String username,
+
+        @Schema(description = "Display name", example = "John Doe")
+        String displayName,
         @Schema(description = "Email address", example = "john.doe@company.com")
         String email,
         @Schema(description = "Assigned role", example = "ROLE_PMO")

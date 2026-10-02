@@ -24,7 +24,7 @@
         <!--
             Pulls in common-lib's ArchitectureRulesTest so it runs against this service's own
             compiled classes, not just common-lib's. See ADR 0001
-            (docs/adr/0001-archunit-enforcement-scope.md).
+            (CLAUDE.md).
         -->
         <dependency>
             <groupId>com.outreach.platform</groupId>
@@ -171,7 +171,7 @@
                 it does NOT scan test classes arriving via a test-jar dependency (common-lib's
                 ArchitectureRulesTest) even though they're on the test classpath and compile fine.
                 dependenciesToScan explicitly tells Surefire to also treat that dependency as a
-                source of test classes. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md).
+                source of test classes. See CLAUDE.md.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

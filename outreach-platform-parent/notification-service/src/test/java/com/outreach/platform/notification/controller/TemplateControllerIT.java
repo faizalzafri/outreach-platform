@@ -2,7 +2,6 @@ package com.outreach.platform.notification.controller;
 
 import com.outreach.platform.common.tenant.TenantConstants;
 import com.outreach.platform.notification.model.NotificationType;
-import com.outreach.platform.notification.model.TemplateEngine;
 import com.outreach.platform.notification.model.dto.TemplateCreateRequest;
 import com.outreach.platform.notification.model.dto.TemplateDto;
 import com.outreach.platform.notification.model.dto.TemplatePreviewRequest;
@@ -97,7 +96,6 @@ class TemplateControllerIT {
                 NotificationType.EMAIL,
                 "Welcome [[${name}]]!",
                 "<p>Hello [[${name}]], welcome to the platform!</p>",
-                TemplateEngine.THYMELEAF,
                 null
         );
 
@@ -109,7 +107,6 @@ class TemplateControllerIT {
         assertThat(response.getBody().id()).isNotNull();
         assertThat(response.getBody().name()).isEqualTo("welcome-email");
         assertThat(response.getBody().type()).isEqualTo(NotificationType.EMAIL);
-        assertThat(response.getBody().engine()).isEqualTo(TemplateEngine.THYMELEAF);
         assertThat(response.getBody().active()).isTrue();
     }
 
@@ -121,7 +118,6 @@ class TemplateControllerIT {
                 NotificationType.EMAIL,
                 "Subject",
                 "<p>Body</p>",
-                TemplateEngine.THYMELEAF,
                 null
         );
         restTemplate.postForEntity("/notifications/templates", request, TemplateDto.class);
@@ -147,7 +143,6 @@ class TemplateControllerIT {
                 NotificationType.EMAIL,
                 "Old Subject",
                 "<p>Old Body</p>",
-                TemplateEngine.THYMELEAF,
                 null
         );
         ResponseEntity<TemplateDto> createResponse = restTemplate.postForEntity(
@@ -160,7 +155,6 @@ class TemplateControllerIT {
                 null,
                 "New Subject [[${name}]]",
                 "<p>New Body for [[${name}]]</p>",
-                null,
                 null,
                 null
         );
@@ -188,7 +182,6 @@ class TemplateControllerIT {
                 NotificationType.EMAIL,
                 "Subject",
                 "<p>Body</p>",
-                TemplateEngine.THYMELEAF,
                 null
         );
         ResponseEntity<TemplateDto> createResponse = restTemplate.postForEntity(
@@ -208,7 +201,7 @@ class TemplateControllerIT {
 
         // Verify deleted — attempt to update should return 404
         TemplateUpdateRequest updateRequest = new TemplateUpdateRequest(
-                "ghost-template", null, null, null, null, null, null
+                "ghost-template", null, null, null, null, null
         );
         ResponseEntity<String> updateResponse = restTemplate.exchange(
                 "/notifications/templates/{id}",
@@ -228,7 +221,6 @@ class TemplateControllerIT {
                 NotificationType.EMAIL,
                 "Hello [[${name}]]!",
                 "<h1>Welcome, [[${name}]]!</h1><p>Your event: [[${eventName}]]</p>",
-                TemplateEngine.THYMELEAF,
                 null
         );
         ResponseEntity<TemplateDto> createResponse = restTemplate.postForEntity(

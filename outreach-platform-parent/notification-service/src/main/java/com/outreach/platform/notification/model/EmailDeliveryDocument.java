@@ -6,23 +6,27 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * MongoDB document tracking individual email delivery attempts and status.
  */
 @Document("email_deliveries")
-@CompoundIndex(name = "idx_event_status", def = "{'eventId': 1, 'status': 1}")
+@CompoundIndex(name = "idx_email_deliveries_eventId_status", def = "{'eventId': 1, 'status': 1}")
+@CompoundIndex(name = "idx_email_deliveries_status_lastAttemptAt", def = "{'status': 1, 'lastAttemptAt': 1}")
 public class EmailDeliveryDocument {
 
     @Id
     private String id;
 
     @Indexed
+    private UUID tenantId;
+
     private String eventId;
 
     private String templateId;
 
-    @Indexed
+    @Indexed(name = "idx_email_deliveries_recipientEmail")
     private String recipientEmail;
 
     private String recipientName;
@@ -41,11 +45,26 @@ public class EmailDeliveryDocument {
 
     private String errorMessage;
 
+    @Indexed(name = "idx_email_deliveries_ttl_90d", expireAfter = "90d")
     private Instant createdAt;
 
     private Instant sentAt;
 
+    /**
+     * The body held a secret (activation or reset link, one-time code) and was not stored. Such
+     * deliveries are never re-sent from here; the user asks for a new link or code instead.
+     */
+    private boolean redacted;
+
     public EmailDeliveryDocument() {
+    }
+
+    public boolean isRedacted() {
+        return redacted;
+    }
+
+    public void setRedacted(boolean redacted) {
+        this.redacted = redacted;
     }
 
     public String getId() {
@@ -54,6 +73,14 @@ public class EmailDeliveryDocument {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
     }
 
     public String getEventId() {

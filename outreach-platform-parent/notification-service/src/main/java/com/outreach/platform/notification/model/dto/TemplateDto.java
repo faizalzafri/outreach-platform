@@ -1,7 +1,6 @@
 package com.outreach.platform.notification.model.dto;
 
 import com.outreach.platform.notification.model.NotificationType;
-import com.outreach.platform.notification.model.TemplateEngine;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -22,8 +21,6 @@ public record TemplateDto(
         String subjectTemplate,
         @Schema(description = "Body template content")
         String bodyTemplate,
-        @Schema(description = "Template engine used", example = "THYMELEAF")
-        TemplateEngine engine,
         @Schema(description = "JSON schema defining available template variables")
         String variablesSchema,
         @Schema(description = "Whether the template is active", example = "true")

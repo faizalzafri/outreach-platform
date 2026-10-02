@@ -35,15 +35,19 @@ export const reportHandlers = [
         { status: 'COMPLETED', count: 15 },
         { status: 'ARCHIVED', count: 2 },
       ],
-      feedbackScoreDistribution: [
-        { score: 1, count: 3 },
-        { score: 2, count: 8 },
-        { score: 3, count: 22 },
-        { score: 4, count: 45 },
-        { score: 5, count: 32 },
-      ],
     })
   }),
+
+  // GET /api/reports/score-distribution - responses per score 1-5
+  http.get('/api/reports/score-distribution', () =>
+    HttpResponse.json([
+      { score: 1, count: 3 },
+      { score: 2, count: 8 },
+      { score: 3, count: 22 },
+      { score: 4, count: 45 },
+      { score: 5, count: 32 },
+    ]),
+  ),
 
   // POST /api/reports/export - start export job
   http.post('/api/reports/export', async ({ request }) => {

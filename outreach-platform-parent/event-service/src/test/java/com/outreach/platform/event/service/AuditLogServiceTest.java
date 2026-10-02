@@ -15,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,6 +59,24 @@ class AuditLogServiceTest {
         assertThat(saved.getDetails()).isEqualTo(details);
         assertThat(saved.getTimestamp()).isNotNull();
         assertThat(saved.getId()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("log() without a user attributes the entry to the caller, or 'system' when there is none")
+    void logWithoutUser_attributesToCaller() {
+        try {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new TestingAuthenticationToken("priya_sharma", null, "ROLE_PMO"));
+            auditLogService.log("CREATE_EVENT", "Event", "evt-1", null);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+        auditLogService.log("UPDATE_STATUS", "Event", "evt-1", null);
+
+        ArgumentCaptor<AuditLogDocument> captor = ArgumentCaptor.forClass(AuditLogDocument.class);
+        verify(mongoTemplate, times(2)).save(captor.capture(), eq("audit_logs"));
+        assertThat(captor.getAllValues()).extracting(AuditLogDocument::getUserId)
+                .containsExactly("priya_sharma", "system");
     }
 
     @Test

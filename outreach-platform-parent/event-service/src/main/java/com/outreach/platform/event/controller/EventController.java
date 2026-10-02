@@ -7,7 +7,9 @@ import com.outreach.platform.event.model.dto.EventSearchCriteria;
 import com.outreach.platform.event.model.dto.EventUpdateRequest;
 import com.outreach.platform.event.model.dto.LifecycleStatsDto;
 import com.outreach.platform.event.model.dto.StatusTransitionRequest;
+import com.outreach.platform.event.model.dto.FeedbackEligibilityDto;
 import com.outreach.platform.event.service.EventService;
+import com.outreach.platform.event.service.EventVisibility;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +34,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -44,10 +48,12 @@ import java.util.UUID;
 public class EventController {
 
     private final EventService eventService;
+    private final EventVisibility visibility;
 
     @Inject
-    public EventController(EventService eventService) {
+    public EventController(EventService eventService, EventVisibility visibility) {
         this.eventService = eventService;
+        this.visibility = visibility;
     }
 
     @Operation(summary = "Create a new event", description = "Creates a new outreach event in DRAFT status")
@@ -66,9 +72,11 @@ public class EventController {
             @Parameter(description = "Filter by category") @RequestParam(required = false) String category,
             @Parameter(description = "Start of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @Parameter(description = "End of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @Parameter(description = "Text matched against name, city and event code") @RequestParam(required = false) String query,
+            @Parameter(description = "Only events this POC works on") @RequestParam(required = false) UUID pocId,
             Pageable pageable) {
 
-        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, null);
+        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, query, pocId);
         Page<EventDto> page = eventService.listEvents(criteria, pageable);
         return ResponseEntity.ok(page);
     }
@@ -76,6 +84,7 @@ public class EventController {
     @Operation(summary = "Get event details", description = "Retrieves full details of an event by its ID")
     @GetMapping("/{eventId}")
     public ResponseEntity<EventDto> getEvent(@Parameter(description = "Event UUID") @PathVariable UUID eventId) {
+        visibility.requireVisible(eventId);
         EventDto event = eventService.getEvent(eventId);
         return ResponseEntity.ok(event);
     }
@@ -106,15 +115,6 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Search events", description = "Full-text search across event name, city, and event code")
-    @GetMapping("/search")
-    public ResponseEntity<Page<EventDto>> searchEvents(
-            @Parameter(description = "Search query") @RequestParam String query,
-            Pageable pageable) {
-        Page<EventDto> page = eventService.searchEvents(query, pageable);
-        return ResponseEntity.ok(page);
-    }
-
     @Operation(summary = "Calendar view", description = "Events within a date range for calendar display")
     @GetMapping("/calendar")
     public ResponseEntity<Page<EventDto>> calendarView(
@@ -123,6 +123,22 @@ public class EventController {
             Pageable pageable) {
         Page<EventDto> page = eventService.getCalendarView(from, to, pageable);
         return ResponseEntity.ok(page);
+    }
+
+    // The next two are called by feedback-service with its client-credentials token, which
+    // carries no roles, so they are not role-gated (see VolunteerController#importVolunteer).
+
+    @Operation(summary = "Event names", description = "Event names by id, for services that store only the id")
+    @PostMapping("/names")
+    public Map<UUID, String> names(@RequestBody List<UUID> eventIds) {
+        return eventService.names(eventIds);
+    }
+
+    @Operation(summary = "Feedback eligibility", description = "The event's status and whether the given user is one of its POCs")
+    @GetMapping("/{eventId}/feedback-eligibility")
+    public FeedbackEligibilityDto feedbackEligibility(@PathVariable UUID eventId,
+                                                      @RequestParam(required = false) UUID userId) {
+        return eventService.feedbackEligibility(eventId, userId);
     }
 
     @Operation(summary = "Lifecycle statistics", description = "Event counts grouped by lifecycle status")

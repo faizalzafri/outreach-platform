@@ -17,8 +17,7 @@ export const auditLogHandlers = [
           action: 'EVENT_CREATED',
           resourceType: 'EVENT',
           resourceId: 'evt-001',
-          ipAddress: '192.168.1.100',
-          payload: {
+          details: {
             eventName: 'Annual Volunteer Drive',
             eventCode: 'EVT2024001',
           },
@@ -31,8 +30,7 @@ export const auditLogHandlers = [
           action: 'USER_ROLE_CHANGED',
           resourceType: 'USER',
           resourceId: 'user-002',
-          ipAddress: '10.0.0.50',
-          payload: {
+          details: {
             previousRole: 'ROLE_POC',
             newRole: 'ROLE_PMO',
           },
@@ -45,8 +43,7 @@ export const auditLogHandlers = [
           action: 'VOLUNTEER_ENROLLED',
           resourceType: 'VOLUNTEER',
           resourceId: 'EMP005',
-          ipAddress: '172.16.0.25',
-          payload: {
+          details: {
             eventId: 'evt-001',
             employeeId: 'EMP005',
           },

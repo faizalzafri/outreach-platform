@@ -34,6 +34,10 @@ public class CsvParser {
             if (headerLine == null || headerLine.isBlank()) {
                 return List.of();
             }
+            // Excel's "CSV UTF-8" starts with a byte-order mark, which would otherwise end up in the first header.
+            if (headerLine.startsWith("﻿")) {
+                headerLine = headerLine.substring(1);
+            }
 
             List<String> headers = parseLine(headerLine).stream()
                     .map(h -> h.trim().toLowerCase())

@@ -75,6 +75,9 @@ export interface FeedbackSubmission {
   status: FeedbackStatus;
   anonymous: boolean;
   submittedAt: string;
+  /** Filled in by feedback-service from event-service on lists; null for anonymous feedback. */
+  eventName?: string | null;
+  volunteerName?: string | null;
 }
 
 export type AttendanceStatus = 'REGISTERED' | 'ATTENDED' | 'NOT_ATTENDED' | 'UNREGISTERED';
@@ -91,6 +94,33 @@ export interface EventEnrollment {
   emailStatus: EmailStatus;
   registeredAt: string;
   attendanceMarkedAt?: string;
+}
+
+/** An organisation an event serves. */
+export interface Beneficiary {
+  id: string;
+  name: string;
+  organization: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  city: string | null;
+  address: string | null;
+  description: string | null;
+  active: boolean;
+}
+
+export type AssignmentRole = 'PRIMARY' | 'SECONDARY';
+
+/** A user assigned to an event as one of its points of contact. */
+export interface PocAssignment {
+  id: string;
+  eventId: string;
+  eventName: string;
+  userId: string;
+  username: string;
+  assignmentRole: AssignmentRole;
+  assignedAt: string;
+  assignedBy: string | null;
 }
 
 export type ImportJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -121,49 +151,106 @@ export interface NotificationTemplate {
   type: NotificationType;
   subjectTemplate: string | null;
   bodyTemplate: string;
-  engine: string;
   active: boolean;
   version: number;
   variablesSchema: string | null;
 }
 
-export type DeliveryStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED';
+export type DeliveryStatus =
+  | 'PENDING' | 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED' | 'PERMANENTLY_FAILED' | 'BOUNCED';
 
+/** One email as tracked by notification-service (GET /notifications/history). */
 export interface DeliveryRecord {
   id: string;
-  recipient: string;
-  eventName: string;
+  eventId: string;
+  recipientEmail: string;
+  subject: string;
   status: DeliveryStatus;
-  timestamp: string;
+  createdAt: string;
+  sentAt: string | null;
+  lastAttemptAt: string | null;
 }
 
 export interface AuditEntry {
   id: string;
   timestamp: string;
-  user: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;
-  ipAddress: string;
-  payload: Record<string, unknown>;
+  details: Record<string, unknown>;
 }
 
 export type UserRole = 'ROLE_ADMIN' | 'ROLE_PMO' | 'ROLE_POC';
 export type UserStatus = 'ENABLED' | 'DISABLED' | 'LOCKED';
 
+/** A user in event-service's directory (read-only; used for pickers such as POC assignment). */
 export interface User {
   id: string;
   username: string;
+  displayName: string | null;
   email: string;
   role: UserRole;
   enabled: boolean;
 }
 
+/** Tenant role as auth-service names it (no ROLE_ prefix). */
+export type AccountRole = 'ADMIN' | 'PMO' | 'POC';
+export type AccountStatus = 'INVITED' | 'ACTIVE' | 'DISABLED';
+
+/** A sign-in account as returned by auth-service's user administration API (/api/auth/users). */
+export interface Account {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  phone: string | null;
+  role: AccountRole;
+  status: AccountStatus;
+  locked: boolean;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+}
+
+export type OtpPurpose = 'LOGIN' | 'PASSWORD_RESET' | 'PASSWORD_CHANGE';
+
+export interface OtpSettings {
+  enabled: boolean;
+  length: number;
+  ttlSeconds: number;
+  maxAttempts: number;
+  resendCooldownSeconds: number;
+}
+
+/** An organization's sign-in security (/api/auth/security-policy). */
+export interface SecurityPolicy {
+  passwordMinLength: number;
+  passwordHistoryCount: number;
+  /** Read-only: the platform floor the organization cannot go below. */
+  platformMinLength?: number;
+  platformHistoryCount?: number;
+  otp: Record<OtpPurpose, OtpSettings>;
+}
+
+/** The signed-in user's own account (/api/auth/me). */
+export interface Profile {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  phone: string | null;
+  platformAdmin: boolean;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  passwordMinLength: number;
+}
+
+/** Dashboard tiles, combined from GET /reports/dashboard and GET /reports/dashboard/kpis. */
 export interface DashboardKPIs {
   totalEvents: number;
-  activeEvents: number;
+  completedEvents: number;
   totalVolunteers: number;
   averageFeedbackScore: number;
-  pendingFeedback: number;
-  notificationDeliveryRate: number;
+  totalFeedbackSubmissions: number;
+  feedbackCompletionRate: number;
 }

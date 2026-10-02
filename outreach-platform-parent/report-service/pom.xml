@@ -23,7 +23,7 @@
         <!--
             Pulls in common-lib's ArchitectureRulesTest so it runs against this service's own
             compiled classes, not just common-lib's. See ADR 0001
-            (docs/adr/0001-archunit-enforcement-scope.md).
+            (CLAUDE.md).
         -->
         <dependency>
             <groupId>com.outreach.platform</groupId>
@@ -57,6 +57,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- Report export: Excel and PDF -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -109,7 +119,7 @@
             Test-scope only: report-service never runs Liquibase in production (it's read-only
             by design, schema owned by event-service), but its schema-drift/tenant-isolation
             tests need Liquibase to build a real schema against Testcontainers Postgres — see
-            db.changelog-test.xml and docs/specs/platform-hardening/ Task 1.5.
+            db.changelog-test.xml and CLAUDE.md.
         -->
         <dependency>
             <groupId>org.liquibase</groupId>
@@ -154,7 +164,7 @@
                 it does NOT scan test classes arriving via a test-jar dependency (common-lib's
                 ArchitectureRulesTest) even though they're on the test classpath and compile fine.
                 dependenciesToScan explicitly tells Surefire to also treat that dependency as a
-                source of test classes. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md).
+                source of test classes. See CLAUDE.md.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -5,7 +5,6 @@ import com.outreach.platform.notification.entity.NotificationScheduleEntity;
 import com.outreach.platform.notification.entity.NotificationTemplateEntity;
 import com.outreach.platform.notification.model.NotificationType;
 import com.outreach.platform.notification.model.ScheduleStatus;
-import com.outreach.platform.notification.model.TemplateEngine;
 import com.outreach.platform.notification.model.TriggerType;
 import com.outreach.platform.notification.repo.NotificationScheduleRepository;
 import com.outreach.platform.notification.repo.NotificationTemplateRepository;
@@ -30,10 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Cross-tenant leakage regression tests for {@link NotificationScheduleEntity}/
- * {@link NotificationTemplateEntity} (docs/specs/platform-hardening/ Task 0.5.6/1.4), run against
+ * {@link NotificationTemplateEntity} (CLAUDE.md), run against
  * a real Testcontainers Postgres with Liquibase enabled and {@code ddl-auto=validate} — unlike
  * this service's default {@code application-test.yml} (H2, {@code create-drop}), this profile
- * doubles as Task 1.5's schema-drift validation: if either entity's mapping didn't match what
+ * doubles as's schema-drift validation: if either entity's mapping didn't match what
  * Liquibase actually produces, the Spring context would fail to start here, not just silently
  * pass against H2's auto-generated schema.
  *
@@ -164,7 +163,6 @@ class TenantScopedRepositoriesIsolationIT {
         template.setName(name + "-" + UUID.randomUUID());
         template.setType(NotificationType.EMAIL);
         template.setBodyTemplate("Hello {{name}}");
-        template.setEngine(TemplateEngine.THYMELEAF);
         template.setActive(true);
         return template;
     }

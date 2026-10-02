@@ -138,13 +138,10 @@ spring.cloud.openfeign:
 
 # Ingestion service custom properties
 ingestion-service:
-  input-directory: ${INGESTION_INPUT_DIR:}
-  max-file-size-mb: 25
   allowed-extensions:
     - .xlsx
     - .xls
     - .csv
-  max-concurrent-jobs: 5
 
 # SpringDoc OpenAPI
 springdoc:

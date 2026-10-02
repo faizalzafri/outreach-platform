@@ -20,6 +20,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Eureka client endpoints must be accessible without credentials
                 .requestMatchers("/eureka/**").permitAll()
+                // Eureka answers an unknown instance's heartbeat with 404 via sendError, which is forwarded
+                // to /error; a 401 there hides the 404 the client needs to re-register after a restart
+                .requestMatchers("/error").permitAll()
                 // Actuator health endpoint for load balancers and probes
                 .requestMatchers("/actuator/health").permitAll()
                 // Everything else (dashboard, actuator details) requires authentication

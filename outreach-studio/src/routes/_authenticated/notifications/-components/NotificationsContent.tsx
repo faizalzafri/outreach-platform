@@ -19,6 +19,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { NotificationTemplate, DeliveryRecord, NotificationType } from '@/types/domain';
 
 import styles from './NotificationsContent.module.css';
+import { sampleVariables } from '@/lib/template-preview';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,7 +32,6 @@ interface TemplateFormData {
   type: NotificationType;
   subject: string;
   body: string;
-  engine: string;
   variables: Array<{ name: string; dataType: string }>;
 }
 
@@ -79,7 +79,6 @@ function TemplateEditor({
     type: template?.type ?? 'EMAIL',
     subject: template?.subjectTemplate ?? '',
     body: template?.bodyTemplate ?? '',
-    engine: template?.engine ?? 'THYMELEAF',
     variables: parseVariablesSchema(template?.variablesSchema ?? null),
   });
   const [errors, setErrors] = useState<Partial<Record<keyof TemplateFormData, string>>>({});
@@ -103,7 +102,6 @@ function TemplateEditor({
         type: form.type,
         subjectTemplate: form.subject.trim(),
         bodyTemplate: form.body,
-        engine: form.engine,
         variablesSchema: buildVariablesSchema(form.variables.filter((v) => v.name.trim())),
       };
       if (template) {
@@ -179,19 +177,6 @@ function TemplateEditor({
               <option value="EMAIL">Email</option>
               <option value="SMS">SMS</option>
               <option value="PUSH">Push</option>
-            </select>
-          </div>
-
-          <div className={styles['formGroup']}>
-            <label className={styles['formLabel']} htmlFor="tpl-engine">Engine</label>
-            <select
-              id="tpl-engine"
-              className={styles['formSelect']}
-              value={form.engine}
-              onChange={(e) => setForm((prev) => ({ ...prev, engine: e.target.value }))}
-            >
-              <option value="THYMELEAF">Thymeleaf</option>
-              <option value="FREEMARKER">Freemarker</option>
             </select>
           </div>
 
@@ -291,14 +276,20 @@ function PreviewModal({
     <div className={styles['previewOverlay']} onClick={onClose} role="dialog" aria-modal="true" aria-label="Template preview">
       <div ref={previewRef} className={styles['previewPanel']} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles['previewTitle']}>Template Preview</h2>
+        <p className={styles['previewHint']}>Filled with sample values; real emails use each recipient's details.</p>
         {data.renderedSubject && (
-          <div style={{ marginBottom: '1rem' }}>
+          <div className={styles['previewSubject']}>
             <strong>Subject:</strong> {data.renderedSubject}
           </div>
         )}
-        <div className={styles['previewContent']}>
-          {data.renderedBody ?? ''}
-        </div>
+        {/* The rendered email as the recipient sees it. sandbox="" blocks scripts, forms and
+            same-origin access, so template HTML cannot touch this page. */}
+        <iframe
+          className={styles['previewFrame']}
+          title="Email body preview"
+          sandbox=""
+          srcDoc={data.renderedBody ?? ''}
+        />
         <div className={styles['formActions']}>
           <button type="button" className={styles['btnSecondary']} onClick={onClose}>Close</button>
         </div>
@@ -333,10 +324,10 @@ function TemplatesTab() {
   };
 
   const previewMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (template: NotificationTemplate) => {
       const response = await httpClient.post<PreviewResponse>(
-        `/notifications/templates/${id}/preview`,
-        { templateId: id, variables: {} }
+        `/notifications/templates/${template.id}/preview`,
+        { templateId: template.id, variables: sampleVariables(template) }
       );
       return response.data;
     },
@@ -382,7 +373,6 @@ function TemplatesTab() {
       },
     },
     { accessorKey: 'subjectTemplate', header: 'Subject' },
-    { accessorKey: 'engine', header: 'Engine', enableColumnFilter: false },
     {
       accessorKey: 'active',
       header: 'Status',
@@ -409,7 +399,7 @@ function TemplatesTab() {
             <button
               type="button"
               className={styles['actionBtn']}
-              onClick={() => previewMutation.mutate(template.id)}
+              onClick={() => previewMutation.mutate(template)}
               disabled={previewMutation.isPending}
             >
               Preview
@@ -493,18 +483,20 @@ function DeliveryTab() {
 
   const getDeliveryStatusClass = (status: string): string => {
     switch (status) {
-      case 'PENDING': return styles['statusPending']!;
+      case 'PENDING':
+      case 'QUEUED': return styles['statusPending']!;
       case 'SENT': return styles['statusSent']!;
       case 'DELIVERED': return styles['statusDelivered']!;
-      case 'FAILED': return styles['statusFailed']!;
+      case 'FAILED':
+      case 'PERMANENTLY_FAILED': return styles['statusFailed']!;
       case 'BOUNCED': return styles['statusBounced']!;
       default: return '';
     }
   };
 
   const columns: ColumnDef<DeliveryRecord, unknown>[] = useMemo(() => [
-    { accessorKey: 'recipient', header: 'Recipient' },
-    { accessorKey: 'eventName', header: 'Event' },
+    { accessorKey: 'recipientEmail', header: 'Recipient', enableColumnFilter: false },
+    { accessorKey: 'subject', header: 'Subject', enableColumnFilter: false },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -520,16 +512,18 @@ function DeliveryTab() {
         filterType: 'select' as const,
         filterOptions: [
           { label: 'Pending', value: 'PENDING' },
+          { label: 'Queued', value: 'QUEUED' },
           { label: 'Sent', value: 'SENT' },
           { label: 'Delivered', value: 'DELIVERED' },
           { label: 'Failed', value: 'FAILED' },
+          { label: 'Permanently failed', value: 'PERMANENTLY_FAILED' },
           { label: 'Bounced', value: 'BOUNCED' },
         ],
       },
     },
     {
-      accessorKey: 'timestamp',
-      header: 'Timestamp',
+      accessorKey: 'createdAt',
+      header: 'Created',
       cell: ({ getValue }) => {
         const date = new Date(getValue() as string);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -543,13 +537,14 @@ function DeliveryTab() {
       enableColumnFilter: false,
       cell: ({ row }) => {
         const record = row.original;
-        const canRetry = record.status === 'FAILED' || record.status === 'BOUNCED';
+        // The API retries every failed email of the record's event; bounces are not retried.
+        const canRetry = record.status === 'FAILED' || record.status === 'PERMANENTLY_FAILED';
         if (!canRetry) return null;
         return (
           <button
             type="button"
             className={styles['retryBtn']}
-            onClick={() => retryMutation.mutate(record.id)}
+            onClick={() => retryMutation.mutate(record.eventId)}
             disabled={retryMutation.isPending}
           >
             Retry
@@ -600,13 +595,13 @@ function ScheduleTab() {
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         templateId,
-        targetEvent,
+        eventId: targetEvent,
         triggerType,
       };
       if (triggerType === 'SCHEDULED') {
         payload.cronExpression = cronExpression;
       }
-      await httpClient.post('/notifications/schedules', payload);
+      await httpClient.post('/notifications/schedule', payload);
     },
     onSuccess: () => {
       setSuccess(true);
@@ -664,7 +659,7 @@ function ScheduleTab() {
             className={styles['formInput']}
             value={targetEvent}
             onChange={(e) => setTargetEvent(e.target.value)}
-            placeholder="Event ID or name"
+            placeholder="Event ID"
             required
           />
         </div>

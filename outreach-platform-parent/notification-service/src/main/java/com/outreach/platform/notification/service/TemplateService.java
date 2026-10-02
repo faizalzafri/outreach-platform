@@ -1,5 +1,7 @@
 package com.outreach.platform.notification.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.notification.entity.NotificationTemplateEntity;
 import com.outreach.platform.notification.model.dto.TemplateCreateRequest;
@@ -42,11 +44,6 @@ public class TemplateService {
         return templateRepository.findAll(pageable).map(this::toDto);
     }
 
-    @Transactional(readOnly = true)
-    public TemplateDto getTemplate(UUID id) {
-        return toDto(findEntityOrThrow(id));
-    }
-
     @Transactional
     public TemplateDto createTemplate(TemplateCreateRequest request) {
         NotificationTemplateEntity entity = new NotificationTemplateEntity();
@@ -54,7 +51,6 @@ public class TemplateService {
         entity.setType(request.type());
         entity.setSubjectTemplate(request.subjectTemplate());
         entity.setBodyTemplate(request.bodyTemplate());
-        entity.setEngine(request.engine());
         entity.setVariablesSchema(request.variablesSchema());
         entity.setActive(true);
 
@@ -78,9 +74,6 @@ public class TemplateService {
         if (request.bodyTemplate() != null) {
             entity.setBodyTemplate(request.bodyTemplate());
         }
-        if (request.engine() != null) {
-            entity.setEngine(request.engine());
-        }
         if (request.variablesSchema() != null) {
             entity.setVariablesSchema(request.variablesSchema());
         }
@@ -98,7 +91,7 @@ public class TemplateService {
         // SimpleJpaRepository.deleteById() implementation internally calls findById() and then
         // removes the result — so this was not just a cross-tenant read risk but a cross-tenant
         // delete risk. Route through the same tenant-scoped lookup and an explicit delete(entity)
-        // call instead. See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // call instead. See CLAUDE.md.
         templateRepository.delete(findEntityOrThrow(id));
     }
 
@@ -124,7 +117,7 @@ public class TemplateService {
 
     private NotificationTemplateEntity findEntityOrThrow(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         Optional<NotificationTemplateEntity> entity = TenantContext.isPresent()
                 ? templateRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : templateRepository.findById(id);
@@ -138,7 +131,6 @@ public class TemplateService {
                 entity.getType(),
                 entity.getSubjectTemplate(),
                 entity.getBodyTemplate(),
-                entity.getEngine(),
                 entity.getVariablesSchema(),
                 entity.isActive(),
                 entity.getVersion(),
@@ -151,25 +143,18 @@ public class TemplateService {
     /**
      * Thrown when a template is not found by ID.
      */
-    public static class TemplateNotFoundException extends RuntimeException {
+    public static class TemplateNotFoundException extends ResponseStatusException {
         public TemplateNotFoundException(UUID id) {
-            super("Notification template not found: " + id);
+            super(HttpStatus.NOT_FOUND, "Notification template not found: " + id);
         }
     }
 
     /**
      * Thrown when template variables fail schema validation.
      */
-    public static class TemplateVariableValidationException extends RuntimeException {
-        private final List<String> errors;
-
+    public static class TemplateVariableValidationException extends ResponseStatusException {
         public TemplateVariableValidationException(List<String> errors) {
-            super("Template variable validation failed: " + String.join("; ", errors));
-            this.errors = errors;
-        }
-
-        public List<String> getErrors() {
-            return errors;
+            super(HttpStatus.UNPROCESSABLE_ENTITY, "Template variable validation failed: " + String.join("; ", errors));
         }
     }
 }

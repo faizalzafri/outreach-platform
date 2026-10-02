@@ -3,7 +3,7 @@ package com.outreach.platform.auth.controller;
 import com.outreach.platform.auth.model.dto.SelectTenantRequest;
 import com.outreach.platform.auth.model.dto.TenantMembershipResponse;
 import com.outreach.platform.auth.service.TenantMembershipService;
-import com.outreach.platform.auth.util.UserIdentifiers;
+import com.outreach.platform.auth.repo.UserAccountRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
@@ -36,17 +36,26 @@ import java.util.UUID;
 public class TenantSelectionController {
 
     private final TenantMembershipService tenantMembershipService;
+    private final UserAccountRepository accounts;
 
     @Inject
-    public TenantSelectionController(TenantMembershipService tenantMembershipService) {
+    public TenantSelectionController(TenantMembershipService tenantMembershipService,
+                                     UserAccountRepository accounts) {
         this.tenantMembershipService = tenantMembershipService;
+        this.accounts = accounts;
+    }
+
+    private UUID accountId(Jwt jwt) {
+        return accounts.findByUsername(jwt.getSubject())
+                .orElseThrow(() -> new TenantMembershipService.MembershipNotFoundException(null, null))
+                .getId();
     }
 
     @Operation(summary = "List active tenant memberships",
             description = "Returns the authenticated user's ACTIVE tenant memberships, for the tenant-selection page")
     @GetMapping("/tenant-memberships")
     public ResponseEntity<List<TenantMembershipResponse>> listTenantMemberships(@AuthenticationPrincipal Jwt jwt) {
-        UUID userId = UserIdentifiers.fromUsername(jwt.getSubject());
+        UUID userId = accountId(jwt);
         List<TenantMembershipResponse> memberships = tenantMembershipService.listActiveMembershipsForUser(userId)
                 .stream()
                 .map(summary -> new TenantMembershipResponse(
@@ -60,7 +69,7 @@ public class TenantSelectionController {
     @PostMapping("/select-tenant")
     public ResponseEntity<Void> selectTenant(@AuthenticationPrincipal Jwt jwt,
                                              @Valid @RequestBody SelectTenantRequest request) {
-        UUID userId = UserIdentifiers.fromUsername(jwt.getSubject());
+        UUID userId = accountId(jwt);
         tenantMembershipService.selectTenant(userId, request.tenantId());
         return ResponseEntity.ok().build();
     }

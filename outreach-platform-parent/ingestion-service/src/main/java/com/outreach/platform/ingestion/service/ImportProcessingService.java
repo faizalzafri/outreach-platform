@@ -62,6 +62,7 @@ public class ImportProcessingService {
             Map<UUID, List<Map<String, String>>> volunteersByEvent = new LinkedHashMap<>();
             int processed = 0;
             int rowsHandled = 0;
+            boolean cancelled = false;
 
             for (ParsedRow row : parseResult.validRows()) {
                 try {
@@ -87,16 +88,21 @@ public class ImportProcessingService {
                     errors.add(new ValidationError(row.rowNumber(), "eventCode", e.getMessage(), field(row, "eventcode")));
                 }
                 rowsHandled++;
-                jobTrackingService.updateProgress(jobId, rowsHandled, parseResult.totalRows());
+                if (jobTrackingService.updateProgress(jobId, rowsHandled, parseResult.totalRows())) {
+                    cancelled = true;
+                    log.info("Import job {} cancelled after {} row(s)", jobId, rowsHandled);
+                    break;
+                }
             }
 
             jobTrackingService.completeJob(jobId, processed, errors.size(), errors);
 
+            // Rows already imported before a cancellation are real, so still announce them.
             for (Map.Entry<UUID, List<Map<String, String>>> entry : volunteersByEvent.entrySet()) {
                 domainEventPublisher.publishVolunteersImported(entry.getKey(), entry.getValue());
             }
-            domainEventPublisher.publishImportJobCompleted(
-                    jobId, fileName, "COMPLETED", parseResult.totalRows(), processed, errors.size());
+            domainEventPublisher.publishImportJobCompleted(jobId, fileName, cancelled ? "CANCELLED" : "COMPLETED",
+                    parseResult.totalRows(), processed, errors.size());
         } catch (Exception e) {
             log.error("Import job {} failed: {}", jobId, e.getMessage(), e);
             jobTrackingService.failJob(jobId, "Import failed: " + e.getMessage());

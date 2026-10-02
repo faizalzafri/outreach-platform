@@ -10,7 +10,6 @@ import type {
   AuditLogParams,
   ListParams,
 } from '@/types/api';
-import type { ActivityFilters } from '@/types/tenant';
 
 /**
  * Structured query key factory for all domains.
@@ -43,6 +42,8 @@ export const queryKeys = {
     dashboard: (params: DashboardParams) => ['reports', 'dashboard', params] as const,
     trends: (params: TrendParams) => ['reports', 'trends', params] as const,
     timeSeries: (params: TimeSeriesParams) => ['reports', 'time-series', params] as const,
+    scoreDistribution: (dateFrom: string, dateTo: string) =>
+      ['reports', 'score-distribution', dateFrom, dateTo] as const,
     export: (jobId: string) => ['reports', 'export', jobId] as const,
   },
   ingestion: {
@@ -59,7 +60,12 @@ export const queryKeys = {
   admin: {
     all: ['admin'] as const,
     users: (params?: UserListParams) => [...queryKeys.admin.all, 'users', params] as const,
+    accounts: (tenantId?: string) => [...queryKeys.admin.all, 'accounts', tenantId ?? 'own'] as const,
     auditLog: (params: AuditLogParams) => [...queryKeys.admin.all, 'audit-log', params] as const,
+  },
+  profile: {
+    all: ['profile'] as const,
+    me: () => [...queryKeys.profile.all, 'me'] as const,
   },
   ai: {
     all: ['ai'] as const,
@@ -84,11 +90,6 @@ export const queryKeys = {
       [...queryKeys.teams.all(tenantId), 'detail', teamId] as const,
     members: (tenantId: string | null, teamId: string, params?: ListParams) =>
       [...queryKeys.teams.all(tenantId), 'detail', teamId, 'members', params] as const,
-  },
-  activities: {
-    all: (tenantId: string | null) => ['activities', tenantId] as const,
-    feed: (tenantId: string | null, filters?: ActivityFilters) =>
-      [...queryKeys.activities.all(tenantId), 'feed', filters] as const,
   },
   resources: {
     permissions: (type: string, resourceId: string) =>

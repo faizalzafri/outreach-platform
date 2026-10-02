@@ -10,8 +10,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { UserProfile } from '@/types/auth';
-import { usePrefetch } from '@/hooks/usePrefetch';
 import styles from './Sidebar.module.css';
+import { formatRole } from '@/lib/format-role';
 
 export interface NavigationItem {
   label: string;
@@ -37,12 +37,6 @@ export interface SidebarProps {
 /**
  * Formats a role string for display (e.g., "ROLE_ADMIN" → "Admin")
  */
-function formatRole(role: string): string {
-  return role
-    .replace(/^ROLE_/, '')
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
 
 export function Sidebar({
   collapsed,
@@ -54,7 +48,6 @@ export function Sidebar({
 }: SidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const isMobile = useIsMobile();
-  const { handleMouseEnter, handleMouseLeave } = usePrefetch();
 
   const firstRole = user.roles[0];
   const primaryRole = firstRole ? formatRole(firstRole) : 'User';
@@ -159,8 +152,6 @@ export function Sidebar({
                     className={`${styles.navItem} ${active ? styles.active : ''}`}
                     aria-current={active ? 'page' : undefined}
                     data-tooltip={collapsed ? item.label : undefined}
-                    onMouseEnter={() => handleMouseEnter(item.href)}
-                    onMouseLeave={handleMouseLeave}
                     onClick={() => {
                       if (isMobile && !collapsed) {
                         onToggle();
@@ -191,9 +182,9 @@ export function Sidebar({
           </div>
 
           <div className={styles.bottomActions}>
+            {/* Your own profile: name, phone and password */}
             <Link
-              to="/admin"
-              search={{ page: 1, size: 10 }}
+              to="/settings"
               className={styles.bottomBtn}
               data-tooltip={collapsed ? 'Settings' : undefined}
               aria-label="Settings"

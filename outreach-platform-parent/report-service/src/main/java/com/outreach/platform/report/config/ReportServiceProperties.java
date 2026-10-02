@@ -11,20 +11,8 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record ReportServiceProperties(
 
-        @Min(1) @Max(100)
-        @DefaultValue("20")
-        int defaultPageSize,
-
-        @Min(1) @Max(500)
-        @DefaultValue("100")
-        int maxPageSize,
-
         @Min(1) @Max(1440)
         @DefaultValue("10")
-        int cacheTtlMinutes,
-
-        @Min(1) @Max(3650)
-        @DefaultValue("365")
-        int snapshotRetentionDays
+        int cacheTtlMinutes
 ) {
 }

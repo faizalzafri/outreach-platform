@@ -24,6 +24,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
+        <!-- AspectJ weaver: without it Spring never applies TenantFilterAspect, and the Hibernate
+             tenant filter is never switched on for lists, searches and counts. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
@@ -164,8 +170,8 @@
                 and actually run these ArchUnit rules against their OWN compiled classes. Without
                 this, @AnalyzeClasses scans whatever is on the classpath of whichever module's
                 test run executes it — which, without this test-jar, is only ever common-lib
-                itself. See ADR 0001 (docs/adr/0001-archunit-enforcement-scope.md) and
-                docs/specs/platform-hardening/requirements.md Finding 2.
+                itself. See CLAUDE.md and
+                CLAUDE.md.
 
                 Scoped narrowly to the architecture package (plus the properties file) rather than
                 packaging ALL of common-lib's test classes — a consuming service's Surefire also

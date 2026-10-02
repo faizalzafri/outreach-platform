@@ -11,10 +11,10 @@ COPY notification-service/pom.xml notification-service/pom.xml
 COPY ingestion-service/pom.xml ingestion-service/pom.xml
 COPY report-service/pom.xml report-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
-RUN mvn dependency:go-offline -B -pl report-service -am
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B -pl report-service -am
 COPY common-lib/src common-lib/src
 COPY report-service/src report-service/src
-RUN mvn package -B -pl report-service -am -DskipTests \
+RUN --mount=type=cache,target=/root/.m2 mvn package -B -pl report-service -am -DskipTests \
     && mv report-service/target/*.jar /app.jar
 
 FROM eclipse-temurin:21-jre-alpine

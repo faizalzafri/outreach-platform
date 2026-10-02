@@ -49,7 +49,7 @@ public class LockoutAwareAuthenticationProvider extends DaoAuthenticationProvide
         try {
             Authentication result = super.authenticate(authentication);
             // Successful authentication — reset lockout counter
-            lockoutService.resetAttempts(username);
+            lockoutService.recordSuccessfulLogin(username);
             return result;
         } catch (AuthenticationException ex) {
             lockoutService.recordFailedAttempt(username);

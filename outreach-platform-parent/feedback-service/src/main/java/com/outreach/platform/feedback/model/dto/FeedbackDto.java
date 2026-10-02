@@ -45,6 +45,10 @@ public record FeedbackDto(
         @Schema(description = "Creation timestamp")
         Instant createdAt,
         @Schema(description = "Last update timestamp")
-        Instant updatedAt
+        Instant updatedAt,
+        @Schema(description = "Event name, for display", example = "Coastal Cleanup Drive")
+        String eventName,
+        @Schema(description = "Volunteer name, for display; empty for anonymous feedback", example = "Rajesh Kumar")
+        String volunteerName
 ) {
 }

@@ -1,6 +1,8 @@
 package com.outreach.platform.event.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -12,14 +14,18 @@ import java.util.UUID;
  * Captures mutations performed in the system for traceability.
  */
 @Document(collection = "audit_logs")
+@CompoundIndex(name = "idx_audit_logs_userId_timestamp", def = "{'userId': 1, 'timestamp': -1}")
+@CompoundIndex(name = "idx_audit_logs_resource", def = "{'resourceType': 1, 'resourceId': 1}")
 public class AuditLogDocument {
 
     @Id
     private String id;
     private String userId;
+    @Indexed(name = "idx_audit_logs_action")
     private String action;
     private String resourceType;
     private String resourceId;
+    @Indexed(name = "idx_audit_logs_ttl_90d", expireAfter = "90d")
     private Instant timestamp;
     private Map<String, Object> details;
 

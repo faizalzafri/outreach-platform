@@ -6,14 +6,12 @@
  * - HEAD /api/health confirmation to validate actual API reachability
  * - System unavailable detection (API unreachable > 10s)
  *
- * On reconnect: dismisses banner within 3s, flushes offline queue,
- * shows confirmation toast.
+ * On reconnect: dismisses the banner within 3s and shows a confirmation toast.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 import { useUIStore } from '@/stores/ui-store';
-import { offlineQueue } from '@/lib/offline-queue';
 
 const HEALTH_CHECK_URL = '/api/health';
 const HEALTH_CHECK_TIMEOUT = 5_000;
@@ -48,7 +46,7 @@ async function checkApiHealth(): Promise<boolean> {
 
 /**
  * Hook that manages offline detection and system unavailability.
- * Integrates with the UIStore for offline state and the offline request queue.
+ * Integrates with the UIStore for offline state.
  */
 export function useConnectivity(): ConnectivityState {
   const setOffline = useUIStore((s) => s.setOffline);
@@ -70,12 +68,9 @@ export function useConnectivity(): ConnectivityState {
         setIsSystemUnavailable(false);
         unavailableSinceRef.current = null;
 
-        // Flush queued requests
-        void offlineQueue.flush();
-
         addToast({
           severity: 'success',
-          message: 'Connection restored. Pending requests are being processed.',
+          message: 'Connection restored.',
         });
       }, Math.min(RECONNECT_DISMISS_DELAY, 3_000));
     }

@@ -89,6 +89,25 @@ class ImportProcessingServiceTest {
     }
 
     @Test
+    @DisplayName("a cancelled job stops importing remaining rows and reports CANCELLED")
+    void cancelledMidway_stopsAndReportsCancelled() throws IOException {
+        UUID eventId = UUID.randomUUID();
+        ParsedRow row1 = buildRow(1, "EMP001", "EVT-001");
+        ParsedRow row2 = buildRow(2, "EMP002", "EVT-001");
+
+        when(fileParserService.parseAndValidate(any(InputStream.class), eq(".csv")))
+                .thenReturn(new ParseResult(List.of(row1, row2), List.of(), 2, 2, 0));
+        when(eventServiceClient.importVolunteer(any()))
+                .thenReturn(new EventServiceClient.VolunteerImportResponse(UUID.randomUUID(), eventId, false));
+        when(jobTrackingService.updateProgress("job-c", 1, 2)).thenReturn(true);
+
+        importProcessingService.processImport("job-c", "content".getBytes(), "volunteers.csv", ".csv");
+
+        verify(eventServiceClient, times(1)).importVolunteer(any());
+        verify(domainEventPublisher).publishImportJobCompleted("job-c", "volunteers.csv", "CANCELLED", 2, 1, 0);
+    }
+
+    @Test
     @DisplayName("rows spanning different events publish one VolunteersImported per event")
     void rowsAcrossDifferentEvents_publishOnePerEvent() throws IOException {
         UUID eventA = UUID.randomUUID();

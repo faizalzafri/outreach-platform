@@ -16,13 +16,18 @@ import com.outreach.platform.event.repo.EventEnrollmentRepository;
 import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.VolunteerRepository;
 import jakarta.inject.Inject;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Business logic for the volunteer directory: listing/searching, profile detail,
@@ -91,6 +96,7 @@ public class VolunteerService {
      *
      * @throws NoSuchElementException if no event exists with the given eventCode
      */
+    @CacheEvict(value = "eventCache", key = "#result.eventId()")
     @Transactional
     public VolunteerImportResponse importVolunteer(VolunteerImportRequest request) {
         EventEntity event = eventRepository.findByEventCode(request.eventCode())
@@ -121,9 +127,20 @@ public class VolunteerService {
             enrollment.setEmailStatus(EmailStatus.PENDING);
             enrollment.setRegisteredAt(Instant.now());
             enrollmentRepository.save(enrollment);
+            enrollmentRepository.refreshCounts(event);
         }
 
         return new VolunteerImportResponse(volunteer.getId(), event.getId(), alreadyEnrolled);
+    }
+
+    /** Volunteer names by id, for services that store only the id. Unknown ids are left out. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> names(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return volunteerRepository.findByIdIn(ids).stream()
+                .collect(Collectors.toMap(VolunteerEntity::getId, VolunteerEntity::getFullName));
     }
 
     private VolunteerEntity findVolunteerOrThrow(String employeeId) {

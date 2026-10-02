@@ -1,5 +1,6 @@
 package com.outreach.platform.notification.controller;
 
+import com.outreach.platform.notification.model.DeliveryStatus;
 import com.outreach.platform.notification.model.EmailDeliveryDocument;
 import com.outreach.platform.notification.model.dto.DeliveryAnalyticsResponse;
 import com.outreach.platform.notification.model.dto.DeliveryStatusSummary;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -62,11 +64,12 @@ public class DeliveryController {
     }
 
     /**
-     * GET /notifications/history — paginated delivery history across all events.
+     * GET /notifications/history — paginated delivery history across all events, optionally by status.
      */
     @GetMapping("/history")
-    public Page<EmailDeliveryDocument> getDeliveryHistory(Pageable pageable) {
-        return deliveryTrackingService.getDeliveryHistory(pageable);
+    public Page<EmailDeliveryDocument> getDeliveryHistory(
+            @RequestParam(required = false) DeliveryStatus status, Pageable pageable) {
+        return deliveryTrackingService.getDeliveryHistory(status, pageable);
     }
 
     /**

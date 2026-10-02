@@ -6,10 +6,13 @@ export function buildDeliveryRecord(overrides: Partial<DeliveryRecord> = {}): De
   counter += 1;
   return {
     id: `dlv-${counter}`,
-    recipient: `volunteer${counter}@example.com`,
-    eventName: `Event ${counter}`,
+    eventId: `evt-${counter}`,
+    recipientEmail: `volunteer${counter}@example.com`,
+    subject: `Event ${counter}`,
     status: 'DELIVERED',
-    timestamp: '2025-03-01T12:00:00Z',
+    createdAt: '2025-03-01T12:00:00Z',
+    sentAt: '2025-03-01T12:00:05Z',
+    lastAttemptAt: '2025-03-01T12:00:05Z',
     ...overrides,
   };
 }

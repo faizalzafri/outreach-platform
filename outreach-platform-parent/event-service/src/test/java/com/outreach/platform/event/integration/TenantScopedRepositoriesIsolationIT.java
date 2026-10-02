@@ -2,24 +2,17 @@ package com.outreach.platform.event.integration;
 
 import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.BeneficiaryEntity;
-import com.outreach.platform.event.entity.ResourcePermission;
 import com.outreach.platform.event.entity.Team;
-import com.outreach.platform.event.entity.TenantEntity;
 import com.outreach.platform.event.entity.UserEntity;
-import com.outreach.platform.event.model.PermissionLevel;
-import com.outreach.platform.event.model.ResourceType;
-import com.outreach.platform.event.model.TenantStatus;
 import com.outreach.platform.event.model.UserRole;
-import com.outreach.platform.event.model.Visibility;
 import com.outreach.platform.event.repo.BeneficiaryRepository;
-import com.outreach.platform.event.repo.ResourcePermissionRepository;
 import com.outreach.platform.event.repo.TeamRepository;
-import com.outreach.platform.event.repo.TenantRepository;
 import com.outreach.platform.event.repo.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -35,9 +28,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Cross-tenant leakage regression tests for the remaining repositories {@code findByIdAndTenantId}
- * was added to as part of Requirement 0's fix (docs/specs/platform-hardening/requirements.md,
- * Finding 0 / Task 0.5.5) — {@link UserRepository}, {@link BeneficiaryRepository},
- * {@link ResourcePermissionRepository}, {@link TeamRepository}. {@code EventEntity} already has
+ * was added to as part of the findById fix (see CLAUDE.md) — {@link UserRepository}, {@link BeneficiaryRepository},
+ * {@link TeamRepository}. {@code EventEntity} already has
  * its own dedicated test ({@link EventTenantIsolationIT}); this class covers the rest of Task
  * 0.5.6 for event-service so every fixed repository has proof the fix actually blocks a
  * cross-tenant read, not just that the method compiles.
@@ -73,16 +65,13 @@ class TenantScopedRepositoriesIsolationIT {
     }
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private BeneficiaryRepository beneficiaryRepository;
-
-    @Autowired
-    private ResourcePermissionRepository resourcePermissionRepository;
 
     @Autowired
     private TeamRepository teamRepository;
@@ -151,37 +140,6 @@ class TenantScopedRepositoriesIsolationIT {
     }
 
     @Test
-    void resourcePermissionRepository_crossTenantRead_returnsEmpty() {
-        UUID tenantA = seedTenant("Permission Tenant A", "permission-tenant-a");
-        UUID tenantB = seedTenant("Permission Tenant B", "permission-tenant-b");
-
-        TenantContext.setCurrentTenantId(tenantA);
-        ResourcePermission saved = resourcePermissionRepository.save(newResourcePermission());
-
-        TenantContext.setCurrentTenantId(tenantB);
-        Optional<ResourcePermission> readAsTenantB =
-                resourcePermissionRepository.findByIdAndTenantId(saved.getId(), tenantB);
-
-        assertThat(readAsTenantB)
-                .as("tenant B must not be able to read a resource permission granted under tenant A")
-                .isEmpty();
-    }
-
-    @Test
-    void resourcePermissionRepository_sameTenantRead_findsThePermission() {
-        UUID tenantA = seedTenant("Permission Tenant C", "permission-tenant-c");
-
-        TenantContext.setCurrentTenantId(tenantA);
-        ResourcePermission saved = resourcePermissionRepository.save(newResourcePermission());
-
-        Optional<ResourcePermission> readBack =
-                resourcePermissionRepository.findByIdAndTenantId(saved.getId(), tenantA);
-
-        assertThat(readBack).as("a tenant must still be able to read its own data").isPresent();
-        assertThat(readBack.get().getTenantId()).isEqualTo(tenantA);
-    }
-
-    @Test
     void teamRepository_crossTenantRead_returnsEmpty() {
         UUID tenantA = seedTenant("Team Tenant A", "team-tenant-a");
         UUID tenantB = seedTenant("Team Tenant B", "team-tenant-b");
@@ -210,23 +168,19 @@ class TenantScopedRepositoriesIsolationIT {
         assertThat(readBack.get().getTenantId()).isEqualTo(tenantA);
     }
 
+    // Organizations belong to auth-service; event tables only need the row their tenant_id
+    // foreign key points at.
     private UUID seedTenant(String name, String slug) {
-        // See EventTenantIsolationIT's seedTenant Javadoc note: an arbitrary non-empty
-        // TenantContext value satisfies TenantFilterAspect's pointcut for this non-tenant-scoped
-        // TenantEntity save and has no bearing on the row being created.
-        TenantContext.setCurrentTenantId(UUID.randomUUID());
-        TenantEntity tenant = new TenantEntity();
-        tenant.setName(name);
-        tenant.setSlug(slug);
-        tenant.setStatus(TenantStatus.ACTIVE);
-        return tenantRepository.save(tenant).getId();
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO tenants (id, name, slug, status, created_date, created_by, version) "
+                + "VALUES (?, ?, ?, 'ACTIVE', now(), 'test', 0)", id, name, slug);
+        return id;
     }
 
     private UserEntity newUser(String username) {
         UserEntity user = new UserEntity();
         user.setUsername(username + "-" + UUID.randomUUID().toString().substring(0, 8));
         user.setEmail("encrypted-placeholder");
-        user.setPasswordHash("hash-placeholder");
         user.setRole(UserRole.ADMIN);
         user.setEnabled(true);
         return user;
@@ -237,16 +191,6 @@ class TenantScopedRepositoriesIsolationIT {
         beneficiary.setName(name);
         beneficiary.setActive(true);
         return beneficiary;
-    }
-
-    private ResourcePermission newResourcePermission() {
-        ResourcePermission permission = new ResourcePermission();
-        permission.setResourceType(ResourceType.SEQUENCE);
-        permission.setResourceId(UUID.randomUUID());
-        permission.setVisibility(Visibility.PRIVATE);
-        permission.setOwnerUserId(UUID.randomUUID());
-        permission.setPermissionLevel(PermissionLevel.EDIT);
-        return permission;
     }
 
     private Team newTeam(String name) {

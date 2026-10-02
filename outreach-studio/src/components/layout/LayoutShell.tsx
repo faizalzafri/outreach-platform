@@ -100,6 +100,14 @@ function AdminIcon() {
   );
 }
 
+function SecurityIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
 function AiInsightsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -139,7 +147,7 @@ function AuditLogIcon() {
  * Role-based visibility rules:
  * - ROLE_ADMIN: all sections
  * - ROLE_PMO: Dashboard, Events, Volunteers, Feedback, Reports
- * - ROLE_POC: Dashboard, Events (assigned), Volunteers (enrolled), Feedback
+ * - ROLE_POC: Events, Volunteers, Feedback
  *
  * Items with empty requiredRoles are visible to all authenticated users.
  */
@@ -147,7 +155,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Overview',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon, requiredRoles: [] },
+      { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon, requiredRoles: ['ROLE_ADMIN', 'ROLE_PMO'] },
     ],
   },
   {
@@ -173,10 +181,17 @@ const navigationGroups: NavigationGroup[] = [
     ],
   },
   {
+    label: 'Platform',
+    items: [
+      { label: 'Organizations', href: '/platform/tenants', icon: AdminIcon, requiredRoles: ['ROLE_PLATFORM_ADMIN'] },
+    ],
+  },
+  {
     label: 'System',
     items: [
       { label: 'Teams', href: '/teams', icon: TeamsIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Administration', href: '/admin', icon: AdminIcon, requiredRoles: ['ROLE_ADMIN'] },
+      { label: 'Security', href: '/admin/security', icon: SecurityIcon, requiredRoles: ['ROLE_ADMIN'] },
       { label: 'Audit Log', href: '/audit-log', icon: AuditLogIcon, requiredRoles: ['ROLE_ADMIN'] },
     ],
   },

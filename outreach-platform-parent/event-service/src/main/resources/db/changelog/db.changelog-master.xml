@@ -50,7 +50,7 @@
     <include file="db/changelog/20250122-003-add-tenant-id-to-team-memberships.sql"/>
 
     <!-- 11. Add missing audit/version columns so all remaining entities can extend TenantAwareBaseEntity
-         without a Hibernate "Multiple @FilterDef" conflict — see docs/specs/platform-hardening/ -->
+         without a Hibernate "Multiple @FilterDef" conflict — see CLAUDE.md -->
     <include file="db/changelog/20250122-004-add-missing-audit-columns.sql"/>
 
     <!-- 12. Ensure tenant_memberships exists in this service's own schema (owned by auth-service,
@@ -64,5 +64,14 @@
     <!-- 14. Fix seed users/volunteers whose PII columns were inserted as plaintext instead of
          AES-256-GCM ciphertext, breaking JPA decryption for every list/read of those rows -->
     <include file="db/changelog/20260914-001-fix-plaintext-seed-pii.sql"/>
+
+    <!-- 15. Users become a directory synced from auth-service (credentials move there) -->
+    <include file="db/changelog/20261002-001-users-become-directory.sql"/>
+
+    <!-- 16. Event counts follow enrollments, including imported ones -->
+    <include file="db/changelog/20261002-002-recount-event-enrollments.sql"/>
+
+    <!-- 17. Events are shared with teams -->
+    <include file="db/changelog/20261002-003-event-team-access.sql"/>
 
 </databaseChangeLog>

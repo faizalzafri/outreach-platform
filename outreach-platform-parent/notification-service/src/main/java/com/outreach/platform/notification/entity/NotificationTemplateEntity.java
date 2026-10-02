@@ -2,7 +2,6 @@ package com.outreach.platform.notification.entity;
 
 import com.outreach.platform.common.tenant.TenantAwareBaseEntity;
 import com.outreach.platform.notification.model.NotificationType;
-import com.outreach.platform.notification.model.TemplateEngine;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,10 +33,6 @@ public class NotificationTemplateEntity extends TenantAwareBaseEntity {
 
     @Column(name = "body_template", columnDefinition = "TEXT")
     private String bodyTemplate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "engine", nullable = false, length = 50)
-    private TemplateEngine engine;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "variables_schema", columnDefinition = "jsonb")
@@ -85,14 +80,6 @@ public class NotificationTemplateEntity extends TenantAwareBaseEntity {
 
     public void setBodyTemplate(String bodyTemplate) {
         this.bodyTemplate = bodyTemplate;
-    }
-
-    public TemplateEngine getEngine() {
-        return engine;
-    }
-
-    public void setEngine(TemplateEngine engine) {
-        this.engine = engine;
     }
 
     public String getVariablesSchema() {

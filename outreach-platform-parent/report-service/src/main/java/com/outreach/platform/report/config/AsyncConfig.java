@@ -1,5 +1,6 @@
 package com.outreach.platform.report.config;
 
+import com.outreach.platform.common.tenant.TenantContextTaskDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -22,6 +23,9 @@ public class AsyncConfig {
         executor.setMaxPoolSize(8);
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("report-export-");
+        // A hand-built pool doesn't get common-lib's executor customizer, so carry TenantContext
+        // over explicitly — exports query tenant-scoped report data.
+        executor.setTaskDecorator(new TenantContextTaskDecorator());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
         executor.initialize();

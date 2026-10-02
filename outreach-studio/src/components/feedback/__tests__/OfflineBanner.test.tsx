@@ -25,7 +25,7 @@ describe('OfflineBanner', () => {
     render(<OfflineBanner />);
 
     expect(
-      screen.getByText(/changes will be saved and synced when your connection is restored/i),
+      screen.getByText(/changes can't be saved until your connection is restored/i),
     ).toBeInTheDocument();
   });
 });

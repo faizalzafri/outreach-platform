@@ -2,6 +2,7 @@ package com.outreach.platform.ingestion.service;
 
 import com.outreach.platform.common.messaging.DomainEventMessage;
 import com.outreach.platform.common.messaging.RabbitMqConstants;
+import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.ingestion.model.DomainEventDocument;
 import com.outreach.platform.ingestion.model.EventStatus;
 import com.outreach.platform.ingestion.repo.DomainEventRepository;
@@ -69,11 +70,21 @@ public class DomainEventOutboxPoller {
                 event.getCreatedAt()
         );
 
-        rabbitTemplate.convertAndSend(
-                RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
-                routingKey,
-                message
-        );
+        // The poller runs on a scheduler thread with no request tenant; publish under the event's
+        // own tenant so the RabbitTemplate's post-processor stamps x-tenant-id. A tenant-less
+        // event goes out without the header and is dead-lettered by the consumer.
+        if (event.getTenantId() != null) {
+            TenantContext.setCurrentTenantId(event.getTenantId());
+        }
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConstants.EXCHANGE_OUTREACH_EVENTS,
+                    routingKey,
+                    message
+            );
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     private String mapEventTypeToRoutingKey(String eventType) {
@@ -81,7 +92,6 @@ public class DomainEventOutboxPoller {
             case "VolunteersImported" -> RabbitMqConstants.ROUTING_KEY_VOLUNTEERS_IMPORTED;
             case "SendFeedbackEmails" -> RabbitMqConstants.ROUTING_KEY_SEND_FEEDBACK_EMAILS;
             case "ImportJobCompleted" -> RabbitMqConstants.ROUTING_KEY_IMPORT_JOB_COMPLETED;
-            case "EventSummaryImported" -> "event.event-summary-imported";
             default -> "event." + eventType.toLowerCase();
         };
     }

@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /** REST controller for async AI operations (summarize, anomaly detection, NL queries). */
 @RestController
@@ -51,7 +52,7 @@ public class AiController {
                 "maxLength", request.maxLength() != null ? request.maxLength() : 500
         ));
 
-        aiService.summarize(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.summarize(request));
 
         return acceptedResponse(job.getId());
     }
@@ -68,7 +69,7 @@ public class AiController {
                 "threshold", request.threshold() != null ? request.threshold() : 0.5
         ));
 
-        aiService.detectAnomalies(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.detectAnomalies(request));
 
         return acceptedResponse(job.getId());
     }
@@ -85,7 +86,7 @@ public class AiController {
                 "context", request.context() != null ? request.context() : ""
         ));
 
-        aiService.query(request).thenAccept(result -> completeJob(job, result));
+        trackCompletion(job, aiService.query(request));
 
         return acceptedResponse(job.getId());
     }
@@ -94,7 +95,7 @@ public class AiController {
     @GetMapping("/jobs/{jobId}")
     public ResponseEntity<AiJobResponse> getJobResult(@Parameter(description = "Job ID") @PathVariable String jobId) {
         // findById() alone would let any caller read any tenant's job result by ID — see
-        // docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls back to
+        // CLAUDE.md. Empty TenantContext falls back to
         // the unscoped lookup only for the PLATFORM_ADMIN case (TenantContextFilter leaves it empty
         // when no X-Tenant-ID header is sent).
         var job = TenantContext.isPresent()
@@ -133,9 +134,15 @@ public class AiController {
         return aiJobRepository.save(job);
     }
 
+    /** Records the outcome either way — a failed future (e.g. provider fallback threw) must not leave the job PENDING. */
+    private void trackCompletion(AiJobDocument job, CompletableFuture<AiJobResult> future) {
+        future.whenComplete((result, ex) -> completeJob(job,
+                ex == null ? result : AiJobResult.failure("AI provider is currently unavailable")));
+    }
+
     private void completeJob(AiJobDocument job, AiJobResult result) {
         // Takes the AiJobDocument createJob() already returned rather than re-fetching by ID —
-        // avoids a second, unscoped findById() call on a repository that (as of Task 0.5.7) is
+        // avoids a second, unscoped findById() call on a repository that is
         // tenant-scoped, and this way there's no tenant check to get right in the first place.
         if (result.success()) {
             job.setStatus(AiJobStatus.COMPLETED);

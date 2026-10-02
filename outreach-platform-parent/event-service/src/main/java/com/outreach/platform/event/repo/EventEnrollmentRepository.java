@@ -1,6 +1,7 @@
 package com.outreach.platform.event.repo;
 
 import com.outreach.platform.event.entity.EventEnrollmentEntity;
+import com.outreach.platform.event.entity.EventEntity;
 import com.outreach.platform.event.model.AttendanceStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,4 +29,15 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
     boolean existsByEventIdAndVolunteerId(UUID eventId, UUID volunteerId);
 
     long countByEventIdAndAttendanceStatus(UUID eventId, AttendanceStatus attendanceStatus);
+
+    long countByEventIdAndAttendanceStatusNot(UUID eventId, AttendanceStatus attendanceStatus);
+
+    /**
+     * Recomputes an event's registered and attended counts from its enrollments, so every way in
+     * (manual enrollment, file import, attendance marking) keeps them right. The event must be managed.
+     */
+    default void refreshCounts(EventEntity event) {
+        event.setRegisteredCount((int) countByEventIdAndAttendanceStatusNot(event.getId(), AttendanceStatus.UNREGISTERED));
+        event.setAttendedCount((int) countByEventIdAndAttendanceStatus(event.getId(), AttendanceStatus.ATTENDED));
+    }
 }

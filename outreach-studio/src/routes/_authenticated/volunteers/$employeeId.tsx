@@ -2,18 +2,10 @@
  * Volunteer Detail Route
  *
  * Displays profile and participation history for a specific volunteer.
- * Uses React.lazy + Suspense for code splitting.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
-import { PageSkeleton } from '@/components/feedback/PageSkeleton';
-
-const VolunteerDetailContent = lazy(() =>
-  import('./-components/VolunteerDetailContent').then((mod) => ({
-    default: mod.VolunteerDetailContent,
-  }))
-);
+import { VolunteerDetailContent } from './-components/VolunteerDetailContent';
 
 export const Route = createFileRoute('/_authenticated/volunteers/$employeeId')({
   component: VolunteerDetailPage,
@@ -21,8 +13,6 @@ export const Route = createFileRoute('/_authenticated/volunteers/$employeeId')({
 
 function VolunteerDetailPage() {
   return (
-    <Suspense fallback={<PageSkeleton title="Volunteer Detail" />}>
-      <VolunteerDetailContent />
-    </Suspense>
+    <VolunteerDetailContent />
   );
 }

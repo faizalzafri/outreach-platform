@@ -21,6 +21,8 @@ public abstract class BaseAuthIntegrationTest {
     static final PostgreSQLContainer<?> postgres;
 
     static {
+        // Accounts encrypt email/phone at rest (same key layout as docker-compose)
+        System.setProperty("pii.encryption.key", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
         postgres = new PostgreSQLContainer<>("postgres:16-alpine")
                 .withDatabaseName("testdb")
                 .withUsername("test")
@@ -40,6 +42,8 @@ public abstract class BaseAuthIntegrationTest {
         registry.add("eureka.client.enabled", () -> "false");
         // Activate embedded Spring Authorization Server
         registry.add("idp.provider", () -> "spring");
+        // Tests assert on outbox rows directly instead of publishing them
+        registry.add("auth-server.outbox.enabled", () -> "false");
     }
 
     protected String baseUrl() {

@@ -51,13 +51,29 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
+  # Identity events (invitations, password resets, OTP) go out through the outbox to RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
 # Authorization Server configuration (type-safe properties)
 auth-server:
   issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8090}
+  public-url: ${AUTH_PUBLIC_URL:http://localhost:8090}
+  accounts:
+    activation-ttl: 72h
+    password-reset-ttl: 30m
+  bootstrap:
+    platform-admin-email: ${PLATFORM_ADMIN_EMAIL:}
+    platform-admin-username: ${PLATFORM_ADMIN_USERNAME:platform_admin}
   clients:
     dashboard:
       client-id: outreach-dashboard
       redirect-uri: http://localhost:5173/callback
+      # Hidden-iframe session renewal target (the SPA's public/silent-callback.html)
+      silent-redirect-uri: http://localhost:5173/silent-callback.html
       post-logout-redirect-uri: http://localhost:5173/login
     services:
       client-id: outreach-services
@@ -73,9 +89,17 @@ auth-server:
       require-lowercase: true
       require-digit: true
       require-special-char: true
+      history-count: 5
+      reject-common-passwords: true
     brute-force:
       max-failed-attempts: 5
       lock-duration: 30m
+    # Platform defaults; each tenant admin can turn these on and tune them for their organization
+    otp:
+      purposes:
+        LOGIN: { enabled: false, length: 6, ttl: 5m, max-attempts: 5, resend-cooldown: 30s }
+        PASSWORD_RESET: { enabled: false, length: 6, ttl: 10m, max-attempts: 5, resend-cooldown: 30s }
+        PASSWORD_CHANGE: { enabled: false, length: 6, ttl: 5m, max-attempts: 5, resend-cooldown: 30s }
 
 # Eureka client registration
 eureka:
@@ -110,6 +134,10 @@ management:
 
 # Tenant migration configuration
 tenant:
+  # Accounts, tenants and memberships are cross-tenant identity data, not tenant-scoped rows:
+  # the Hibernate tenant filter (and its "TenantContext required" check) must not apply here.
+  jpa-filter:
+    enabled: false
   grace-period-days: 30
   migration-start-date: ${TENANT_MIGRATION_START_DATE:2025-01-20}
 

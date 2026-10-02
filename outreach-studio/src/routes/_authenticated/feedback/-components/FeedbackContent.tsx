@@ -30,12 +30,11 @@ import type { EventEnrollment, FeedbackSubmission } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './FeedbackContent.module.css';
+import { useFeedbackCategories, useFeedbackTags } from './use-feedback-categories';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const FALLBACK_CATEGORIES = ['Communication', 'Organization', 'Content', 'Logistics', 'Overall'];
 
 const EMOJI_LABELS = ['😞', '😕', '😐', '🙂', '😄'];
 
@@ -86,18 +85,8 @@ export function FeedbackContent() {
   const [fieldServerErrors, setFieldServerErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch categories from API, fall back to hardcoded values on error
-  const { data: categories } = useQuery<string[]>({
-    queryKey: [...queryKeys.feedback.all, 'categories'],
-    queryFn: async () => {
-      const response = await httpClient.get<string[]>('/feedback/categories');
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    placeholderData: FALLBACK_CATEGORIES,
-  });
-
-  const FEEDBACK_CATEGORIES = categories ?? FALLBACK_CATEGORIES;
+  const FEEDBACK_CATEGORIES = useFeedbackCategories();
+  const tags = useFeedbackTags();
 
   // Fetch enrolled volunteers for the event feedback is being submitted for — the picker's
   // source of truth. Only enabled once an eventId is present.
@@ -519,11 +508,17 @@ export function FeedbackContent() {
                 type="text"
                 className={styles['textarea']}
                 placeholder="e.g. positive, organized"
+                list="feedback-tags"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 maxLength={200}
               />
+              <datalist id="feedback-tags">
+                {tags.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
             </div>
           )}
         </form.Field>

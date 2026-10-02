@@ -187,6 +187,24 @@ class AiJobLifecycleIT {
         assertThat(capturedJob.getRequest()).containsKey("context");
     }
 
+    @Test
+    @DisplayName("POST /ai/summarize marks the job FAILED when the provider future fails")
+    @WithMockUser(roles = "ADMIN")
+    void summarize_failedFuture_marksJobFailed() throws Exception {
+        AiJobDocument savedJob = createPendingJob("job-fail");
+        when(aiJobRepository.save(any(AiJobDocument.class))).thenReturn(savedJob);
+        when(aiService.summarize(any(SummarizeRequest.class)))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("provider down")));
+
+        mockMvc.perform(post("/ai/summarize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"context\": \"some feedback\"}"))
+                .andExpect(status().isAccepted());
+
+        assertThat(savedJob.getStatus()).isEqualTo(AiJobStatus.FAILED);
+        assertThat(savedJob.getCompletedAt()).isNotNull();
+    }
+
     private AiJobDocument createPendingJob(String jobId) {
         AiJobDocument job = new AiJobDocument(
                 java.util.UUID.randomUUID(),

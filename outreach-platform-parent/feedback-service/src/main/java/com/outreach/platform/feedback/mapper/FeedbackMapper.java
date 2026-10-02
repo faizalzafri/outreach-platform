@@ -10,19 +10,20 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-import java.util.List;
-
 /**
  * MapStruct mapper for converting between feedback entities and DTOs.
  */
 @Mapper(componentModel = "spring")
 public interface FeedbackMapper {
 
-    @Mapping(source = "createdDate", target = "createdAt")
-    @Mapping(source = "lastModifiedDate", target = "updatedAt")
-    FeedbackDto toDto(VolunteerFeedbackEntity entity);
+    default FeedbackDto toDto(VolunteerFeedbackEntity entity) {
+        return toDto(entity, null, null);
+    }
 
-    List<FeedbackDto> toDtoList(List<VolunteerFeedbackEntity> entities);
+    /** With the event's and volunteer's names, which only event-service knows. */
+    @Mapping(source = "entity.createdDate", target = "createdAt")
+    @Mapping(source = "entity.lastModifiedDate", target = "updatedAt")
+    FeedbackDto toDto(VolunteerFeedbackEntity entity, String eventName, String volunteerName);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "sentiment", ignore = true)

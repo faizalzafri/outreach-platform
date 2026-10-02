@@ -13,9 +13,11 @@ import com.outreach.platform.report.repo.ReportScheduleRepository;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,17 +46,13 @@ public class ScheduledReportService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public Optional<ScheduledReportDto> getScheduledReport(UUID id) {
-        return findEntityById(id).map(this::toDto);
-    }
-
     @Transactional
     public ScheduledReportDto createScheduledReport(ScheduledReportCreateRequest request) {
         ReportScheduleEntity entity = new ReportScheduleEntity();
         entity.setName(request.name());
         entity.setReportType(request.reportType());
         entity.setCronExpression(request.cronExpression());
+        entity.setNextRunAt(nextRun(request.cronExpression()));
         entity.setExportFormat(request.exportFormat());
         entity.setFilterCriteria(serializeJson(request.filterCriteria()));
         entity.setRecipients(serializeJson(request.recipients()));
@@ -76,6 +74,7 @@ public class ScheduledReportService {
             }
             if (request.cronExpression() != null) {
                 entity.setCronExpression(request.cronExpression());
+                entity.setNextRunAt(nextRun(request.cronExpression()));
             }
             if (request.exportFormat() != null) {
                 entity.setExportFormat(request.exportFormat());
@@ -88,6 +87,9 @@ public class ScheduledReportService {
             }
             if (request.status() != null) {
                 entity.setStatus(request.status());
+                if (request.status() == ScheduleStatus.ACTIVE) {
+                    entity.setNextRunAt(nextRun(entity.getCronExpression()));
+                }
             }
 
             ReportScheduleEntity saved = scheduleRepository.save(entity);
@@ -102,7 +104,7 @@ public class ScheduledReportService {
         // SimpleJpaRepository.deleteById() implementation internally calls findById() and then
         // removes the result — so this was a cross-tenant delete risk, not just a read risk.
         // Route through the same tenant-scoped lookup and an explicit delete(entity) call instead.
-        // See docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // See CLAUDE.md.
         Optional<ReportScheduleEntity> entity = findEntityById(id);
         entity.ifPresent(e -> {
             scheduleRepository.delete(e);
@@ -113,7 +115,7 @@ public class ScheduledReportService {
 
     private Optional<ReportScheduleEntity> findEntityById(UUID id) {
         // findById() alone does not enforce tenant isolation on this codebase's Hibernate version —
-        // see docs/specs/platform-hardening/ Finding 0 / Requirement 0.
+        // see CLAUDE.md.
         return TenantContext.isPresent()
                 ? scheduleRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 : scheduleRepository.findById(id);
@@ -168,5 +170,14 @@ public class ScheduledReportService {
             log.warn("Failed to deserialize JSON list", e);
             return List.of();
         }
+    }
+
+    /** When a schedule next runs; a cron Spring cannot read is the caller's mistake (400). */
+    static Instant nextRun(String cron) {
+        if (!CronExpression.isValidExpression(cron)) {
+            throw new IllegalArgumentException("Not a valid schedule: " + cron
+                    + " (six fields: second minute hour day-of-month month day-of-week)");
+        }
+        return CronExpression.parse(cron).next(java.time.ZonedDateTime.now()).toInstant();
     }
 }

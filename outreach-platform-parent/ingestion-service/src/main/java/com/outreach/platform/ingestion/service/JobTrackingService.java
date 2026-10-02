@@ -86,23 +86,32 @@ public class JobTrackingService {
 
     /**
      * Updates job progress (processed rows and percentage).
+     *
+     * @return true if the job has been cancelled and processing should stop
      */
-    public void updateProgress(String jobId, int processedRows, int totalRows) {
-        findByIdTenantScoped(jobId).ifPresent(job -> {
-            job.setProcessedRows(processedRows);
-            job.setTotalRows(totalRows);
-            int progress = totalRows > 0 ? (processedRows * 100) / totalRows : 0;
-            job.setProgress(Math.min(progress, 100));
-            job.setUpdatedAt(Instant.now());
-            jobTrackingRepository.save(job);
-        });
+    public boolean updateProgress(String jobId, int processedRows, int totalRows) {
+        Optional<JobTrackingDocument> optJob = findByIdTenantScoped(jobId);
+        if (optJob.isEmpty()) {
+            return false;
+        }
+        JobTrackingDocument job = optJob.get();
+        if (job.getStatus() == JobStatus.CANCELLED) {
+            return true;
+        }
+        job.setProcessedRows(processedRows);
+        job.setTotalRows(totalRows);
+        int progress = totalRows > 0 ? (processedRows * 100) / totalRows : 0;
+        job.setProgress(Math.min(progress, 100));
+        job.setUpdatedAt(Instant.now());
+        jobTrackingRepository.save(job);
+        return false;
     }
 
     /**
-     * Marks a job as COMPLETED.
+     * Marks a job as COMPLETED, unless it was cancelled meanwhile.
      */
     public void completeJob(String jobId, int processedRows, int errorCount, List<ValidationError> errors) {
-        findByIdTenantScoped(jobId).ifPresent(job -> {
+        findByIdTenantScoped(jobId).filter(job -> job.getStatus() != JobStatus.CANCELLED).ifPresent(job -> {
             job.setStatus(JobStatus.COMPLETED);
             job.setProgress(100);
             job.setProcessedRows(processedRows);
@@ -163,7 +172,7 @@ public class JobTrackingService {
      */
     public Page<JobTrackingDocument> listJobs(Pageable pageable) {
         // findAllByOrderByCreatedAtDesc() alone would return every tenant's jobs to any caller —
-        // see docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls
+        // see CLAUDE.md. Empty TenantContext falls
         // back to the unscoped listing only for the PLATFORM_ADMIN case.
         return TenantContext.isPresent()
                 ? jobTrackingRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.getCurrentTenantId(), pageable)
@@ -172,7 +181,7 @@ public class JobTrackingService {
 
     private Optional<JobTrackingDocument> findByIdTenantScoped(String jobId) {
         // findById() alone would let any caller read/cancel any tenant's job by ID — see
-        // docs/specs/platform-hardening/ Finding 0 / Task 0.5.7. Empty TenantContext falls back to
+        // CLAUDE.md. Empty TenantContext falls back to
         // the unscoped lookup only for the PLATFORM_ADMIN case.
         return TenantContext.isPresent()
                 ? jobTrackingRepository.findByIdAndTenantId(jobId, TenantContext.getCurrentTenantId())
