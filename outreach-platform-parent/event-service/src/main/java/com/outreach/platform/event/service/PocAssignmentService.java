@@ -4,10 +4,8 @@ import com.outreach.platform.common.tenant.TenantContext;
 import com.outreach.platform.event.entity.EventEntity;
 import com.outreach.platform.event.entity.PocAssignmentEntity;
 import com.outreach.platform.event.entity.UserEntity;
-import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.PocAssignRequest;
 import com.outreach.platform.event.model.dto.PocAssignmentDto;
-import com.outreach.platform.event.mapper.EventMapper;
 import com.outreach.platform.event.repo.EventRepository;
 import com.outreach.platform.event.repo.PocAssignmentRepository;
 import com.outreach.platform.event.repo.UserRepository;
@@ -30,17 +28,14 @@ public class PocAssignmentService {
     private final PocAssignmentRepository pocAssignmentRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final EventMapper eventMapper;
 
     @Inject
     public PocAssignmentService(PocAssignmentRepository pocAssignmentRepository,
                                 EventRepository eventRepository,
-                                UserRepository userRepository,
-                                EventMapper eventMapper) {
+                                UserRepository userRepository) {
         this.pocAssignmentRepository = pocAssignmentRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
-        this.eventMapper = eventMapper;
     }
 
     /**
@@ -89,17 +84,6 @@ public class PocAssignmentService {
                 .orElseThrow(() -> new NoSuchElementException(
                         "POC assignment not found: eventId=" + eventId + ", pocId=" + pocUserId));
         pocAssignmentRepository.delete(entity);
-    }
-
-    /**
-     * Lists all events assigned to a specific POC user.
-     */
-    @Transactional(readOnly = true)
-    public List<EventDto> getEventsByPoc(UUID pocUserId) {
-        List<PocAssignmentEntity> assignments = pocAssignmentRepository.findByUserId(pocUserId);
-        return assignments.stream()
-                .map(a -> eventMapper.toDto(a.getEvent()))
-                .toList();
     }
 
     /**

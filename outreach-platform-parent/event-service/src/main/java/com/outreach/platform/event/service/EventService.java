@@ -187,7 +187,7 @@ public class EventService {
                 criteria.dateFrom(),
                 criteria.dateTo(),
                 criteria.query() == null || criteria.query().isBlank() ? null : criteria.query().trim(),
-                visibility.pocScope(),
+                visibility.pocScope() != null ? visibility.pocScope() : criteria.pocId(),
                 pageable
         );
         return page.map(eventMapper::toDto);

@@ -117,6 +117,22 @@ describe('EventListContent', () => {
       expect(screen.getByText('DRAFT')).toBeInTheDocument();
     });
 
+    it('shows events on the calendar for the days they run', async () => {
+      const today = new Date();
+      const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      server.use(
+        http.get('/api/events', () => HttpResponse.json(createEventPage([]))),
+        http.get('/api/events/calendar', () =>
+          HttpResponse.json(createEventPage([buildEvent({ id: 'c1', eventName: 'Beach Day', eventDate: day, eventEndDate: day })]))),
+      );
+
+      await renderEventList();
+      await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+      const cell = await screen.findByRole('gridcell', { name: today.toDateString() });
+      await waitFor(() => expect(cell).toHaveTextContent('Beach Day'));
+    });
+
     it('sends the search box text to the API', async () => {
       const queries: (string | null)[] = [];
       server.use(

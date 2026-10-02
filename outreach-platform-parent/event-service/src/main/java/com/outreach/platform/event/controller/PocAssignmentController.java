@@ -1,6 +1,5 @@
 package com.outreach.platform.event.controller;
 
-import com.outreach.platform.event.model.dto.EventDto;
 import com.outreach.platform.event.model.dto.PocAssignRequest;
 import com.outreach.platform.event.model.dto.PocAssignmentDto;
 import com.outreach.platform.event.service.PocAssignmentService;
@@ -54,11 +53,5 @@ public class PocAssignmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removePoc(@PathVariable UUID eventId, @PathVariable UUID userId) {
         pocAssignmentService.removePoc(eventId, userId);
-    }
-
-    @Operation(summary = "List a POC's events")
-    @GetMapping("/assigned-to/{userId}")
-    public List<EventDto> getEventsByPoc(@PathVariable UUID userId) {
-        return pocAssignmentService.getEventsByPoc(userId);
     }
 }

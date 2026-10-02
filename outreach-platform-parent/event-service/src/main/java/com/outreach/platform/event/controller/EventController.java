@@ -73,9 +73,10 @@ public class EventController {
             @Parameter(description = "Start of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @Parameter(description = "End of date range") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @Parameter(description = "Text matched against name, city and event code") @RequestParam(required = false) String query,
+            @Parameter(description = "Only events this POC works on") @RequestParam(required = false) UUID pocId,
             Pageable pageable) {
 
-        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, query);
+        EventSearchCriteria criteria = new EventSearchCriteria(status, city, category, dateFrom, dateTo, query, pocId);
         Page<EventDto> page = eventService.listEvents(criteria, pageable);
         return ResponseEntity.ok(page);
     }

@@ -8,7 +8,7 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/data-table/DataTable';
@@ -17,11 +17,12 @@ import { queryKeys } from '@/lib/query-keys';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/hooks/useToast';
 import { usePermission } from '@/hooks/usePermission';
-import type { NormalizedError } from '@/types/api';
-import type { Event, EventStatus } from '@/types/domain';
+import type { NormalizedError, PageResponse } from '@/types/api';
+import type { Event, EventStatus, User } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './EventListContent.module.css';
+import { EventCalendar } from './EventCalendar';
 
 // ---------------------------------------------------------------------------
 // Status badge styling
@@ -180,7 +181,19 @@ export function EventListContent() {
     [search.page, search.size, search.status, debouncedSearch],
   );
 
-  const searchParams = useMemo(() => ({ query: debouncedSearch || undefined }), [debouncedSearch]);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [pocId, setPocId] = useState('');
+  // ponytail: first 200 POCs; a search box when tenants have more
+  const { data: pocs } = useQuery<PageResponse<User>>({
+    queryKey: queryKeys.admin.users({ role: 'ROLE_POC', page: 0, size: 200 }),
+    queryFn: async () =>
+      (await httpClient.get<PageResponse<User>>('/admin/users', { params: { role: 'ROLE_POC', size: 200 } })).data,
+    enabled: canManage,
+  });
+  const searchParams = useMemo(
+    () => ({ query: debouncedSearch || undefined, pocId: pocId || undefined }),
+    [debouncedSearch, pocId],
+  );
 
   const deleteMutation = useMutation({
     mutationFn: async (eventId: string) => {
@@ -215,6 +228,12 @@ export function EventListContent() {
         )}
       </div>
 
+      <div className={styles['viewToggle']} role="group" aria-label="View">
+        <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>List</button>
+        <button type="button" aria-pressed={view === 'calendar'} onClick={() => setView('calendar')}>Calendar</button>
+      </div>
+
+      {view === 'calendar' ? <EventCalendar /> : (<>
       {/* Search text filter */}
       <div className={styles['searchBar']}>
         <input
@@ -229,6 +248,15 @@ export function EventListContent() {
           }}
           aria-label="Search events"
         />
+        {canManage && (
+          <select className={styles['searchInput']} value={pocId} aria-label="POC"
+            onChange={(e) => setPocId(e.target.value)}>
+            <option value="">Any POC</option>
+            {pocs?.content.map((u) => (
+              <option key={u.id} value={u.id}>{u.displayName ?? u.username}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <DataTable<Event>
@@ -242,6 +270,7 @@ export function EventListContent() {
           void navigate({ search: (prev) => ({ ...prev, page, size }), replace: true })}
         emptyMessage="No events found."
       />
+      </>)}
     </div>
   );
 }

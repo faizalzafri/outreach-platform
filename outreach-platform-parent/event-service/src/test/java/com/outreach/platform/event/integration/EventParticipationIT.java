@@ -210,6 +210,8 @@ class EventParticipationIT {
 
         share(completedEvent, teamId, "VIEW");
         assertThat(eligibility(completedEvent, teamPoc).assigned()).isTrue();
+        assertThat(restTemplate.getForObject("/events?pocId={p}&size=50", String.class, teamPoc))
+                .contains("Old Age Home Visit");
         actAsPoc(teamPoc);
         assertThat(eventService.listEvents(new EventSearchCriteria(null, null, null, null, null, null),
                 Pageable.ofSize(50)).map(EventDto::id).getContent()).contains(completedEvent);
@@ -223,6 +225,8 @@ class EventParticipationIT {
                 .contains("Kolkata Crew").contains("EDIT");
 
         restTemplate.delete("/events/{id}/teams/{team}", completedEvent, teamId);
+        assertThat(restTemplate.getForObject("/events?pocId={p}&size=50", String.class, teamPoc))
+                .doesNotContain("Old Age Home Visit");
         assertThat(eligibility(completedEvent, teamPoc).assigned()).isFalse();
     }
 
