@@ -98,10 +98,12 @@ public class FeedbackController {
             @RequestParam(required = false) Integer maxScore,
             @RequestParam(required = false) Instant dateFrom,
             @RequestParam(required = false) Instant dateTo,
+            @RequestParam(required = false) String tag,
             Pageable pageable) {
 
         FeedbackSearchRequest searchRequest = new FeedbackSearchRequest(
-                eventId, employeeId, category, sentiment, status, minScore, maxScore, dateFrom, dateTo
+                eventId, employeeId, category, sentiment, status, minScore, maxScore, dateFrom, dateTo,
+                tag == null || tag.isBlank() ? null : tag.trim()
         );
         return feedbackService.search(searchRequest, pageable);
     }

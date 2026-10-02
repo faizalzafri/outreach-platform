@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 
 import { httpClient } from '@/lib/http-client';
+import { downloadFile } from '@/lib/download';
 import { queryKeys } from '@/lib/query-keys';
 import { usePermission } from '@/hooks/usePermission';
 import { eventCreateSchema } from '@/lib/zod-schemas';
@@ -313,6 +314,18 @@ function FeedbackTab({ eventId, status }: { eventId: string; status: EventStatus
       Give Feedback
     </Link>
   );
+  const { hasPermission: canExport } = usePermission(['ROLE_PMO', 'ROLE_ADMIN', 'ROLE_TENANT_ADMIN', 'ROLE_PLATFORM_ADMIN']);
+  const actions = (
+    <>
+      {giveFeedbackLink}
+      {canExport && (
+        <button type="button" className={styles['enrollBtn']}
+          onClick={() => void downloadFile(`/feedback/export/${eventId}`, `feedback-${eventId}.csv`)}>
+          Download CSV
+        </button>
+      )}
+    </>
+  );
 
   if (isLoading) {
     return <p className={styles['tabPlaceholder']}>Loading feedback...</p>;
@@ -332,7 +345,7 @@ function FeedbackTab({ eventId, status }: { eventId: string; status: EventStatus
   if (!data || data.content.length === 0) {
     return (
       <div>
-        {giveFeedbackLink}
+        {actions}
         <p className={styles['tabPlaceholder']}>No feedback submissions yet for this event.</p>
       </div>
     );
@@ -340,7 +353,7 @@ function FeedbackTab({ eventId, status }: { eventId: string; status: EventStatus
 
   return (
     <div>
-      {giveFeedbackLink}
+      {actions}
       <table className={styles['volunteerTable']}>
         <thead>
           <tr>

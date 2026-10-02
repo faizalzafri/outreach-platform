@@ -345,6 +345,23 @@ class FeedbackServiceIT {
     }
 
     @Test
+    @DisplayName("Search filters on a whole tag")
+    void search_byTag() {
+        restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, UUID.randomUUID(), 5, "Great", null, null, "Overall", "community, first-time", false),
+                FeedbackDto.class);
+        restTemplate.postForEntity("/feedback", new FeedbackSubmitRequest(
+                eventId, UUID.randomUUID(), 4, "Good", null, null, "Overall", "community-led", false),
+                FeedbackDto.class);
+
+        RestPageResponse<FeedbackDto> page = restTemplate.exchange("/feedback/search?eventId={id}&tag=community",
+                HttpMethod.GET, null, new ParameterizedTypeReference<RestPageResponse<FeedbackDto>>() { },
+                eventId).getBody();
+
+        assertThat(page.getContent()).extracting(FeedbackDto::tags).containsExactly("community, first-time");
+    }
+
+    @Test
     @DisplayName("Listed feedback carries event and volunteer names, except for anonymous feedback")
     void list_showsNames_butNotForAnonymousFeedback() {
         UUID named = UUID.randomUUID();

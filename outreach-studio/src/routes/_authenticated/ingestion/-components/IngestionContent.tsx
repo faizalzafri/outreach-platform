@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
 
 import { httpClient } from '@/lib/http-client';
+import { downloadFile } from '@/lib/download';
 import { queryKeys } from '@/lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import type { ImportJob, JobError } from '@/types/domain';
@@ -286,13 +287,7 @@ function TemplateDownloads() {
   const download = async (format: string) => {
     setError(null);
     try {
-      const response = await httpClient.get<Blob>('/ingestion/templates', { params: { format }, responseType: 'blob' });
-      const url = URL.createObjectURL(response.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `volunteer-import-template.${format}`;
-      link.click();
-      URL.revokeObjectURL(url);
+      await downloadFile('/ingestion/templates', `volunteer-import-template.${format}`, { format });
     } catch {
       setError('The template could not be downloaded. Please try again.');
     }

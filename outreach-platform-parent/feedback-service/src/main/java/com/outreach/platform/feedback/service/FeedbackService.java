@@ -114,6 +114,7 @@ public class FeedbackService {
                 request.maxScore(),
                 request.dateFrom(),
                 request.dateTo(),
+                request.tag(),
                 pageable
         ));
     }

@@ -12,7 +12,7 @@ import { DataTable } from '@/components/data-table/DataTable';
 import { queryKeys } from '@/lib/query-keys';
 
 import styles from './FeedbackListContent.module.css';
-import { useFeedbackCategories } from './use-feedback-categories';
+import { useFeedbackCategories, useFeedbackTags } from './use-feedback-categories';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +26,7 @@ interface FeedbackRecord {
   anonymous: boolean;
   score: number;
   category: string;
+  tags: string | null;
   sentiment: string | null;
   status: string;
   submittedAt: string;
@@ -86,7 +87,7 @@ function StatusBadge({ status }: { status: string }) {
 // Column definitions
 // ---------------------------------------------------------------------------
 
-function buildColumns(categories: string[]): ColumnDef<FeedbackRecord, unknown>[] {
+function buildColumns(categories: string[], tags: string[]): ColumnDef<FeedbackRecord, unknown>[] {
   return [
     // Names come from event-service, so the server can neither sort nor filter on them.
     {
@@ -119,6 +120,19 @@ function buildColumns(categories: string[]): ColumnDef<FeedbackRecord, unknown>[
       meta: {
         filterType: 'select',
         filterOptions: categories.map((c) => ({ label: c, value: c })),
+      },
+    },
+    {
+      // Filtered as "tag": the server matches one whole tag.
+      id: 'tag',
+      accessorKey: 'tags',
+      header: 'Tags',
+      enableSorting: false,
+      enableColumnFilter: true,
+      cell: ({ getValue }) => (getValue() as string | null) ?? '',
+      meta: {
+        filterType: 'select',
+        filterOptions: tags.map((t) => ({ label: t, value: t })),
       },
     },
     {
@@ -170,7 +184,8 @@ function buildColumns(categories: string[]): ColumnDef<FeedbackRecord, unknown>[
 export function FeedbackListContent() {
   const queryKey = useMemo(() => queryKeys.feedback.lists(), []);
   const categories = useFeedbackCategories();
-  const columns = useMemo(() => buildColumns(categories), [categories]);
+  const tags = useFeedbackTags();
+  const columns = useMemo(() => buildColumns(categories, tags), [categories, tags]);
 
   return (
     <div className={styles['container']}>

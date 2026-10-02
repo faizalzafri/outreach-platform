@@ -30,7 +30,7 @@ import type { EventEnrollment, FeedbackSubmission } from '@/types/domain';
 
 import { Route } from '../index';
 import styles from './FeedbackContent.module.css';
-import { useFeedbackCategories } from './use-feedback-categories';
+import { useFeedbackCategories, useFeedbackTags } from './use-feedback-categories';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -86,6 +86,7 @@ export function FeedbackContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const FEEDBACK_CATEGORIES = useFeedbackCategories();
+  const tags = useFeedbackTags();
 
   // Fetch enrolled volunteers for the event feedback is being submitted for — the picker's
   // source of truth. Only enabled once an eventId is present.
@@ -507,11 +508,17 @@ export function FeedbackContent() {
                 type="text"
                 className={styles['textarea']}
                 placeholder="e.g. positive, organized"
+                list="feedback-tags"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 maxLength={200}
               />
+              <datalist id="feedback-tags">
+                {tags.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
             </div>
           )}
         </form.Field>

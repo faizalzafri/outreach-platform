@@ -34,6 +34,8 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
               AND (:maxScore IS NULL OR f.score <= :maxScore)
               AND (CAST(:dateFrom AS timestamp) IS NULL OR f.submittedAt >= :dateFrom)
               AND (CAST(:dateTo AS timestamp) IS NULL OR f.submittedAt <= :dateTo)
+              AND (CAST(:tag AS string) IS NULL
+                   OR CONCAT(',', REPLACE(f.tags, ' ', ''), ',') LIKE CONCAT('%,', CAST(:tag AS string), ',%'))
             """)
     Page<VolunteerFeedbackEntity> search(
             @Param("eventId") UUID eventId,
@@ -45,6 +47,7 @@ public interface VolunteerFeedbackRepository extends JpaRepository<VolunteerFeed
             @Param("maxScore") Integer maxScore,
             @Param("dateFrom") Instant dateFrom,
             @Param("dateTo") Instant dateTo,
+            @Param("tag") String tag,
             Pageable pageable
     );
 

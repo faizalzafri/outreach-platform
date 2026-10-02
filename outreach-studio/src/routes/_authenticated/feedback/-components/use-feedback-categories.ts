@@ -26,3 +26,13 @@ export function useFeedbackCategories(): string[] {
   });
   return data ?? FALLBACK_CATEGORIES;
 }
+
+/** Tags in use, offered as suggestions when tagging feedback and as a list filter. */
+export function useFeedbackTags(): string[] {
+  const { data } = useQuery<string[]>({
+    queryKey: [...queryKeys.feedback.all, 'tags'],
+    queryFn: async () => (await httpClient.get<string[]>('/feedback/tags')).data,
+    staleTime: 5 * 60 * 1000,
+  });
+  return data ?? [];
+}
