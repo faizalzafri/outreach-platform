@@ -96,7 +96,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image for ${{ matrix.service }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           # Every service's Dockerfile COPYs common-lib/ and sibling service poms relative to
           # outreach-platform-parent/ (multi-module build), so the context has to be the parent
